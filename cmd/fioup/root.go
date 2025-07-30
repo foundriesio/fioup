@@ -1,14 +1,19 @@
 package main
 
 import (
+	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
 )
 
 var (
-	verbose bool
+	verbose     bool
+	configPaths []string
+	config      *sotatoml.AppConfig
+
 	rootCmd = &cobra.Command{
 		Use:   "fioup",
 		Short: "Utility to perform OTA Updates managed by FoundriesFactory (c)",
@@ -21,9 +26,10 @@ var (
 			}
 			// Output pretty console if terminal (optional)
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			DieNotNil(cmd.Help())
+
+			var err error
+			config, err = sotatoml.NewAppConfig(configPaths)
+			DieNotNil(err, "failed to load configuration from paths: %s", strings.Join(configPaths, ", "))
 		},
 	}
 )
@@ -34,22 +40,6 @@ func Execute() error {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose debug logging")
-
-	// Override usage template
-	rootCmd.SetUsageTemplate(`{{.UseLine}}
-
-{{.Short}}
-
-Usage:
-  {{.CommandPath}} [global flags] <command> [command flags] [arguments...]
-
-Available Commands:
-{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
-
-Global flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.
-`)
+	rootCmd.PersistentFlags().StringSliceVarP(&configPaths, "cfg-dirs", "c",
+		sotatoml.DEF_CONFIG_ORDER, "A comma-separated list of paths to search for .toml configuration files")
 }
