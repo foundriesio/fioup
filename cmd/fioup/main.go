@@ -1,7 +1,13 @@
 package main
 
+import (
+	"fmt"
+	"os"
+)
+
 func main() {
 	if err := Execute(); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
