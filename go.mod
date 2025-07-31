@@ -3,7 +3,7 @@ module github.com/foundriesio/fioup
 go 1.24.4
 
 require (
-	github.com/foundriesio/fioconfig v0.0.0-20250724152827-1d02a9821379
+	github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 )
