@@ -29,7 +29,7 @@ var (
 
 			var err error
 			config, err = sotatoml.NewAppConfig(configPaths)
-			DieNotNil(err, "failed to load configuration from paths: %s", strings.Join(configPaths, ", "))
+			DieNotNil(err, "failed to load configuration from paths: "+strings.Join(configPaths, ", "))
 		},
 	}
 )
