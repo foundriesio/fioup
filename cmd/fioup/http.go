@@ -46,7 +46,8 @@ func doGet(cmd *cobra.Command, args []string, opts *httpOptions) {
 	url, err := getUrl(config, args[0])
 	DieNotNil(err, "failed to parse URL or endpoint")
 
-	client := transport.CreateClient(config)
+	client, err := transport.CreateClient(config)
+	DieNotNil(err, "failed to create HTTPS client with the given configuration")
 	resp, err := transport.HttpGet(client, url, nil)
 	if err != nil || resp.StatusCode != 200 {
 		if err == nil {
