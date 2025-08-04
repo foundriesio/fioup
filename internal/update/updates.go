@@ -21,58 +21,60 @@ type (
 		SrcDir    string
 		EnableTuf bool
 		TargetId  string
+
+		DoCheck   bool
+		DoPull    bool
+		DoInstall bool
+		DoRun     bool
 	}
 )
 
-func InitUpdate(updateContext *UpdateContext) error {
-	log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
+func GetPendingUpdate(updateContext *UpdateContext) error {
 	updateRunner, err := update.GetCurrentUpdate(updateContext.ComposeConfig)
-	var correlationId string
-	if !errors.Is(err, update.ErrUpdateNotFound) {
-		updateStatus := updateRunner.Status()
-		log.Debug().Msgf("Current update: %v", updateStatus)
-
-		clientRef := updateStatus.ClientRef
-		clientRefSplit := strings.Split(clientRef, "|")
-		if (clientRefSplit == nil) || (len(clientRefSplit) != 2) {
-			log.Info().Msgf("Invalid clientRef: %s", clientRef)
-			err = updateRunner.Cancel(updateContext.Context)
-			if err != nil {
-				return fmt.Errorf("error cancelling update: %w", err)
-			}
-		}
-
-		targetName := clientRefSplit[0]
-		correlationId = clientRefSplit[1]
-
-		if updateStatus.State == update.StateStarted {
-			updateRunner.Complete(updateContext.Context)
-		}
-
-		updateStatus = updateRunner.Status()
-		if updateStatus.State != update.StateCompleted {
-			if updateStatus.State != update.StateInitializing && updateStatus.State != update.StateCanceled && updateStatus.State != update.StateCancelling && targetName == updateContext.Target.Path && appsListMatch(updateContext.RequiredApps, updateStatus.URIs) {
-				log.Info().Msgf("Proceeding with previous update of target %s", targetName)
-				updateContext.Resuming = true
-			} else {
-				log.Debug().Msgf("Cancelling current update: %s", updateStatus.ID)
-				correlationId = ""
-				err = updateRunner.Cancel(updateContext.Context)
-				if err != nil {
-					return fmt.Errorf("error cancelling update: %w", err)
-				}
-			}
-		}
+	if errors.Is(err, update.ErrUpdateNotFound) {
+		log.Debug().Msg("No pending update found")
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("error getting current update: %w", err)
 	}
 
-	if !updateContext.Resuming {
+	updateStatus := updateRunner.Status()
+	log.Debug().Msgf("Pending update: %v", updateStatus)
+
+	clientRef := updateStatus.ClientRef
+	clientRefSplit := strings.Split(clientRef, "|")
+	updateContext.PendingRunner = updateRunner
+	if (clientRefSplit == nil) || (len(clientRefSplit) != 2) {
+		log.Warn().Msgf("Invalid clientRef: %s", clientRef)
+		err = updateRunner.Cancel(updateContext.Context)
+		if err != nil {
+			log.Warn().Msgf("Error cancelling update: %v", err)
+		}
+	} else {
+		updateContext.PendingTargetName = clientRefSplit[0]
+		updateContext.PendingCorrelationId = clientRefSplit[1]
+		updateContext.PendingApps = updateStatus.URIs
+		log.Debug().Msgf("Pending target name: %s, correlation ID: %s, state: %s, pendingApps: %v", updateContext.PendingTargetName, updateContext.PendingCorrelationId, updateStatus.State, updateContext.PendingApps)
+	}
+
+	return nil
+}
+
+func InitUpdate(updateContext *UpdateContext) error {
+	log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
+
+	if updateContext.PendingRunner != nil {
+		updateContext.Resuming = true
+		updateContext.Runner = updateContext.PendingRunner
+		updateContext.CorrelationId = updateContext.PendingCorrelationId
+	} else {
 		version, err := GetVersion(updateContext.Target)
 		if err != nil {
 			return fmt.Errorf("error getting version: %w", err)
 		}
-		correlationId = fmt.Sprintf("%d-%d", version, time.Now().Unix())
+		updateContext.CorrelationId = fmt.Sprintf("%d-%d", version, time.Now().Unix())
 
-		updateRunner, err = update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+correlationId)
+		updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+updateContext.CorrelationId)
 		if err != nil {
 			return err
 		}
@@ -102,9 +104,9 @@ func InitUpdate(updateContext *UpdateContext) error {
 		if err != nil {
 			return err
 		}
+		log.Debug().Msgf("Initialized new update. Status: %v, CorrelationId: %s", updateRunner.Status().State, updateContext.CorrelationId)
+		updateContext.Runner = updateRunner
 	}
-	updateContext.Runner = updateRunner
-	updateContext.CorrelationId = correlationId
 	return nil
 }
 
@@ -405,12 +407,6 @@ func IsTargetRunning(updateContext *UpdateContext) (bool, error) {
 		return false, nil
 	}
 
-	// updateStatus, err := update.GetLastSuccessfulUpdate(updateContext.ComposeConfig)
-	// if err != nil {
-	// 	log.Info().Msg("error gettingChecking target last update", err)
-	// 	return false, err
-	// }
-
 	if len(updateContext.RequiredApps) == 0 {
 		log.Debug().Msg("No required apps to check")
 		return true, nil
@@ -448,32 +444,6 @@ func isSublist[S ~[]E, E comparable](mainList, sublist S) bool {
 	}
 	return true
 }
-
-func appsListMatch(appsList1 []string, appsList2 []string) bool {
-	if len(appsList1) != len(appsList2) {
-		return false
-	}
-
-	for _, app1 := range appsList1 {
-		found := false
-		for _, app2 := range appsList2 {
-			if app1 == app2 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
-// func progress(status *update.InitProgress) {
-// 	if status.State == update.UpdateInitStateLoadingTree {
-// 	} else {
-// 	}
-// }
 
 func getInstalledApps(updateContext *UpdateContext) ([]string, error) {
 	ret := []string{}

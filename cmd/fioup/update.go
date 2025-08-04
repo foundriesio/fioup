@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/foundriesio/fioup/internal/update"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +31,11 @@ func init() {
 }
 
 func doUpdate(opts *update.UpdateOptions) {
+	opts.DoCheck = true
+	opts.DoPull = true
+	opts.DoInstall = true
+	opts.DoRun = true
 	err := update.Update(config, opts)
 	DieNotNil(err, "Failed to perform update")
+	log.Info().Msgf("Update operation complete")
 }

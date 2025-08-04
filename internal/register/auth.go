@@ -105,7 +105,6 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	return jsonResp, resp.StatusCode, nil
 }
 
-// Headers of a request to the device registration endpoint DEVICE_API
 func AuthGetHttpHeaders(opt *RegisterOptions) (HttpHeaders, error) {
 	headers := map[string]string{"Content-type": "application/json"}
 	if opt.ApiToken != "" {
