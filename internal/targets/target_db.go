@@ -131,6 +131,7 @@ func GetCurrentTarget(dbFilePath string) (*metadata.TargetFiles, error) {
 }
 
 func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, correlationId string, updateMode int) error {
+	log.Debug().Msgf("Saving installed version: %s, correlation ID: %s, mode: %d", target.Path, correlationId, updateMode)
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return err

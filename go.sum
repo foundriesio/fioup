@@ -59,12 +59,12 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/foundriesio/composeapp v0.0.0-20250728150720-ddc01b311d26 h1:BtlhJ/6AxFSGtwvpC7AV6meuyY+E8BUbehlxMcLc+1E=
-github.com/foundriesio/composeapp v0.0.0-20250728150720-ddc01b311d26/go.mod h1:1Qjo0+wMxg+QFj9haiopJhgfYb7BJRw3n9Ts/O5obtE=
+github.com/foundriesio/composeapp v0.0.0-20250811110056-cbb222a464c9 h1:UpnUmChRo3VMOe3f0aoiyI/+I6zADEPUA4bXy2P8YUU=
+github.com/foundriesio/composeapp v0.0.0-20250811110056-cbb222a464c9/go.mod h1:1Qjo0+wMxg+QFj9haiopJhgfYb7BJRw3n9Ts/O5obtE=
 github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9 h1:as4pQlFnsipt0cocWLazFFZOTeaVIJhLkipaR0lb8xk=
 github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9/go.mod h1:J3pslinCE6G5lqeAU5EY7/KBGKWRTq53P16eUH9zgG4=
-github.com/foundriesio/fiotuf v0.0.0-20250721214037-88e2893859cd h1:tTQkcQclXHV1+5DlSliRwjmhQretcM0mG4o7XHqziLU=
-github.com/foundriesio/fiotuf v0.0.0-20250721214037-88e2893859cd/go.mod h1:oDW6Jql9xkxuUwo3I2L7+uX1zrbS3l8RIWWdbA5OVsM=
+github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
+github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8/go.mod h1:FgQ6Kc6zP1/+sEXbJjl76WwcCyPe/KrYuCNdkNz0cW0=
 github.com/foundriesio/go-tuf/v2 v2.0.2-fio h1:adV2lRCEcWxBSAIYRT69gTIq2GwkpzGnQucONWHkPoo=
 github.com/foundriesio/go-tuf/v2 v2.0.2-fio/go.mod h1:t6EpmESDnXjVcmGE2ZijOQGyEcsOBxCqotOMssOkAVQ=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=

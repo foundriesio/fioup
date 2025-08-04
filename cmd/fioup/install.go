@@ -13,15 +13,12 @@ func init() {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "pull <target_name_or_version>",
-		Short: "Pull the update from the OTA server",
+		Use:   "install",
+		Short: "Install the update. A pull operation must be performed first.",
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) > 0 {
-				opts.TargetId = args[0]
-			}
-			doPull(&opts)
+			doInstall(&opts)
 		},
-		Args: cobra.RangeArgs(0, 1),
+		Args: cobra.NoArgs,
 	}
 
 	cmd.Flags().StringVarP(&opts.SrcDir, "src-dir", "s", "", "Directory that contains an offline update bundle.")
@@ -30,9 +27,9 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doPull(opts *update.UpdateOptions) {
-	opts.DoPull = true
+func doInstall(opts *update.UpdateOptions) {
+	opts.DoInstall = true
 	err := update.Update(config, opts)
 	DieNotNil(err, "Failed to perform update")
-	log.Info().Msgf("Pull operation complete")
+	log.Info().Msgf("Install operation complete")
 }

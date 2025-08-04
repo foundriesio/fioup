@@ -28,7 +28,7 @@ import (
 // Atributes of the UpdateContext instance are gradually set during the update process
 type (
 	UpdateContext struct {
-		opts       UpdateOptions
+		opts       *UpdateOptions
 		DbFilePath string
 
 		Target             *metadata.TargetFiles
@@ -43,6 +43,12 @@ type (
 		Context       context.Context
 		ComposeConfig *compose.Config
 		Runner        update.Runner
+
+		PendingRunner        update.Runner
+		PendingTargetName    string
+		PendingCorrelationId string
+		PendingApps          []string
+
 		Resuming      bool
 		CorrelationId string
 	}
@@ -62,17 +68,19 @@ func InitializeDatabase(dbFilePath string) error {
 	return nil
 }
 
-func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client) (map[string]*metadata.TargetFiles, error) {
+func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
 	fiotuf, err := tuf.NewFioTuf(config, client)
 	if err != nil {
 		log.Err(err).Msg("Error creating fiotuf instance")
 		return nil, err
 	}
 
-	err = fiotuf.RefreshTuf(localRepoPath)
-	if err != nil {
-		log.Err(err).Msg("Error refreshing TUF")
-		return nil, err
+	if refreshTargets {
+		err = fiotuf.RefreshTuf(localRepoPath)
+		if err != nil {
+			log.Err(err).Msg("Error refreshing TUF")
+			return nil, err
+		}
 	}
 
 	tufTargets := fiotuf.GetTargets()
@@ -95,19 +103,34 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client) ([]byte, 
 	return res.Body, nil
 }
 
-func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client) (map[string]*metadata.TargetFiles, error) {
+func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
 	var targetsBytes []byte
 	var err error
-	if localRepoPath == "" {
-		targetsBytes, err = fetchTargetsJson(config, client)
+
+	// Store unverified targets.json outside "tuf" directory
+	unsafeTargetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
+	if refreshTargets {
+		if localRepoPath == "" {
+			targetsBytes, err = fetchTargetsJson(config, client)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching targets.json: %w", err)
+			}
+		} else {
+			filePath := path.Join(localRepoPath, "repo", "targets.json")
+			targetsBytes, err = os.ReadFile(filePath)
+			if err != nil {
+				return nil, fmt.Errorf("error reading targets.json from %s: %v", filePath, err)
+			}
+		}
+		// Write contents of targetsBytes to local file
+		err = os.WriteFile(unsafeTargetsPath, targetsBytes, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching targets.json: %w", err)
+			return nil, fmt.Errorf("error writing targets.json to %s: %w", unsafeTargetsPath, err)
 		}
 	} else {
-		filePath := path.Join(localRepoPath, "repo", "targets.json")
-		targetsBytes, err = os.ReadFile(filePath)
+		targetsBytes, err = os.ReadFile(unsafeTargetsPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading targets.json from %s: %v", filePath, err)
+			return nil, fmt.Errorf("error reading targets.json from %s: %w", unsafeTargetsPath, err)
 		}
 	}
 
@@ -121,23 +144,106 @@ func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 
 }
 
-func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, enableTuf bool) (map[string]*metadata.TargetFiles, error) {
+func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
 	if enableTuf {
-		return getTargetsTuf(config, localRepoPath, client)
+		return getTargetsTuf(config, localRepoPath, client, refreshTargets)
 	} else {
-		return getTargetsUnsafe(config, localRepoPath, client)
+		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets)
 	}
 }
 
-// Runs check + update (if needed) once. May become a loop in the future
+func checkUpdateState(updateContext *UpdateContext, targetId string) error {
+	log.Debug().Msgf("Checking update state. targetId: %s", targetId)
+	// standalone check command has no state requirements
+	if updateContext.opts.DoCheck && !updateContext.opts.DoPull {
+		log.Debug().Msg("Standalone check command, no state requirements")
+		return nil
+	}
+
+	var updateState update.State
+	if updateContext.PendingRunner != nil {
+		updateState = updateContext.PendingRunner.Status().State
+	}
+
+	// standalone install and run commands require a pending update operation at the right state
+	if (updateContext.opts.DoInstall || updateContext.opts.DoRun) && !updateContext.opts.DoPull {
+		log.Debug().Msg("Standalone install or run command, checking requirements")
+		if updateContext.PendingRunner == nil {
+			return fmt.Errorf("no pending target to perform operation on")
+		}
+		if updateContext.opts.DoInstall {
+			// Check valid states for standalone install command
+			if updateState != update.StateFetched && updateState != update.StateInstalling {
+				return fmt.Errorf("pending target is in state %s, cannot install", updateState.String())
+			}
+		} else {
+			// Check valid states for standalone run command
+			if updateState != update.StateInstalled && updateState != update.StateStarting && updateState != update.StateStarted && updateState != update.StateCompleting {
+				return fmt.Errorf("pending target is in state %s, cannot run", updateState.String())
+			}
+		}
+		return nil
+	}
+
+	// update and standalone pull commands requires that either:
+	// - there is no pending update; or
+	// - no targetId was specified by the user, so we proceed with whatever update was going on; or
+	// - the pending update matches the targetId selected by the user
+	if updateContext.opts.DoPull && updateContext.PendingRunner != nil {
+		log.Debug().Msg("Update or standalone pull command, checking requirements")
+		if targetId != "" {
+			if _, err := strconv.Atoi(targetId); err == nil {
+				// targetId is a version, check if PendingTargetName ends with -<version>
+				log.Debug().Msg("targetId is a version, checking if PendingTargetName ends with -<version>")
+				if !strings.HasSuffix(updateContext.PendingTargetName, "-"+targetId) {
+					return fmt.Errorf("Pending target %s does not match requested version %s", updateContext.PendingTargetName, targetId)
+				}
+			} else {
+				// targetId is a target name, must match exactly
+				log.Debug().Msg("targetId is a name, checking if PendingTargetName matches")
+				if updateContext.PendingTargetName != targetId {
+					return fmt.Errorf("Pending target %s does not match requested target %s", updateContext.PendingTargetName, targetId)
+				}
+			}
+		}
+
+		if !updateContext.opts.DoCheck {
+			// Check valid states for standalone pull operation
+			if updateState != update.StateInitialized && updateState != update.StateFetching {
+				return fmt.Errorf("pending target is in state %s, cannot pull", updateState.String())
+			}
+		}
+	}
+
+	return nil
+}
+
 func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	updateContext := &UpdateContext{
 		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
 	}
-	err := InitializeDatabase(updateContext.DbFilePath)
+
+	var err error
+	updateContext.Context = context.Background()
+	updateContext.ComposeConfig, err = getComposeConfig(config)
+	updateContext.opts = opts
 	if err != nil {
-		log.Err(err).Msg("Error initializing database")
 		return err
+	}
+
+	err = GetPendingUpdate(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Error getting pending update")
+		return fmt.Errorf("error getting pending update: %w", err)
+	}
+
+	err = checkUpdateState(updateContext, opts.TargetId)
+	if err != nil {
+		return fmt.Errorf("invalid update state: %w", err)
+	}
+
+	if updateContext.PendingTargetName != "" && (opts.DoInstall || opts.DoRun) {
+		log.Info().Msgf("Resuming pending update to target %s", updateContext.PendingTargetName)
 	}
 
 	var localRepoPath string
@@ -153,28 +259,52 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return err
 	}
 
-	tufTargets, err := getTargets(config, localRepoPath, client, opts.EnableTuf)
+	err = InitializeDatabase(updateContext.DbFilePath)
+	if err != nil {
+		log.Err(err).Msg("Error initializing database")
+		return err
+	}
+
+	var tufTargets map[string]*metadata.TargetFiles
+	tufTargets, err = getTargets(config, localRepoPath, client, opts.EnableTuf, opts.DoCheck)
 	if err != nil {
 		log.Err(err).Msg("Error getting targets")
 		return err
 	}
 
-	err = GetTargetToInstall(updateContext, config, tufTargets, opts.TargetId)
+	var targetId string
+	if opts.DoInstall || opts.DoRun {
+		if !opts.DoPull && updateContext.PendingTargetName == "" {
+			log.Info().Msg("No pending target to update")
+			return fmt.Errorf("no pending target to update")
+		}
+		if updateContext.PendingTargetName != "" {
+			targetId = updateContext.PendingTargetName
+			log.Info().Msgf("Using pending target %s", updateContext.PendingTargetName)
+		}
+	}
+	if targetId == "" {
+		targetId = opts.TargetId
+	}
+
+	err = GetTargetToInstall(updateContext, config, tufTargets, targetId)
 	if err != nil {
 		return fmt.Errorf("error getting target to install %w", err)
 	}
 
-	_, err = PerformUpdate(updateContext)
-	// if doRollback {
-	// 	log.Info().Msg("Rolling back", err)
-	// 	err = Rollback(updateContext)
-	// 	if err != nil {
-	// 		log.Info().Msg("Error rolling back", err)
-	// 		return err
-	// 	}
-	// }
-	if err != nil {
-		log.Err(err).Msg("Error updating to target")
+	if opts.DoPull || opts.DoInstall || opts.DoRun {
+		_, err = PerformUpdate(updateContext)
+		// if doRollback {
+		// 	log.Info().Msg("Rolling back", err)
+		// 	err = Rollback(updateContext)
+		// 	if err != nil {
+		// 		log.Info().Msg("Error rolling back", err)
+		// 		return err
+		// 	}
+		// }
+		if err != nil {
+			log.Err(err).Msg("Error updating to target")
+		}
 	}
 
 	ReportAppsStates(config, client, updateContext)
@@ -230,29 +360,36 @@ func getAppNameFromUri(uri string) string {
 }
 
 func FillAppsList(updateContext *UpdateContext) error {
-	targetApps, err := GetAppsUris(updateContext.Target)
-	if err != nil {
-		log.Err(err).Msg("Error getting apps uris")
-		return fmt.Errorf("error getting apps uris: %w", err)
+	var requiredApps []string
+	if updateContext.PendingApps == nil {
+		targetApps, err := GetAppsUris(updateContext.Target)
+		if err != nil {
+			log.Err(err).Msg("Error getting apps uris")
+			return fmt.Errorf("error getting apps uris: %w", err)
+		}
+		requiredApps := []string{}
+		for _, appUri := range targetApps {
+			appName := getAppNameFromUri(appUri)
+			if appName == "" {
+				log.Warn().Msgf("App URI %s does not contain a valid app name", appUri)
+				continue
+			}
+			if updateContext.ConfiguredAppNames == nil || slices.Contains(updateContext.ConfiguredAppNames, appName) {
+				requiredApps = append(requiredApps, appUri)
+			}
+		}
+		log.Debug().Msgf("targetApps: %v", targetApps)
+		log.Debug().Msgf("Using filtered target apps: %v", requiredApps)
+	} else {
+		requiredApps = updateContext.PendingApps
+		log.Debug().Msgf("Using pending update apps: %v", requiredApps)
 	}
 
-	requiredApps := []string{}
-	for _, appUri := range targetApps {
-		appName := getAppNameFromUri(appUri)
-		if appName == "" {
-			log.Warn().Msgf("App URI %s does not contain a valid app name", appUri)
-			continue
-		}
-		if updateContext.ConfiguredAppNames == nil || slices.Contains(updateContext.ConfiguredAppNames, appName) {
-			requiredApps = append(requiredApps, appUri)
-		}
-	}
 	updateContext.RequiredApps = requiredApps
 
 	installedApps, err := getInstalledApps(updateContext)
-	log.Debug().Msg(fmt.Sprintf("targetApps: %v", targetApps))
-	log.Debug().Msg(fmt.Sprintf("installedApps: %v", installedApps))
-	log.Debug().Msg(fmt.Sprintf("requiredApps: %v", requiredApps))
+	log.Debug().Msgf("installedApps: %v", installedApps)
+	log.Debug().Msgf("requiredApps: %v", requiredApps)
 	if err != nil {
 		log.Err(err).Msg("Error getting running apps")
 		return fmt.Errorf("error getting running apps: %w", err)
@@ -298,11 +435,6 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig, tufTargets map[string]*metadata.TargetFiles, targetId string) error {
 	var err error
 
-	updateContext.ComposeConfig, err = getComposeConfig(config)
-	if err != nil {
-		return err
-	}
-
 	currentTarget, err := targets.GetCurrentTarget(updateContext.DbFilePath)
 	if err != nil {
 		log.Err(err).Msg("Error getting current target")
@@ -324,7 +456,7 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 	}
 
 	if targetId == "" {
-		// If no specific target is specified, check if automatically selected target is marked as failing
+		// If no target is specified, check if automatically selected target is marked as failing
 		failing, _ := targets.IsFailingTarget(updateContext.DbFilePath, candidateTarget.Path)
 		if failing {
 			log.Info().Msg("Skipping failing target " + candidateTarget.Path + " using " + currentTarget.Path + " instead")
@@ -334,7 +466,6 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 
 	updateContext.Target = candidateTarget
 	updateContext.CurrentTarget = currentTarget
-	updateContext.Context = context.Background()
 
 	apps := config.GetDefault("pacman.compose_apps", "-")
 	if apps != "-" {
@@ -347,12 +478,6 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 		log.Err(err).Msg("FillAndCheckAppsList error")
 		return err
 	}
-
-	// // No update required
-	// if updateContext.Target == nil {
-	// 	log.Debug().Msg("No update required")
-	// 	return nil
-	// }
 
 	if !updateContext.TargetIsRunning {
 		if updateContext.CurrentTarget.Path != updateContext.Target.Path {
@@ -393,25 +518,30 @@ func UpdateToTarget(updateContext *UpdateContext) (bool, error) {
 		return false, fmt.Errorf("error initializing update for target: %w", err)
 	}
 
+	log.Debug().Msgf("updateContext.opts.DoPull: %v, updateContext.opts.DoInstall: %v, updateContext.opts.DoRun: %v", updateContext.opts.DoPull, updateContext.opts.DoInstall, updateContext.opts.DoRun)
 	// Pull
-	err = PullTarget(updateContext)
-	if err != nil {
-		return false, fmt.Errorf("error pulling target: %w", err)
+	if updateContext.opts.DoPull {
+		err = PullTarget(updateContext)
+		if err != nil {
+			return false, fmt.Errorf("error pulling target: %w", err)
+		}
 	}
 
 	// Install
-	err = InstallTarget(updateContext)
-	if err != nil {
-		return false, fmt.Errorf("error installing target: %w", err)
+	if updateContext.opts.DoInstall {
+		err = InstallTarget(updateContext)
+		if err != nil {
+			return false, fmt.Errorf("error installing target: %w", err)
+		}
 	}
 
 	// Run
-	doRollback, err := StartTarget(updateContext)
-	if err != nil {
-		return doRollback, fmt.Errorf("error running target: %w", err)
+	if updateContext.opts.DoRun {
+		doRollback, err := StartTarget(updateContext)
+		if err != nil {
+			return doRollback, fmt.Errorf("error running target: %w", err)
+		}
 	}
-	log.Info().Msgf("Update complete")
-
 	return false, nil
 }
 
@@ -513,4 +643,36 @@ func getComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func CancelPendingUpdate(config *sotatoml.AppConfig, opts *UpdateOptions) error {
+	updateContext := &UpdateContext{
+		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
+	}
+
+	var err error
+	updateContext.Context = context.Background()
+	updateContext.ComposeConfig, err = getComposeConfig(config)
+	updateContext.opts = opts
+	if err != nil {
+		return err
+	}
+
+	err = GetPendingUpdate(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Error getting pending update")
+		return fmt.Errorf("error getting pending update: %w", err)
+	}
+
+	if updateContext.PendingRunner != nil {
+		log.Info().Msgf("Canceling pending update to target %s", updateContext.PendingTargetName)
+		err := updateContext.PendingRunner.Cancel(updateContext.Context)
+		if err != nil {
+			log.Err(err).Msg("Error canceling pending update")
+			return fmt.Errorf("error canceling pending update: %w", err)
+		}
+	} else {
+		log.Info().Msg("No pending update to cancel")
+	}
+	return nil
 }
