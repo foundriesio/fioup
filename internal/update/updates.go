@@ -72,40 +72,35 @@ func InitUpdate(updateContext *UpdateContext) error {
 		}
 		correlationId = fmt.Sprintf("%d-%d", version, time.Now().Unix())
 
-		if len(updateContext.RequiredApps) == 0 {
-			// Do not invoke composeapp update if there are no apps to install. updateRunner.Init does not accept an empty apps list
-			updateRunner = nil
-		} else {
-			updateRunner, err = update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+correlationId)
-			if err != nil {
-				return err
-			}
+		updateRunner, err = update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+correlationId)
+		if err != nil {
+			return err
+		}
 
-			// Progress bar
-			bar := progressbar.DefaultBytes(int64(len(updateContext.RequiredApps)))
-			initOptions := []update.InitOption{
-				update.WithInitProgress(func(status *update.InitProgress) {
-					if status.Current == 0 {
-						return
+		// Progress bar
+		bar := progressbar.DefaultBytes(int64(len(updateContext.RequiredApps)) + 1)
+		initOptions := []update.InitOption{
+			update.WithInitProgress(func(status *update.InitProgress) {
+				if status.Current == 0 {
+					return
+				}
+				if status.State == update.UpdateInitStateLoadingTree {
+					if err := bar.Set(status.Current + 1); err != nil {
+						log.Err(err).Msg("Error setting progress bar")
 					}
-					if status.State == update.UpdateInitStateLoadingTree {
-						if err := bar.Set(status.Current); err != nil {
-							log.Err(err).Msg("Error setting progress bar")
-						}
-					} else {
-						if bar == nil {
-							bar = progressbar.Default(int64(status.Total))
-						}
-						if err := bar.Set(status.Current); err != nil {
-							log.Err(err).Msg("Error setting progress bar: %s")
-						}
+				} else {
+					if bar == nil {
+						bar = progressbar.Default(int64(status.Total))
 					}
-				})}
+					if err := bar.Set(status.Current + 1); err != nil {
+						log.Err(err).Msg("Error setting progress bar")
+					}
+				}
+			}), update.WithInitAllowEmptyAppList(true), update.WithInitCheckStatus(false)}
 
-			err = updateRunner.Init(updateContext.Context, updateContext.RequiredApps, initOptions...)
-			if err != nil {
-				return err
-			}
+		err = updateRunner.Init(updateContext.Context, updateContext.RequiredApps, initOptions...)
+		if err != nil {
+			return err
 		}
 	}
 	updateContext.Runner = updateRunner
@@ -117,16 +112,11 @@ func PullTarget(updateContext *UpdateContext) error {
 	log.Info().Msgf("Pulling target %v", updateContext.Target.Path)
 
 	var updateStatus update.Update
-	invokeComposeUpdate := updateContext.Runner != nil
-	if invokeComposeUpdate {
-		updateStatus = updateContext.Runner.Status()
-		if updateStatus.State != update.StateInitialized && updateStatus.State != update.StateFetching {
-			log.Info().Msgf("update has already been fetched. Update state: %s", updateStatus.State)
-			if updateContext.Resuming {
-				return nil
-			}
-			// If we are not resuming an update, still generate events
-			invokeComposeUpdate = false
+	updateStatus = updateContext.Runner.Status()
+	if updateStatus.State != update.StateInitialized && updateStatus.State != update.StateFetching {
+		log.Info().Msgf("update has already been fetched. Update state: %s", updateStatus.State)
+		if updateContext.Resuming {
+			return nil
 		}
 	}
 
@@ -136,29 +126,27 @@ func PullTarget(updateContext *UpdateContext) error {
 	}
 
 	// Progress bar
-	if invokeComposeUpdate {
-		bar := progressbar.DefaultBytes(updateStatus.TotalBlobsBytes)
-		fetchOptions := []compose.FetchOption{
-			compose.WithFetchProgress(func(status *compose.FetchProgress) {
-				if err := bar.Set64(status.CurrentBytes); err != nil {
-					log.Err(err).Msgf("Error setting progress bar: %s")
-				}
-			}),
-			compose.WithProgressPollInterval(200)}
+	bar := progressbar.DefaultBytes(updateStatus.TotalBlobsBytes + 1)
+	fetchOptions := []compose.FetchOption{
+		compose.WithFetchProgress(func(status *compose.FetchProgress) {
+			if err := bar.Set64(status.CurrentBytes + 1); err != nil {
+				log.Err(err).Msg("Error setting progress bar")
+			}
+		}),
+		compose.WithProgressPollInterval(200)}
 
-		err = updateContext.Runner.Fetch(updateContext.Context, fetchOptions...)
-		if err != nil {
-			GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
-			return fmt.Errorf("error pulling target: %w", err)
-		}
+	err = updateContext.Runner.Fetch(updateContext.Context, fetchOptions...)
+	if err != nil {
+		GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
+		return fmt.Errorf("error pulling target: %w", err)
+	}
 
-		updateStatus = updateContext.Runner.Status()
-		if updateStatus.State != update.StateFetched {
-			log.Info().Msg("update not fetched")
-		}
-		if updateStatus.Progress != 100 {
-			log.Info().Msgf("update is not fetched for 100%%: %d", updateStatus.Progress)
-		}
+	updateStatus = updateContext.Runner.Status()
+	if updateStatus.State != update.StateFetched {
+		log.Info().Msg("update not fetched")
+	}
+	if updateStatus.Progress != 100 {
+		log.Info().Msgf("update is not fetched for 100%%: %d", updateStatus.Progress)
 	}
 
 	err = GenAndSaveEvent(updateContext, events.DownloadCompleted, "", targets.BoolPointer(true))
@@ -241,16 +229,11 @@ func renderImageLoadingProgress(ctx *progressRendererCtx, p *compose.InstallProg
 func InstallTarget(updateContext *UpdateContext) error {
 	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
 
-	invokeComposeUpdate := updateContext.Runner != nil
-	if invokeComposeUpdate {
-		updateStatus := updateContext.Runner.Status()
-		if updateStatus.State != update.StateFetched && updateStatus.State != update.StateInstalling {
-			log.Debug().Msgf("update was already installed. Update state: %s", updateStatus.State)
-			if updateContext.Resuming {
-				return nil
-			}
-			// If we are not resuming an update, still generate events
-			invokeComposeUpdate = false
+	updateStatus := updateContext.Runner.Status()
+	if updateStatus.State != update.StateFetched && updateStatus.State != update.StateInstalling {
+		log.Debug().Msgf("update was already installed. Update state: %s", updateStatus.State)
+		if updateContext.Resuming {
+			return nil
 		}
 	}
 
@@ -260,26 +243,22 @@ func InstallTarget(updateContext *UpdateContext) error {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
 
-	if invokeComposeUpdate {
-		installOptions := []compose.InstallOption{
-			compose.WithInstallProgress(getProgressRenderer())}
+	installOptions := []compose.InstallOption{
+		compose.WithInstallProgress(getProgressRenderer())}
 
-		compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
-		err = updateContext.Runner.Install(updateContext.Context, installOptions...)
-	}
+	compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
+	err = updateContext.Runner.Install(updateContext.Context, installOptions...)
 	if err != nil {
 		err := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
 		return fmt.Errorf("error installing target: %w", err)
 	}
 
-	if invokeComposeUpdate {
-		updateStatus := updateContext.Runner.Status()
-		if updateStatus.State != update.StateInstalled {
-			log.Debug().Msg("update not installed")
-		}
-		if updateStatus.Progress != 100 {
-			log.Debug().Msgf("update is not installed for 100%%: %d", updateStatus.Progress)
-		}
+	updateStatus = updateContext.Runner.Status()
+	if updateStatus.State != update.StateInstalled {
+		log.Debug().Msg("update not installed")
+	}
+	if updateStatus.Progress != 100 {
+		log.Debug().Msgf("update is not installed for 100%%: %d", updateStatus.Progress)
 	}
 
 	err = GenAndSaveEvent(updateContext, events.InstallationApplied, "", targets.BoolPointer(true))
@@ -293,43 +272,37 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	log.Info().Msgf("Running target %v", updateContext.Target.Path)
 
 	var err error
-	invokeComposeUpdate := updateContext.Runner != nil
-	if invokeComposeUpdate {
-		updateStatus := updateContext.Runner.Status()
-		if updateStatus.State != update.StateInstalled && updateStatus.State != update.StateStarting {
-			log.Debug().Msgf("Skipping start target operation because state is: %s", updateStatus.State)
-			if updateContext.Resuming {
-				return false, nil
-			}
-			invokeComposeUpdate = false
+	updateStatus := updateContext.Runner.Status()
+	if updateStatus.State != update.StateInstalled && updateStatus.State != update.StateStarting {
+		log.Debug().Msgf("Skipping start target operation because state is: %s", updateStatus.State)
+		if updateContext.Resuming {
+			return false, nil
 		}
 	}
 
 	compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
 
-	if invokeComposeUpdate {
-		err = updateContext.Runner.Start(updateContext.Context)
+	err = updateContext.Runner.Start(updateContext.Context)
+	if err != nil {
+		log.Err(err).Msg("error on starting target")
+		err := GenAndSaveEvent(updateContext, events.InstallationCompleted, err.Error(), targets.BoolPointer(false))
 		if err != nil {
-			log.Err(err).Msg("error on starting target")
-			err := GenAndSaveEvent(updateContext, events.InstallationCompleted, err.Error(), targets.BoolPointer(false))
-			if err != nil {
-				log.Err(err).Msg("error on GenAndSaveEvent")
-			}
-			targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
-
-			rollback(updateContext)
-
-			return false, fmt.Errorf("rolled back to previous target")
+			log.Err(err).Msg("error on GenAndSaveEvent")
 		}
+		targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
 
-		if updateContext.Runner.Status().State != update.StateStarted {
-			log.Info().Msg("update not started")
-		}
+		rollback(updateContext)
 
-		updateStatus := updateContext.Runner.Status()
-		if updateStatus.Progress != 100 {
-			log.Debug().Msgf("update is not started for 100%%: %d", updateStatus.Progress)
-		}
+		return false, fmt.Errorf("rolled back to previous target")
+	}
+
+	if updateContext.Runner.Status().State != update.StateStarted {
+		log.Info().Msg("update not started")
+	}
+
+	updateStatus = updateContext.Runner.Status()
+	if updateStatus.Progress != 100 {
+		log.Debug().Msgf("update is not started for 100%%: %d", updateStatus.Progress)
 	}
 
 	err = GenAndSaveEvent(updateContext, events.InstallationCompleted, "", targets.BoolPointer(true))
@@ -338,14 +311,10 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	}
 	targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
 
-	if invokeComposeUpdate {
-		log.Debug().Msg("Completing update with pruning")
-		err = updateContext.Runner.Complete(updateContext.Context, update.CompleteWithPruning())
-		if err != nil {
-			log.Err(err).Msg("error completing update:")
-		}
-	} else {
-		StopAndRemoveApps(updateContext)
+	log.Debug().Msg("Completing update with pruning")
+	err = updateContext.Runner.Complete(updateContext.Context, update.CompleteWithPruning())
+	if err != nil {
+		log.Err(err).Msg("error completing update:")
 	}
 
 	return false, nil
@@ -505,35 +474,6 @@ func appsListMatch(appsList1 []string, appsList2 []string) bool {
 // 	} else {
 // 	}
 // }
-
-func StopAndRemoveApps(updateContext *UpdateContext) error {
-	if len(updateContext.AppsToUninstall) == 0 {
-		return nil
-	}
-
-	log.Debug().Msgf("Stopping apps %v", updateContext.AppsToUninstall)
-	err := compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
-	if err != nil {
-		log.Err(err).Msg("Error stopping apps")
-		// return fmt.Errorf("error stopping apps: %w", err)
-	}
-
-	log.Debug().Msgf("Uninstalling apps %v", updateContext.AppsToUninstall)
-	err = compose.UninstallApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
-	if err != nil {
-		log.Err(err).Msg("Error uninstalling apps")
-		// return fmt.Errorf("error uninstalling apps: %w", err)
-	}
-
-	log.Debug().Msgf("Removing apps %v", updateContext.AppsToUninstall)
-	err = compose.RemoveApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
-	if err != nil {
-		log.Err(err).Msg("Error removing apps")
-		return fmt.Errorf("error removing apps: %w", err)
-	}
-
-	return nil
-}
 
 func getInstalledApps(updateContext *UpdateContext) ([]string, error) {
 	ret := []string{}

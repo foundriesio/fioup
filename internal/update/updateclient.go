@@ -38,6 +38,7 @@ type (
 		AppsToUninstall    []string
 		InstalledApps      []string
 		ConfiguredAppNames []string
+		TargetIsRunning    bool
 
 		Context       context.Context
 		ComposeConfig *compose.Config
@@ -280,10 +281,9 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 		return fmt.Errorf("error checking target: %w", err)
 	}
 
+	updateContext.TargetIsRunning = isRunning
 	if isRunning {
 		log.Debug().Msg("Target is running")
-		updateContext.Target = nil
-		updateContext.RequiredApps = nil
 		if len(updateContext.AppsToUninstall) == 0 {
 			log.Debug().Msg("No apps to uninstall")
 		} else {
@@ -348,49 +348,42 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 		return err
 	}
 
-	// No update required
-	if updateContext.Target == nil {
-		log.Debug().Msg("No update required")
-		return nil
-	}
+	// // No update required
+	// if updateContext.Target == nil {
+	// 	log.Debug().Msg("No update required")
+	// 	return nil
+	// }
 
-	if updateContext.CurrentTarget.Path != updateContext.Target.Path {
-		updateContext.Reason = "Updating from " + updateContext.CurrentTarget.Path + " to " + updateContext.Target.Path
-	} else {
-		updateContext.Reason = "Syncing Active Target Apps"
+	if !updateContext.TargetIsRunning {
+		if updateContext.CurrentTarget.Path != updateContext.Target.Path {
+			updateContext.Reason = "Updating from " + updateContext.CurrentTarget.Path + " to " + updateContext.Target.Path
+		} else {
+			updateContext.Reason = "Syncing Active Target Apps"
+		}
+		log.Debug().Msg("Reason: " + updateContext.Reason)
 	}
-	log.Debug().Msg("Reason: " + updateContext.Reason)
 	return nil
 }
 
-// Perform the actual update based on information collected before
 func PerformUpdate(updateContext *UpdateContext) (bool, error) {
-	// Valid cases:
-	// If updateContext.Target is set, it is either an apps sync or version update. Events will be generated. updateContext.AppsToUninstall will be explicitly handled
-	//   - If updateContext.AppsToInstall is empty, we will not initiate a composeapp update.
-	//   - If updateContext.AppsToInstall is set, we will initiate a composeapp update.
-	// If updateContext.Target is not set, updateContext.AppsToInstall shouldn't be set, and only handle updateContext.AppsToUninstall
-
-	if updateContext.Target == nil {
-		if len(updateContext.AppsToUninstall) == 0 {
-			log.Info().Msgf("Target %s is already running, nothing to do", updateContext.CurrentTarget.Path)
-			return false, nil
-		} else {
-			log.Info().Msgf("Target %s is already running, but the following apps need to be uninstalled: %v", updateContext.CurrentTarget.Path, updateContext.AppsToUninstall)
-			return false, StopAndRemoveApps(updateContext)
-		}
-
-	} else {
-		return UpdateToTarget(updateContext)
-	}
+	return UpdateToTarget(updateContext)
 }
 
 func UpdateToTarget(updateContext *UpdateContext) (bool, error) {
 	// updateContext.Target must be set
-	// updateContext.AppsToInstall might be empty. In this case, we will not initiate a composeapp update, just remove the required apps and geenerate the events
-
+	// updateContext.AppsToInstall might be empty
 	if updateContext.Target.Path == updateContext.CurrentTarget.Path {
-		log.Info().Msgf("Target %s is already running, but some apps need to be started", updateContext.Target.Path)
+		if updateContext.TargetIsRunning {
+			log.Info().Msgf("Target %s is already running", updateContext.Target.Path)
+			if len(updateContext.AppsToUninstall) == 0 {
+				log.Info().Msgf("No apps to uninstall for target %s", updateContext.Target.Path)
+				return false, nil
+			} else {
+				log.Info().Msgf("Uninstalling apps for target %s: %v", updateContext.Target.Path, updateContext.AppsToUninstall)
+			}
+		} else {
+			log.Info().Msgf("Target %s is already running, but some apps need to be started", updateContext.Target.Path)
+		}
 	} else {
 		log.Info().Msgf("%s", updateContext.Reason)
 	}
