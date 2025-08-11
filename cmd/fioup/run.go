@@ -7,11 +7,7 @@ import (
 )
 
 func init() {
-	opts := update.UpdateOptions{
-		SrcDir:    "",
-		EnableTuf: false,
-	}
-
+	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Start execution of the updated target. A install operation must be performed first.",
@@ -20,10 +16,6 @@ func init() {
 		},
 		Args: cobra.NoArgs,
 	}
-
-	cmd.Flags().StringVarP(&opts.SrcDir, "src-dir", "s", "", "Directory that contains an offline update bundle.")
-	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
-
 	rootCmd.AddCommand(cmd)
 }
 
