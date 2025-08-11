@@ -7,11 +7,7 @@ import (
 )
 
 func init() {
-	opts := update.UpdateOptions{
-		SrcDir:    "",
-		EnableTuf: false,
-	}
-
+	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
 		Use:   "pull <target_name_or_version>",
 		Short: "Pull the update from the OTA server",
@@ -23,10 +19,7 @@ func init() {
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
-
-	cmd.Flags().StringVarP(&opts.SrcDir, "src-dir", "s", "", "Directory that contains an offline update bundle.")
-	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
-
+	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)
 }
 

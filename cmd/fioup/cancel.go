@@ -7,11 +7,7 @@ import (
 )
 
 func init() {
-	opts := update.UpdateOptions{
-		SrcDir:    "",
-		EnableTuf: false,
-	}
-
+	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
 		Use:   "cancel",
 		Short: "Cancel the current update operation",
