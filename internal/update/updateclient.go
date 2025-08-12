@@ -735,3 +735,24 @@ func CancelPendingUpdate(config *sotatoml.AppConfig, opts *UpdateOptions) error 
 	}
 	return nil
 }
+
+func Daemon(config *sotatoml.AppConfig, opts *UpdateOptions) {
+	intervalStr := config.GetDefault("uptane.polling_seconds", "60")
+	interval, err := strconv.Atoi(intervalStr)
+	if err != nil {
+		log.Err(err).Msgf("Invalid interval %s, using default 60 seconds", intervalStr)
+		interval = 60
+	}
+	for {
+		opts.DoCheck = true
+		opts.DoPull = true
+		opts.DoInstall = true
+		opts.DoRun = true
+		err := Update(config, opts)
+		if err != nil {
+			log.Err(err).Msg("Error during update")
+		}
+		log.Info().Msgf("Waiting %d seconds before next update check", interval)
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
+}
