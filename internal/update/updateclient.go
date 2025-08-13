@@ -299,17 +299,18 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	}
 
 	if opts.DoPull || opts.DoInstall || opts.DoRun {
-		_, err = PerformUpdate(updateContext)
-		// if doRollback {
-		// 	log.Info().Msg("Rolling back", err)
-		// 	err = Rollback(updateContext)
-		// 	if err != nil {
-		// 		log.Info().Msg("Error rolling back", err)
-		// 		return err
-		// 	}
-		// }
-		if err != nil {
-			log.Err(err).Msg("Error updating to target")
+		doRollback, err := PerformUpdate(updateContext)
+		if doRollback {
+			log.Err(err).Msgf("Error during update to target %s, rolling back", updateContext.Target.Path)
+			rollbackErr := rollback(updateContext)
+			if rollbackErr != nil {
+				log.Err(rollbackErr).Msgf("Error rolling back")
+				return fmt.Errorf("error rolling back: %w", rollbackErr)
+			}
+		} else {
+			if err != nil {
+				log.Err(err).Msgf("Error updating to target %s", updateContext.Target.Path)
+			}
 		}
 	}
 
@@ -598,7 +599,7 @@ func UpdateToTarget(updateContext *UpdateContext) (bool, error) {
 	if updateContext.opts.DoRun {
 		doRollback, err := StartTarget(updateContext)
 		if err != nil {
-			return doRollback, fmt.Errorf("error running target: %w", err)
+			return doRollback, err
 		}
 	}
 	return false, nil

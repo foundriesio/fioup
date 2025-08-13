@@ -293,15 +293,13 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	err = updateContext.Runner.Start(updateContext.Context)
 	if err != nil {
 		log.Err(err).Msg("error on starting target")
-		err := GenAndSaveEvent(updateContext, events.InstallationCompleted, err.Error(), targets.BoolPointer(false))
-		if err != nil {
-			log.Err(err).Msg("error on GenAndSaveEvent")
+		errEvt := GenAndSaveEvent(updateContext, events.InstallationCompleted, err.Error(), targets.BoolPointer(false))
+		if errEvt != nil {
+			log.Err(errEvt).Msg("error on GenAndSaveEvent")
 		}
 		targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
-
-		rollback(updateContext)
-
-		return false, fmt.Errorf("rolled back to previous target")
+		// rollback(updateContext)
+		return true, fmt.Errorf("error starting target: %w", err)
 	}
 
 	if updateContext.Runner.Status().State != update.StateStarted {
@@ -330,9 +328,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 
 func rollback(updateContext *UpdateContext) error {
 	log.Info().Msgf("Rolling back to target %v", updateContext.CurrentTarget.Path)
-
 	if updateContext.Runner != nil {
-
 		updateStatus := updateContext.Runner.Status()
 		if updateStatus.State == update.StateStarted {
 			err := updateContext.Runner.Complete(updateContext.Context)
@@ -346,7 +342,6 @@ func rollback(updateContext *UpdateContext) error {
 				return err
 			}
 		}
-
 		updateContext.Runner = nil
 		updateContext.Resuming = false
 	} else {
@@ -373,36 +368,41 @@ func rollback(updateContext *UpdateContext) error {
 		return nil
 	}
 
-	if len(updateContext.RequiredApps) > 0 {
-		err = updateRunner.Init(updateContext.Context, updateContext.RequiredApps)
-		if err != nil {
-			log.Err(err).Msg("rollback init error")
-			return err
-		}
+	initOptions := []update.InitOption{update.WithInitAllowEmptyAppList(true), update.WithInitCheckStatus(false)}
+	err = updateRunner.Init(updateContext.Context, updateContext.RequiredApps, initOptions...)
+	if err != nil {
+		log.Err(err).Msg("rollback init error")
+		return err
 	}
 
 	updateStatus := updateRunner.Status()
-	// Must be in fetched state
-	if updateStatus.State != update.StateFetched && updateStatus.State != update.StateInstalled {
-		log.Info().Msgf("rollback wrong state error %v", updateStatus.State)
-		return fmt.Errorf("rollback update was not fetched %s", updateStatus.State)
+	if updateStatus.State != update.StateInitialized {
+		log.Info().Msgf("rollback unexpected state error %v", updateStatus.State)
+		return fmt.Errorf("rollback update was %s, expected initialized", updateStatus.State)
 	}
 
-	log.Info().Msgf("Proceeding with rollback. Current update runner state is %v", updateStatus.State)
+	// Call fetch just to move the update to the next state. No actual data should be fetched, and no events should be generated
+	err = updateRunner.Fetch(updateContext.Context)
+	if err != nil {
+		log.Err(err).Msg("rollback fetch error")
+		return fmt.Errorf("rollback update fetch error: %w", err)
+	}
 
 	updateContext.Runner = updateRunner
+	log.Info().Msgf("Installing rollback target %v", updateContext.Target.Path)
 	err = InstallTarget(updateContext)
 	if err != nil {
 		log.Err(err).Msg("rollback error installing target")
 		return err
 	}
+
+	log.Info().Msgf("Starting rollback target %v", updateContext.Target.Path)
 	_, err = StartTarget(updateContext)
 	if err != nil {
-		log.Err(err).Msg("rollback error starting target")
+		log.Err(err).Msgf("rollback error starting target %v", updateContext.Target.Path)
 		return err
 	}
-
-	log.Err(err).Msg("rollback done")
+	log.Info().Msgf("Rollback to target %v completed successfully", updateContext.Target.Path)
 	return nil
 }
 
