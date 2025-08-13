@@ -409,7 +409,7 @@ func FillAppsList(updateContext *UpdateContext) error {
 			log.Err(err).Msg("Error getting apps uris")
 			return fmt.Errorf("error getting apps uris: %w", err)
 		}
-		requiredApps := []string{}
+		requiredApps = []string{}
 		for _, appUri := range targetApps {
 			appName := getAppNameFromUri(appUri)
 			if appName == "" {
