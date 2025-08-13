@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -292,6 +294,11 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return fmt.Errorf("error getting target to install %w", err)
 	}
 
+	if opts.DoCheck && !opts.DoPull {
+		// Log targets info when running standalone check command
+		dumpTargetsInfo(tufTargets, updateContext)
+	}
+
 	if opts.DoPull || opts.DoInstall || opts.DoRun {
 		_, err = PerformUpdate(updateContext)
 		// if doRollback {
@@ -312,6 +319,41 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	eventsUrl := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/events"
 	events.FlushEvents(updateContext.DbFilePath, client, eventsUrl)
 	return err
+}
+
+func dumpTargetsInfo(tufTargets map[string]*metadata.TargetFiles, updateContext *UpdateContext) {
+	log.Info().Msgf("Available targets:")
+	targetsNames := slices.Collect(maps.Keys(tufTargets))
+	sort.Strings(targetsNames)
+	for _, name := range targetsNames {
+		log.Info().Msgf("  %s", name)
+		apps, err := GetAppsUris(tufTargets[name])
+		if err != nil {
+			log.Err(err).Msgf("Error getting apps uris for target %s", name)
+			continue
+		}
+		if len(apps) > 0 {
+			log.Info().Msgf("    apps:")
+			for _, app := range apps {
+				log.Info().Msgf("      %s -> %s", getAppNameFromUri(app), app)
+			}
+		}
+		log.Info().Msg("")
+	}
+
+	if updateContext.Target.Path == updateContext.CurrentTarget.Path {
+		if updateContext.TargetIsRunning {
+			if len(updateContext.AppsToUninstall) == 0 {
+				log.Info().Msgf("Selected Target %s is already running", updateContext.Target.Path)
+			} else {
+				log.Info().Msgf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.Path, updateContext.AppsToUninstall)
+			}
+		} else {
+			log.Info().Msgf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.Path)
+		}
+	} else {
+		log.Info().Msgf("Target %s needs to be installed", updateContext.Target.Path)
+	}
 }
 
 func ReportAppsStates(config *sotatoml.AppConfig, client *http.Client, updateContext *UpdateContext) error {
