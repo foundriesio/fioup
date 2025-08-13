@@ -43,14 +43,20 @@ func GetPendingUpdate(updateContext *UpdateContext) error {
 
 	clientRef := updateStatus.ClientRef
 	clientRefSplit := strings.Split(clientRef, "|")
-	updateContext.PendingRunner = updateRunner
-	if (clientRefSplit == nil) || (len(clientRefSplit) != 2) {
+	if updateStatus.State == update.StateInitializing || updateStatus.State == update.StateCreated {
+		log.Info().Msgf("Canceling current update that was not initialized")
+		err = updateRunner.Cancel(updateContext.Context)
+		if err != nil {
+			log.Warn().Msgf("Error cancelling update: %v", err)
+		}
+	} else if (clientRefSplit == nil) || (len(clientRefSplit) != 2) {
 		log.Warn().Msgf("Invalid clientRef: %s", clientRef)
 		err = updateRunner.Cancel(updateContext.Context)
 		if err != nil {
 			log.Warn().Msgf("Error cancelling update: %v", err)
 		}
 	} else {
+		updateContext.PendingRunner = updateRunner
 		updateContext.PendingTargetName = clientRefSplit[0]
 		updateContext.PendingCorrelationId = clientRefSplit[1]
 		updateContext.PendingApps = updateStatus.URIs
