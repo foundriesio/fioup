@@ -23,6 +23,6 @@ func init() {
 func doCheck(opts *update.UpdateOptions) {
 	opts.DoCheck = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform update")
+	DieNotNil(err, "Failed to perform check operation")
 	log.Info().Msgf("Check operation complete")
 }

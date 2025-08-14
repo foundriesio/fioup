@@ -26,6 +26,6 @@ func init() {
 func doPull(opts *update.UpdateOptions) {
 	opts.DoPull = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform update")
+	DieNotNil(err, "Failed to perform pull operation")
 	log.Info().Msgf("Pull operation complete")
 }

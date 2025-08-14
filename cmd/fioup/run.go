@@ -22,6 +22,6 @@ func init() {
 func doRun(opts *update.UpdateOptions) {
 	opts.DoRun = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform update")
+	DieNotNil(err, "Failed to perform run operation")
 	log.Info().Msgf("Run operation complete")
 }
