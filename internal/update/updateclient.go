@@ -757,3 +757,57 @@ func Daemon(config *sotatoml.AppConfig, opts *UpdateOptions) {
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
+
+func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
+	updateContext := &UpdateContext{
+		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
+	}
+
+	var err error
+	updateContext.Context = context.Background()
+	updateContext.ComposeConfig, err = getComposeConfig(config)
+	updateContext.opts = opts
+	if err != nil {
+		return err
+	}
+
+	err = InitializeDatabase(updateContext.DbFilePath)
+	if err != nil {
+		log.Err(err).Msg("Error initializing database")
+		return err
+	}
+
+	err = GetPendingUpdate(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Error getting pending update")
+		return fmt.Errorf("error getting pending update: %w", err)
+	}
+
+	target, err := targets.GetCurrentTarget(updateContext.DbFilePath)
+	if err != nil {
+		log.Err(err).Msg("Error getting current target")
+		return fmt.Errorf("error getting current target: %w", err)
+	}
+
+	log.Info().Msgf("Current target: %s", target.Path)
+	installedApps, err := getInstalledApps(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Error getting installed apps")
+	}
+
+	if len(installedApps) > 0 {
+		log.Info().Msgf("Installed apps:")
+		for _, app := range installedApps {
+			log.Info().Msgf("  %s -> %s", getAppNameFromUri(app), app)
+		}
+	}
+
+	if updateContext.PendingRunner != nil {
+		log.Info().Msgf("Ongoing update for target %s", updateContext.PendingTargetName)
+		log.Info().Msgf("  Correlation ID: %s", updateContext.PendingCorrelationId)
+		log.Info().Msgf("  Apps: %v", updateContext.PendingApps)
+		log.Info().Msgf("  State: %s", updateContext.PendingRunner.Status().State.String())
+	}
+
+	return nil
+}
