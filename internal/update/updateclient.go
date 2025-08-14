@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"net/http"
 	"os"
 	"path"
@@ -323,13 +322,31 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 
 func dumpTargetsInfo(tufTargets map[string]*metadata.TargetFiles, updateContext *UpdateContext) {
 	log.Info().Msgf("Available targets:")
-	targetsNames := slices.Collect(maps.Keys(tufTargets))
-	sort.Strings(targetsNames)
-	for _, name := range targetsNames {
-		log.Info().Msgf("  %s", name)
-		apps, err := GetAppsUris(tufTargets[name])
+
+	// Sort targets by version
+	type targetInfo struct {
+		Name    string
+		Version int
+	}
+	var targetsList []targetInfo
+	for name, t := range tufTargets {
+		version, err := GetVersion(t)
 		if err != nil {
-			log.Err(err).Msgf("Error getting apps uris for target %s", name)
+			log.Err(err).Msgf("Error getting version for target %s", name)
+			continue
+		}
+		targetsList = append(targetsList, targetInfo{Name: name, Version: version})
+	}
+	sort.Slice(targetsList, func(i, j int) bool {
+		return targetsList[i].Version < targetsList[j].Version
+	})
+
+	// Print sorted list of targets
+	for _, ti := range targetsList {
+		log.Info().Msgf("  %s (version: %d)", ti.Name, ti.Version)
+		apps, err := GetAppsUris(tufTargets[ti.Name])
+		if err != nil {
+			log.Err(err).Msgf("Error getting apps uris for target %s", ti.Name)
 			continue
 		}
 		if len(apps) > 0 {
