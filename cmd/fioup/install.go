@@ -22,6 +22,6 @@ func init() {
 func doInstall(opts *update.UpdateOptions) {
 	opts.DoInstall = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform update")
+	DieNotNil(err, "Failed to perform install operation")
 	log.Info().Msgf("Install operation complete")
 }

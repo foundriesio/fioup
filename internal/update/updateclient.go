@@ -175,12 +175,12 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 		if updateContext.opts.DoInstall {
 			// Check valid states for standalone install command
 			if updateState != update.StateFetched && updateState != update.StateInstalling {
-				return fmt.Errorf("pending target is in state %s, cannot install", updateState.String())
+				return fmt.Errorf("cannot install, current update is in '%s' state", updateState.String())
 			}
 		} else {
 			// Check valid states for standalone run command
 			if updateState != update.StateInstalled && updateState != update.StateStarting && updateState != update.StateStarted && updateState != update.StateCompleting {
-				return fmt.Errorf("pending target is in state %s, cannot run", updateState.String())
+				return fmt.Errorf("cannot run, current update is in '%s' state", updateState.String())
 			}
 		}
 		return nil
@@ -211,7 +211,7 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 		if !updateContext.opts.DoCheck {
 			// Check valid states for standalone pull operation
 			if updateState != update.StateInitialized && updateState != update.StateFetching {
-				return fmt.Errorf("pending target is in state %s, cannot pull", updateState.String())
+				return fmt.Errorf("cannot pull, current update is in '%s' state", updateState.String())
 			}
 		}
 	}
@@ -240,11 +240,11 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 
 	err = checkUpdateState(updateContext, opts.TargetId)
 	if err != nil {
-		return fmt.Errorf("invalid update state: %w", err)
+		return err
 	}
 
 	if updateContext.PendingTargetName != "" && (opts.DoInstall || opts.DoRun) {
-		log.Info().Msgf("Resuming pending update to target %s", updateContext.PendingTargetName)
+		log.Info().Msgf("Proceeding with update to target %s", updateContext.PendingTargetName)
 	}
 
 	var localRepoPath string
@@ -281,7 +281,7 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		}
 		if updateContext.PendingTargetName != "" {
 			targetId = updateContext.PendingTargetName
-			log.Info().Msgf("Using pending target %s", updateContext.PendingTargetName)
+			log.Debug().Msgf("Using pending target %s", updateContext.PendingTargetName)
 		}
 	}
 	if targetId == "" {

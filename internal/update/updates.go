@@ -67,13 +67,12 @@ func GetPendingUpdate(updateContext *UpdateContext) error {
 }
 
 func InitUpdate(updateContext *UpdateContext) error {
-	log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
-
 	if updateContext.PendingRunner != nil {
 		updateContext.Resuming = true
 		updateContext.Runner = updateContext.PendingRunner
 		updateContext.CorrelationId = updateContext.PendingCorrelationId
 	} else {
+		log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
 		version, err := GetVersion(updateContext.Target)
 		if err != nil {
 			return fmt.Errorf("error getting version: %w", err)
@@ -277,7 +276,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 }
 
 func StartTarget(updateContext *UpdateContext) (bool, error) {
-	log.Info().Msgf("Running target %v", updateContext.Target.Path)
+	log.Info().Msgf("Starting target %v", updateContext.Target.Path)
 
 	var err error
 	updateStatus := updateContext.Runner.Status()
@@ -323,6 +322,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 		log.Err(err).Msg("error completing update:")
 	}
 
+	log.Info().Msgf("Target %v has been started", updateContext.Target.Path)
 	return false, nil
 }
 
