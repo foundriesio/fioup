@@ -3,12 +3,13 @@
 package main
 
 import (
+	"os"
+	"strings"
+
 	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
 )
 
 var (
