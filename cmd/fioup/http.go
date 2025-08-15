@@ -4,11 +4,12 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/foundriesio/fioconfig/transport"
 	"github.com/spf13/cobra"
-	"net/http"
-	"net/url"
 )
 
 func init() {
