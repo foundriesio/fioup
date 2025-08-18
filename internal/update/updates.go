@@ -14,7 +14,6 @@ import (
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
 	"github.com/rs/zerolog/log"
-	"github.com/schollz/progressbar/v3"
 	_ "modernc.org/sqlite"
 )
 
@@ -86,32 +85,20 @@ func InitUpdate(updateContext *UpdateContext) error {
 			return err
 		}
 
-		// Progress bar
-		bar := progressbar.DefaultBytes(int64(len(updateContext.RequiredApps)) + 1)
 		initOptions := []update.InitOption{
-			update.WithInitProgress(func(status *update.InitProgress) {
-				if status.Current == 0 {
-					return
-				}
-				if status.State == update.UpdateInitStateLoadingTree {
-					if err := bar.Set(status.Current + 1); err != nil {
-						log.Err(err).Msg("Error setting progress bar")
-					}
-				} else {
-					if bar == nil {
-						bar = progressbar.Default(int64(status.Total))
-					}
-					if err := bar.Set(status.Current + 1); err != nil {
-						log.Err(err).Msg("Error setting progress bar")
-					}
-				}
-			}), update.WithInitAllowEmptyAppList(true), update.WithInitCheckStatus(false)}
+			update.WithInitProgress(update.GetInitProgressPrinter()),
+			update.WithInitAllowEmptyAppList(true),
+			update.WithInitCheckStatus(false)}
 
 		err = updateRunner.Init(updateContext.Context, updateContext.RequiredApps, initOptions...)
 		if err != nil {
 			return err
 		}
-		log.Debug().Msgf("Initialized new update. Status: %v, CorrelationId: %s", updateRunner.Status().State, updateContext.CorrelationId)
+		us := updateRunner.Status()
+		if len(us.URIs) > 0 {
+			fmt.Printf("Diff summary:\t\t\t\t  %d blobs (%s) to fetch\n", len(us.Blobs), compose.FormatBytesInt64(us.TotalBlobsBytes))
+		}
+		log.Debug().Msgf("Initialized new update. Status: %v, CorrelationId: %s", us.State, updateContext.CorrelationId)
 		updateContext.Runner = updateRunner
 	}
 	return nil
@@ -134,14 +121,8 @@ func PullTarget(updateContext *UpdateContext) error {
 		return fmt.Errorf("error on GenAndSaveEvent: %w", err)
 	}
 
-	// Progress bar
-	bar := progressbar.DefaultBytes(updateStatus.TotalBlobsBytes + 1)
 	fetchOptions := []compose.FetchOption{
-		compose.WithFetchProgress(func(status *compose.FetchProgress) {
-			if err := bar.Set64(status.CurrentBytes + 1); err != nil {
-				log.Err(err).Msg("Error setting progress bar")
-			}
-		}),
+		compose.WithFetchProgress(update.GetFetchProgressPrinter()),
 		compose.WithProgressPollInterval(200)}
 
 	err = updateContext.Runner.Fetch(updateContext.Context, fetchOptions...)
@@ -166,75 +147,6 @@ func PullTarget(updateContext *UpdateContext) error {
 	return nil
 }
 
-type progressRendererCtx struct {
-	bar        *progressbar.ProgressBar
-	curImageID string
-	curLayerID string
-}
-
-func getProgressRenderer() compose.InstallProgressFunc {
-	ctx := &progressRendererCtx{}
-
-	return func(p *compose.InstallProgress) {
-		switch p.AppInstallState {
-		case compose.AppInstallStateComposeInstalling:
-			{
-				log.Info().Msgf("Installing app %s", p.AppID)
-			}
-		case compose.AppInstallStateComposeChecking:
-			{
-			}
-		case compose.AppInstallStateImagesLoading:
-			{
-				renderImageLoadingProgress(ctx, p)
-			}
-		}
-	}
-}
-
-func renderImageLoadingProgress(ctx *progressRendererCtx, p *compose.InstallProgress) {
-	switch p.ImageLoadState {
-	case compose.ImageLoadStateLayerLoading:
-		{
-			if ctx.curImageID != p.ImageID {
-				log.Printf("  Loading image %s", p.ImageID)
-				ctx.curImageID = p.ImageID
-				ctx.curLayerID = ""
-			}
-			if ctx.curLayerID != p.ID {
-				ctx.bar = progressbar.DefaultBytes(p.Total)
-				ctx.bar.Describe(fmt.Sprintf("    %s", p.ID))
-				ctx.curLayerID = p.ID
-			}
-			if err := ctx.bar.Set64(p.Current); err != nil {
-				log.Printf("Error setting progress bar: %s", err.Error())
-			}
-		}
-	case compose.ImageLoadStateLayerSyncing:
-		{
-			// TODO: render layer syncing progress
-			//fmt.Print(".")
-		}
-	case compose.ImageLoadStateLayerLoaded:
-		{
-			//fmt.Println("ok")
-			ctx.curLayerID = ""
-			ctx.bar.Close()
-			ctx.bar = nil
-		}
-	case compose.ImageLoadStateImageLoaded:
-		{
-			log.Debug().Msgf("  Image loaded: %s", p.ImageID)
-		}
-	case compose.ImageLoadStateImageExist:
-		{
-			log.Debug().Msgf("  Already exists: %s", p.ImageID)
-		}
-	default:
-		log.Debug().Msgf("  Unknown state %s", p.ImageLoadState)
-	}
-}
-
 func InstallTarget(updateContext *UpdateContext) error {
 	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
 
@@ -253,7 +165,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 	}
 
 	installOptions := []compose.InstallOption{
-		compose.WithInstallProgress(getProgressRenderer())}
+		compose.WithInstallProgress(update.GetInstallProgressPrinter())}
 
 	compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
 	err = updateContext.Runner.Install(updateContext.Context, installOptions...)
