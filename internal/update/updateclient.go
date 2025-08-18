@@ -553,10 +553,6 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 }
 
 func PerformUpdate(updateContext *UpdateContext) (bool, error) {
-	return UpdateToTarget(updateContext)
-}
-
-func UpdateToTarget(updateContext *UpdateContext) (bool, error) {
 	// updateContext.Target must be set
 	// updateContext.AppsToInstall might be empty
 	if updateContext.Target.Path == updateContext.CurrentTarget.Path {
