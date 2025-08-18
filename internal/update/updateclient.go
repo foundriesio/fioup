@@ -71,7 +71,8 @@ func InitializeDatabase(dbFilePath string) error {
 	return nil
 }
 
-func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
+func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string) (map[string]*metadata.TargetFiles, error) {
+	// TODO: Set currentTargetName in Fiotuf instance, for it to update the x-ats-target header accordingly
 	fiotuf, err := tuf.NewFioTuf(config, client)
 	if err != nil {
 		log.Err(err).Msg("Error creating fiotuf instance")
@@ -90,10 +91,11 @@ func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *htt
 	return tufTargets, nil
 }
 
-func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client) ([]byte, error) {
+func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTargetName string) ([]byte, error) {
 	urlPath := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/repo/targets.json"
 	headers := make(map[string]string)
 	headers["x-ats-tags"] = config.Get("pacman.tags")
+	headers["x-ats-target"] = currentTargetName
 	res, err := transport.HttpGet(client, urlPath, headers)
 
 	if err != nil {
@@ -106,7 +108,7 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client) ([]byte, 
 	return res.Body, nil
 }
 
-func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
+func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string) (map[string]*metadata.TargetFiles, error) {
 	var targetsBytes []byte
 	var err error
 
@@ -114,7 +116,7 @@ func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 	unsafeTargetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
 	if refreshTargets {
 		if localRepoPath == "" {
-			targetsBytes, err = fetchTargetsJson(config, client)
+			targetsBytes, err = fetchTargetsJson(config, client, currentTargetName)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching targets.json: %w", err)
 			}
@@ -147,11 +149,11 @@ func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 
 }
 
-func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
+func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, currentTargetName string, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
 	if enableTuf {
-		return getTargetsTuf(config, localRepoPath, client, refreshTargets)
+		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName)
 	} else {
-		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets)
+		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName)
 	}
 }
 
@@ -268,8 +270,13 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return err
 	}
 
+	updateContext.CurrentTarget, err = targets.GetCurrentTarget(updateContext.DbFilePath)
+	if err != nil {
+		log.Err(err).Msg("Error getting current target")
+	}
+
 	var tufTargets map[string]*metadata.TargetFiles
-	tufTargets, err = getTargets(config, localRepoPath, client, opts.EnableTuf, opts.DoCheck)
+	tufTargets, err = getTargets(config, localRepoPath, client, updateContext.CurrentTarget.Path, opts.EnableTuf, opts.DoCheck)
 	if err != nil {
 		log.Err(err).Msg("Error getting targets")
 		return err
@@ -497,11 +504,6 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig, tufTargets map[string]*metadata.TargetFiles, targetId string) error {
 	var err error
 
-	currentTarget, err := targets.GetCurrentTarget(updateContext.DbFilePath)
-	if err != nil {
-		log.Err(err).Msg("Error getting current target")
-	}
-
 	specificVersion := -1
 	specificName := ""
 	if targetId != "" {
@@ -521,13 +523,12 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 		// If no target is specified, check if automatically selected target is marked as failing
 		failing, _ := targets.IsFailingTarget(updateContext.DbFilePath, candidateTarget.Path)
 		if failing {
-			log.Info().Msg("Skipping failing target " + candidateTarget.Path + " using " + currentTarget.Path + " instead")
-			candidateTarget = currentTarget
+			log.Info().Msg("Skipping failing target " + candidateTarget.Path + " using " + updateContext.CurrentTarget.Path + " instead")
+			candidateTarget = updateContext.CurrentTarget
 		}
 	}
 
 	updateContext.Target = candidateTarget
-	updateContext.CurrentTarget = currentTarget
 
 	apps := config.GetDefault("pacman.compose_apps", "-")
 	if apps != "-" {
