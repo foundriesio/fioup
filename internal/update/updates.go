@@ -159,7 +159,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 	}
 
 	targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
-	err := GenAndSaveEvent(updateContext, events.InstallationStarted, updateContext.Reason, nil)
+	err := GenAndSaveEvent(updateContext, events.InstallationStarted, "", nil)
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
