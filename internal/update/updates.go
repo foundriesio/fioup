@@ -148,8 +148,6 @@ func PullTarget(updateContext *UpdateContext) error {
 }
 
 func InstallTarget(updateContext *UpdateContext) error {
-	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
-
 	updateStatus := updateContext.Runner.Status()
 	if updateStatus.State != update.StateFetched && updateStatus.State != update.StateInstalling {
 		log.Debug().Msgf("update was already installed. Update state: %s", updateStatus.State)
@@ -167,7 +165,16 @@ func InstallTarget(updateContext *UpdateContext) error {
 	installOptions := []compose.InstallOption{
 		compose.WithInstallProgress(update.GetInstallProgressPrinter())}
 
-	compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
+	if len(updateContext.AppsToUninstall) > 0 {
+		log.Info().Msgf("Stopping apps not included in target %v", updateContext.Target.Path)
+		log.Debug().Msgf("Apps being stopped: %v", updateContext.AppsToUninstall)
+		err = compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
+		if err != nil {
+			log.Err(err).Msg("error stopping apps before installing target")
+		}
+	}
+
+	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
 	err = updateContext.Runner.Install(updateContext.Context, installOptions...)
 	if err != nil {
 		err := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
