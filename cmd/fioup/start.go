@@ -11,23 +11,19 @@ import (
 func init() {
 	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
-		Use:   "pull <target_name_or_version>",
-		Short: "Pull the update from the OTA server",
+		Use:   "start",
+		Short: "Start execution of the updated target. A install operation must be performed first.",
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) > 0 {
-				opts.TargetId = args[0]
-			}
-			doPull(&opts)
+			doStart(&opts)
 		},
-		Args: cobra.RangeArgs(0, 1),
+		Args: cobra.NoArgs,
 	}
-	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)
 }
 
-func doPull(opts *update.UpdateOptions) {
-	opts.DoPull = true
+func doStart(opts *update.UpdateOptions) {
+	opts.DoStart = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform pull operation")
-	log.Info().Msgf("Pull operation complete")
+	DieNotNil(err, "Failed to perform start operation")
+	log.Info().Msgf("Start operation complete")
 }

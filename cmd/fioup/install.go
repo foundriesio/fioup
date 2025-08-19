@@ -12,7 +12,7 @@ func init() {
 	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install the update. A pull operation must be performed first.",
+		Short: "Install the update. A fetch operation must be performed first.",
 		Run: func(cmd *cobra.Command, args []string) {
 			doInstall(&opts)
 		},

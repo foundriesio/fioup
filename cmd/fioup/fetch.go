@@ -11,19 +11,23 @@ import (
 func init() {
 	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Start execution of the updated target. A install operation must be performed first.",
+		Use:   "fetch <target_name_or_version>",
+		Short: "Fetch the update from the OTA server",
 		Run: func(cmd *cobra.Command, args []string) {
-			doRun(&opts)
+			if len(args) > 0 {
+				opts.TargetId = args[0]
+			}
+			doFetch(&opts)
 		},
-		Args: cobra.NoArgs,
+		Args: cobra.RangeArgs(0, 1),
 	}
+	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)
 }
 
-func doRun(opts *update.UpdateOptions) {
-	opts.DoRun = true
+func doFetch(opts *update.UpdateOptions) {
+	opts.DoFetch = true
 	err := update.Update(config, opts)
-	DieNotNil(err, "Failed to perform run operation")
-	log.Info().Msgf("Run operation complete")
+	DieNotNil(err, "Failed to perform fetch operation")
+	log.Info().Msgf("Fetch operation complete")
 }

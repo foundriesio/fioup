@@ -160,7 +160,7 @@ func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.C
 func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 	log.Debug().Msgf("Checking update state. targetId: %s", targetId)
 	// standalone check command has no state requirements
-	if updateContext.opts.DoCheck && !updateContext.opts.DoPull {
+	if updateContext.opts.DoCheck && !updateContext.opts.DoFetch {
 		log.Debug().Msg("Standalone check command, no state requirements")
 		return nil
 	}
@@ -170,9 +170,9 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 		updateState = updateContext.PendingRunner.Status().State
 	}
 
-	// standalone install and run commands require a pending update operation at the right state
-	if (updateContext.opts.DoInstall || updateContext.opts.DoRun) && !updateContext.opts.DoPull {
-		log.Debug().Msg("Standalone install or run command, checking requirements")
+	// standalone install and start commands require a pending update operation at the right state
+	if (updateContext.opts.DoInstall || updateContext.opts.DoStart) && !updateContext.opts.DoFetch {
+		log.Debug().Msg("Standalone install or start command, checking requirements")
 		if updateContext.PendingRunner == nil {
 			return fmt.Errorf("no pending target to perform operation on")
 		}
@@ -182,20 +182,20 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 				return fmt.Errorf("cannot install, current update is in '%s' state", updateState.String())
 			}
 		} else {
-			// Check valid states for standalone run command
+			// Check valid states for standalone start command
 			if updateState != update.StateInstalled && updateState != update.StateStarting && updateState != update.StateStarted && updateState != update.StateCompleting {
-				return fmt.Errorf("cannot run, current update is in '%s' state", updateState.String())
+				return fmt.Errorf("cannot start, current update is in '%s' state", updateState.String())
 			}
 		}
 		return nil
 	}
 
-	// update and standalone pull commands requires that either:
+	// update and standalone fetch commands requires that either:
 	// - there is no pending update; or
 	// - no targetId was specified by the user, so we proceed with whatever update was going on; or
 	// - the pending update matches the targetId selected by the user
-	if updateContext.opts.DoPull && updateContext.PendingRunner != nil {
-		log.Debug().Msg("Update or standalone pull command, checking requirements")
+	if updateContext.opts.DoFetch && updateContext.PendingRunner != nil {
+		log.Debug().Msg("Update or standalone fetch command, checking requirements")
 		if targetId != "" {
 			if _, err := strconv.Atoi(targetId); err == nil {
 				// targetId is a version, check if PendingTargetName ends with -<version>
@@ -213,9 +213,9 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 		}
 
 		if !updateContext.opts.DoCheck {
-			// Check valid states for standalone pull operation
+			// Check valid states for standalone fetch operation
 			if updateState != update.StateInitialized && updateState != update.StateFetching {
-				return fmt.Errorf("cannot pull, current update is in '%s' state", updateState.String())
+				return fmt.Errorf("cannot fetch, current update is in '%s' state", updateState.String())
 			}
 		}
 	}
@@ -247,7 +247,7 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return err
 	}
 
-	if updateContext.PendingTargetName != "" && (opts.DoInstall || opts.DoRun) {
+	if updateContext.PendingTargetName != "" && (opts.DoInstall || opts.DoStart) {
 		log.Info().Msgf("Proceeding with update to target %s", updateContext.PendingTargetName)
 	}
 
@@ -283,8 +283,8 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	}
 
 	var targetId string
-	if opts.DoInstall || opts.DoRun {
-		if !opts.DoPull && updateContext.PendingTargetName == "" {
+	if opts.DoInstall || opts.DoStart {
+		if !opts.DoFetch && updateContext.PendingTargetName == "" {
 			log.Info().Msg("No pending target to update")
 			return fmt.Errorf("no pending target to update")
 		}
@@ -302,12 +302,12 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return fmt.Errorf("error getting target to install %w", err)
 	}
 
-	if opts.DoCheck && !opts.DoPull {
+	if opts.DoCheck && !opts.DoFetch {
 		// Log targets info when running standalone check command
 		dumpTargetsInfo(tufTargets, updateContext)
 	}
 
-	if opts.DoPull || opts.DoInstall || opts.DoRun {
+	if opts.DoFetch || opts.DoInstall || opts.DoStart {
 		doRollback, err := PerformUpdate(updateContext)
 		if doRollback {
 			log.Err(err).Msgf("Error during update to target %s, rolling back", updateContext.Target.Path)
@@ -577,9 +577,9 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 		return false, fmt.Errorf("error initializing update for target: %w", err)
 	}
 
-	log.Debug().Msgf("updateContext.opts.DoPull: %v, updateContext.opts.DoInstall: %v, updateContext.opts.DoRun: %v", updateContext.opts.DoPull, updateContext.opts.DoInstall, updateContext.opts.DoRun)
-	// Pull
-	if updateContext.opts.DoPull {
+	log.Debug().Msgf("updateContext.opts.DoPull: %v, updateContext.opts.DoInstall: %v, updateContext.opts.DoRun: %v", updateContext.opts.DoFetch, updateContext.opts.DoInstall, updateContext.opts.DoStart)
+	// Fetch
+	if updateContext.opts.DoFetch {
 		err = PullTarget(updateContext)
 		if err != nil {
 			return false, fmt.Errorf("error pulling target: %w", err)
@@ -594,8 +594,8 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 		}
 	}
 
-	// Run
-	if updateContext.opts.DoRun {
+	// Start
+	if updateContext.opts.DoStart {
 		doRollback, err := StartTarget(updateContext)
 		if err != nil {
 			return doRollback, err
@@ -745,9 +745,9 @@ func Daemon(config *sotatoml.AppConfig, opts *UpdateOptions) {
 	}
 	for {
 		opts.DoCheck = true
-		opts.DoPull = true
+		opts.DoFetch = true
 		opts.DoInstall = true
-		opts.DoRun = true
+		opts.DoStart = true
 		err := Update(config, opts)
 		if err != nil {
 			log.Err(err).Msg("Error during update")
