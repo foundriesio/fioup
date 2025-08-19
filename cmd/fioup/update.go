@@ -32,9 +32,9 @@ func init() {
 
 func doUpdate(opts *update.UpdateOptions) {
 	opts.DoCheck = true
-	opts.DoPull = true
+	opts.DoFetch = true
 	opts.DoInstall = true
-	opts.DoRun = true
+	opts.DoStart = true
 	err := update.Update(config, opts)
 	DieNotNil(err, "Failed to perform update")
 	log.Info().Msgf("Update operation complete")

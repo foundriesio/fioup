@@ -24,9 +24,9 @@ type (
 		TargetId  string
 
 		DoCheck   bool
-		DoPull    bool
+		DoFetch   bool
 		DoInstall bool
-		DoRun     bool
+		DoStart   bool
 	}
 )
 
