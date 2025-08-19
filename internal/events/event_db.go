@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/foundriesio/composeapp/pkg/compose"
 	_ "github.com/foundriesio/composeapp/pkg/update"
+	"github.com/rs/zerolog/log"
 	_ "modernc.org/sqlite"
 )
 
@@ -17,7 +18,11 @@ func CreateEventsTable(dbFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	_, err = db.Exec("CREATE TABLE IF NOT EXISTS report_events(id INTEGER PRIMARY KEY, json_string TEXT NOT NULL);")
 	if err != nil {
@@ -32,7 +37,11 @@ func SaveEvent(dbFilePath string, event *DgUpdateEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
@@ -52,7 +61,11 @@ func DeleteEvents(dbFilePath string, maxId int) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	_, err = db.Exec("DELETE FROM report_events WHERE id <= ?;", maxId)
 	if err != nil {
@@ -67,13 +80,21 @@ func GetEvents(dbFilePath string) ([]DgUpdateEvent, int, error) {
 	if err != nil {
 		return nil, -1, fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	rows, err := db.Query("SELECT id, json_string FROM report_events;")
 	if err != nil {
 		return nil, -1, fmt.Errorf("failed to select events: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close rows")
+		}
+	}()
 
 	maxId := -1
 	var eventsList []DgUpdateEvent

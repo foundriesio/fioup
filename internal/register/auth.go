@@ -100,10 +100,20 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	if err != nil {
 		return nil, 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close resp.Body")
+		}
+	}()
 	body, _ := io.ReadAll(resp.Body)
 	var jsonResp map[string]interface{}
-	json.Unmarshal(body, &jsonResp)
+
+	err = json.Unmarshal(body, &jsonResp)
+	if err != nil {
+		log.Err(err).Msgf("failed to unmarshal response body: %s", string(body))
+		return nil, resp.StatusCode, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
 	return jsonResp, resp.StatusCode, nil
 }
 

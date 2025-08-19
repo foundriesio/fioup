@@ -75,12 +75,20 @@ func checkUpdateClientNotRunning() error {
 		log.Err(err).Msgf("is %s running?", SOTA_CLIENT)
 		return fmt.Errorf("unable to open update client lock file: %w", err)
 	}
-	defer lock.Close()
+
+	defer func() {
+		if closeErr := lock.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close lock")
+		}
+	}()
 
 	// Try to acquire a shared lock (non-blocking)
 	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_SH|syscall.LOCK_NB); err == nil {
 		// Lock acquired, so aklite is not running
-		syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+		errFlock := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+		if errFlock != nil {
+			log.Err(errFlock).Msgf("failed to unlock %s", aklock)
+		}
 		return nil
 	} else {
 		log.Err(err).Msgf("%s already running", SOTA_CLIENT)
@@ -102,8 +110,17 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 		log.Err(err).Msgf("Unable to write to %s", opt.SotaDir)
 		return err
 	}
-	f.Close()
-	os.Remove(tmp)
+
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close temp file")
+		}
+	}()
+
+	err = os.Remove(tmp)
+	if err != nil {
+		log.Err(err).Msgf("Unable to remove %s", tmp)
+	}
 
 	// Update client must not be running
 	if err := checkUpdateClientNotRunning(); err != nil {
@@ -159,7 +176,11 @@ func writeSafely(name, content string) error {
 	if err != nil {
 		return fmt.Errorf("unable to open %s for writing: %w", tmp, err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close temp file")
+		}
+	}()
 	if _, err := io.WriteString(f, content); err != nil {
 		return fmt.Errorf("unable to write to %s: %w", tmp, err)
 	}
@@ -226,7 +247,7 @@ func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}, pkey str
 	}
 	return nil
 errorHandler:
-	sotaCleanup(opt)
+	_ = sotaCleanup(opt)
 	return errors.New("failed to populate sota directory")
 }
 
@@ -261,7 +282,7 @@ func pkcs11CreateCSR(opt *RegisterOptions) (string, string, error) {
 // cleanup cleans up partial registration.
 func cleanup(opt *RegisterOptions) {
 	log.Info().Msg("Cleaning up partial registration before leaving")
-	sotaCleanup(opt)
+	_ = sotaCleanup(opt)
 	pkcs11Cleanup(opt)
 }
 

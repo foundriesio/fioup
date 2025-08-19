@@ -127,7 +127,10 @@ func PullTarget(updateContext *UpdateContext) error {
 
 	err = updateContext.Runner.Fetch(updateContext.Context, fetchOptions...)
 	if err != nil {
-		GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
+		errEvt := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
+		if errEvt != nil {
+			log.Err(errEvt).Msg("error on GenAndSaveEvent")
+		}
 		return fmt.Errorf("error pulling target: %w", err)
 	}
 
@@ -156,8 +159,12 @@ func InstallTarget(updateContext *UpdateContext) error {
 		}
 	}
 
-	targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
-	err := GenAndSaveEvent(updateContext, events.InstallationStarted, "", nil)
+	err := targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+	if err != nil {
+		log.Err(err).Msg("error registering installation started")
+	}
+
+	err = GenAndSaveEvent(updateContext, events.InstallationStarted, "", nil)
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
@@ -208,7 +215,10 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 		}
 	}
 
-	compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
+	err = compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
+	if err != nil {
+		log.Err(err).Msg("error stopping apps before starting target")
+	}
 
 	err = updateContext.Runner.Start(updateContext.Context)
 	if err != nil {
@@ -217,7 +227,11 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 		if errEvt != nil {
 			log.Err(errEvt).Msg("error on GenAndSaveEvent")
 		}
-		targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+
+		errDb := targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+		if errDb != nil {
+			log.Err(errDb).Msg("error registering installation failed")
+		}
 		// rollback(updateContext)
 		return true, fmt.Errorf("error starting target: %w", err)
 	}
@@ -235,7 +249,10 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
-	targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+	err = targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+	if err != nil {
+		log.Err(err).Msg("error registering installation succeeded")
+	}
 
 	log.Debug().Msg("Completing update with pruning")
 	err = updateContext.Runner.Complete(updateContext.Context, update.CompleteWithPruning())
