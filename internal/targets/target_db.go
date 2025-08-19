@@ -44,7 +44,11 @@ func CreateTargetsTable(dbFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close db")
+		}
+	}()
 
 	_, err = db.Exec(`
 CREATE TABLE IF NOT EXISTS installed_versions(
@@ -72,7 +76,11 @@ func IsFailingTarget(dbFilePath string, name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	rows, err := db.Query("SELECT name FROM installed_versions WHERE name = ? AND was_installed = 0;", name)
 	if err != nil {
@@ -100,7 +108,11 @@ func GetCurrentTarget(dbFilePath string) (*metadata.TargetFiles, error) {
 	if err != nil {
 		return target, err
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	rows, err := db.Query("SELECT name, custom_meta FROM installed_versions WHERE is_current = 1;")
 	if err != nil {
@@ -138,7 +150,11 @@ func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, corr
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Err(closeErr).Msgf("failed to close database")
+		}
+	}()
 
 	var oldWasInstalled *bool = nil
 	// var oldName string = ""
@@ -161,14 +177,15 @@ func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, corr
 		}
 	}
 
-	if updateMode == updateModeCurrent {
+	switch updateMode {
+	case updateModeCurrent:
 		// unset 'current' and 'pending' on all versions for this ecu
 		_, err = db.Exec("UPDATE installed_versions SET is_current = 0, is_pending = 0")
 		if err != nil {
 			return fmt.Errorf("failed to update installed 1 versions: %w", err)
 		}
 
-	} else if updateMode == updateModePending {
+	case updateModePending:
 		// unset 'pending' on all versions for this ecu
 		_, err = db.Exec("UPDATE installed_versions SET is_pending = 0")
 		if err != nil {

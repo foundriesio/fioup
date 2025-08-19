@@ -201,13 +201,13 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 				// targetId is a version, check if PendingTargetName ends with -<version>
 				log.Debug().Msg("targetId is a version, checking if PendingTargetName ends with -<version>")
 				if !strings.HasSuffix(updateContext.PendingTargetName, "-"+targetId) {
-					return fmt.Errorf("Pending target %s does not match requested version %s", updateContext.PendingTargetName, targetId)
+					return fmt.Errorf("pending target %s does not match requested version %s", updateContext.PendingTargetName, targetId)
 				}
 			} else {
 				// targetId is a target name, must match exactly
 				log.Debug().Msg("targetId is a name, checking if PendingTargetName matches")
 				if updateContext.PendingTargetName != targetId {
-					return fmt.Errorf("Pending target %s does not match requested target %s", updateContext.PendingTargetName, targetId)
+					return fmt.Errorf("pending target %s does not match requested target %s", updateContext.PendingTargetName, targetId)
 				}
 			}
 		}
@@ -323,10 +323,13 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		}
 	}
 
-	ReportAppsStates(config, client, updateContext)
+	_ = ReportAppsStates(config, client, updateContext)
 
 	eventsUrl := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/events"
-	events.FlushEvents(updateContext.DbFilePath, client, eventsUrl)
+	errFlush := events.FlushEvents(updateContext.DbFilePath, client, eventsUrl)
+	if errFlush != nil {
+		log.Err(errFlush).Msg("Error flushing events")
+	}
 	return err
 }
 
