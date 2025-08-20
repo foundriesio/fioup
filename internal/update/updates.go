@@ -389,17 +389,19 @@ func isSublist[S ~[]E, E comparable](mainList, sublist S) bool {
 	return true
 }
 
-func getInstalledApps(updateContext *UpdateContext) ([]string, error) {
-	ret := []string{}
+func getInstalledApps(updateContext *UpdateContext) ([]string, []string, error) {
+	retApps := []string{}
+	retAppsNames := []string{}
 	apps, err := compose.ListApps(updateContext.Context, updateContext.ComposeConfig)
 	if err != nil {
 		log.Err(err).Msg("Error listing apps")
-		return nil, fmt.Errorf("error listing apps: %w", err)
+		return nil, nil, fmt.Errorf("error listing apps: %w", err)
 	}
 	for _, app := range apps {
 		if app.Name() != "" {
-			ret = append(ret, app.Ref().Spec.Locator+"@"+app.Ref().Digest.String())
+			retApps = append(retApps, app.Ref().Spec.Locator+"@"+app.Ref().Digest.String())
+			retAppsNames = append(retAppsNames, app.Name())
 		}
 	}
-	return ret, nil
+	return retApps, retAppsNames, nil
 }
