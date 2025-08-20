@@ -40,6 +40,7 @@ type (
 		RequiredApps       []string
 		AppsToUninstall    []string
 		InstalledApps      []string
+		InstalledAppsNames []string
 		ConfiguredAppNames []string
 		TargetIsRunning    bool
 
@@ -71,8 +72,8 @@ func InitializeDatabase(dbFilePath string) error {
 	return nil
 }
 
-func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string) (map[string]*metadata.TargetFiles, error) {
-	// TODO: Set currentTargetName in Fiotuf instance, for it to update the x-ats-target header accordingly
+func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
+	// TODO: Set currentTargetName and appsNames in Fiotuf instance, for it to update the x-ats-* headers accordingly
 	fiotuf, err := tuf.NewFioTuf(config, client)
 	if err != nil {
 		log.Err(err).Msg("Error creating fiotuf instance")
@@ -91,11 +92,12 @@ func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *htt
 	return tufTargets, nil
 }
 
-func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTargetName string) ([]byte, error) {
+func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTargetName string, appsNames []string) ([]byte, error) {
 	urlPath := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/repo/targets.json"
 	headers := make(map[string]string)
 	headers["x-ats-tags"] = config.Get("pacman.tags")
 	headers["x-ats-target"] = currentTargetName
+	headers["x-ats-dockerapps"] = strings.Join(appsNames, ",")
 	res, err := transport.HttpGet(client, urlPath, headers)
 
 	if err != nil {
@@ -108,7 +110,7 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTa
 	return res.Body, nil
 }
 
-func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string) (map[string]*metadata.TargetFiles, error) {
+func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
 	var targetsBytes []byte
 	var err error
 
@@ -116,7 +118,7 @@ func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 	unsafeTargetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
 	if refreshTargets {
 		if localRepoPath == "" {
-			targetsBytes, err = fetchTargetsJson(config, client, currentTargetName)
+			targetsBytes, err = fetchTargetsJson(config, client, currentTargetName, appsNames)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching targets.json: %w", err)
 			}
@@ -149,11 +151,11 @@ func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 
 }
 
-func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, currentTargetName string, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
+func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, currentTargetName string, appsNames []string, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
 	if enableTuf {
-		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName)
+		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	} else {
-		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName)
+		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	}
 }
 
@@ -275,8 +277,13 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		log.Err(err).Msg("Error getting current target")
 	}
 
+	updateContext.InstalledApps, updateContext.InstalledAppsNames, err = getInstalledApps(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Error getting current apps")
+	}
+
 	var tufTargets map[string]*metadata.TargetFiles
-	tufTargets, err = getTargets(config, localRepoPath, client, updateContext.CurrentTarget.Path, opts.EnableTuf, opts.DoCheck)
+	tufTargets, err = getTargets(config, localRepoPath, client, updateContext.CurrentTarget.Path, updateContext.InstalledAppsNames, opts.EnableTuf, opts.DoCheck)
 	if err != nil {
 		log.Err(err).Msg("Error getting targets")
 		return err
@@ -423,22 +430,15 @@ func FillAppsList(updateContext *UpdateContext) error {
 	}
 
 	updateContext.RequiredApps = requiredApps
-
-	installedApps, err := getInstalledApps(updateContext)
-	log.Debug().Msgf("installedApps: %v", installedApps)
+	log.Debug().Msgf("installedApps: %v", updateContext.InstalledApps)
 	log.Debug().Msgf("requiredApps: %v", requiredApps)
-	if err != nil {
-		log.Err(err).Msg("Error getting running apps")
-		return fmt.Errorf("error getting running apps: %w", err)
-	}
 	appsToUninstall := []string{}
-	for _, app := range installedApps {
+	for _, app := range updateContext.InstalledApps {
 		if !slices.Contains(updateContext.RequiredApps, app) {
 			appsToUninstall = append(appsToUninstall, app)
 		}
 	}
 	updateContext.AppsToUninstall = appsToUninstall
-	updateContext.InstalledApps = installedApps
 	return nil
 }
 
@@ -757,15 +757,15 @@ func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	}
 
 	log.Info().Msgf("Current target: %s", target.Path)
-	installedApps, err := getInstalledApps(updateContext)
+	installedApps, installedAppsNames, err := getInstalledApps(updateContext)
 	if err != nil {
 		log.Err(err).Msg("Error getting installed apps")
 	}
 
 	if len(installedApps) > 0 {
 		log.Info().Msgf("Installed apps:")
-		for _, app := range installedApps {
-			log.Info().Msgf("  %s -> %s", getAppNameFromUri(app), app)
+		for i, app := range installedApps {
+			log.Info().Msgf("  %s -> %s", installedAppsNames[i], app)
 		}
 	}
 
