@@ -386,41 +386,6 @@ func dumpTargetsInfo(tufTargets map[string]*metadata.TargetFiles, updateContext 
 	}
 }
 
-func ReportAppsStates(config *sotatoml.AppConfig, client *http.Client, updateContext *UpdateContext) error {
-	log.Debug().Msg("Reporting apps state (stub)")
-
-	// states, err := compose.CheckAppsStatus(updateContext.Context, updateContext.ComposeConfig, nil)
-	// if err != nil {
-	// 	log.Err(err).Msg("Error checking apps status")
-	// 	return err
-	// }
-
-	currentTime := time.Now()
-	utcTime := currentTime.UTC()
-	rfc3339Time := utcTime.Format(time.RFC3339)
-
-	data := map[string]interface{}{
-		"deviceTime": rfc3339Time,
-		"ostree":     "8509e5bda0c762d4bac7f90d79c2f9bf560f0cdac2c4a2d6361a041a5a677566",
-	}
-
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Apps states: %s", string(dataBytes))
-	appsStatesUrl := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/apps-states"
-
-	res, err := transport.HttpPost(client, appsStatesUrl, data)
-	if err != nil {
-		log.Printf("Unable to send apps-state: %s", err)
-	} else if res.StatusCode < 200 || res.StatusCode > 204 {
-		log.Printf("Server could not process apps-states: HTTP_%d - %s", res.StatusCode, res.String())
-	}
-	return err
-}
-
 func getAppNameFromUri(uri string) string {
 	parts := strings.Split(uri, "/")
 	if len(parts) == 0 {
