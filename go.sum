@@ -63,6 +63,12 @@ github.com/foundriesio/composeapp v0.0.0-20250819091005-8f9bcafa3bab h1:y7hToa0f
 github.com/foundriesio/composeapp v0.0.0-20250819091005-8f9bcafa3bab/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
 github.com/foundriesio/composeapp v0.0.0-20250819125059-2e4d02d61259 h1:CuKx/lYkIYiWt9Q/b6IDm8Ys6fg04YX78CxRPXg+Ue0=
 github.com/foundriesio/composeapp v0.0.0-20250819125059-2e4d02d61259/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
+github.com/foundriesio/composeapp v0.0.0-20250820144840-9a2564fd18ba h1:MD66l0vNwtg4CR2JNHGW/ydtwWWlmb0UGyn7ZsP3G+c=
+github.com/foundriesio/composeapp v0.0.0-20250820144840-9a2564fd18ba/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
+github.com/foundriesio/composeapp v0.0.0-20250820152214-ac5089b829c9 h1:JD7ixrd+Tjpbv+Eeco92fCCoRC3viis3Mcz4JrCYeIg=
+github.com/foundriesio/composeapp v0.0.0-20250820152214-ac5089b829c9/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
+github.com/foundriesio/composeapp v0.0.0-20250821081723-1a4d00027810 h1:AHfZs0PoEXsGzrTokAApXYBFXexHC/oyKhatgotLkiE=
+github.com/foundriesio/composeapp v0.0.0-20250821081723-1a4d00027810/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
 github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9 h1:as4pQlFnsipt0cocWLazFFZOTeaVIJhLkipaR0lb8xk=
 github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9/go.mod h1:J3pslinCE6G5lqeAU5EY7/KBGKWRTq53P16eUH9zgG4=
 github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
