@@ -203,7 +203,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 		log.Debug().Msgf("update is not installed for 100%%: %d", updateStatus.Progress)
 	}
 
-	err = GenAndSaveEvent(updateContext, events.InstallationApplied, "", targets.BoolPointer(true))
+	err = GenAndSaveEvent(updateContext, events.InstallationApplied, "", nil)
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
