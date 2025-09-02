@@ -289,12 +289,26 @@ func rollback(updateContext *UpdateContext) error {
 		}
 		updateContext.Runner = nil
 		updateContext.Resuming = false
+		updateContext.PendingApps = nil
+		updateContext.PendingCorrelationId = ""
+		updateContext.PendingRunner = nil
+		updateContext.PendingTargetName = ""
 	} else {
 		log.Info().Msg("Rollback: No installation to cancel")
 	}
 
 	updateContext.Reason = "Rolling back to " + updateContext.CurrentTarget.Path
 	updateContext.Target = updateContext.CurrentTarget
+
+	err := FillAppsList(updateContext)
+	if err != nil {
+		log.Err(err).Msg("Rollback: Error calling FillAppsList")
+	}
+	currentVersion, err := GetVersion(updateContext.CurrentTarget)
+	if err != nil {
+		return fmt.Errorf("error getting version: %w", err)
+	}
+	updateContext.CorrelationId = fmt.Sprintf("%d-%d", currentVersion, time.Now().Unix())
 	updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+updateContext.CorrelationId)
 	if err != nil {
 		log.Err(err).Msg("Rollback: Error calling update.NewUpdate")
