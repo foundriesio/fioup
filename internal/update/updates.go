@@ -44,7 +44,14 @@ func GetPendingUpdate(updateContext *UpdateContext) error {
 
 	clientRef := updateStatus.ClientRef
 	clientRefSplit := strings.Split(clientRef, "|")
-	if updateStatus.State == update.StateInitializing || updateStatus.State == update.StateCreated {
+
+	if updateStatus.State == update.StateStarted {
+		log.Debug().Msgf("Completing current update that was started")
+		err = updateRunner.Complete(updateContext.Context, update.CompleteWithPruning())
+		if err != nil {
+			log.Warn().Msgf("Error completing update: %v", err)
+		}
+	} else if updateStatus.State == update.StateInitializing || updateStatus.State == update.StateCreated {
 		log.Info().Msgf("Canceling current update that was not initialized")
 		err = updateRunner.Cancel(updateContext.Context)
 		if err != nil {
