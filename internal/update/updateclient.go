@@ -528,8 +528,10 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 		if updateContext.TargetIsRunning {
 			log.Info().Msgf("Target %s is already running", updateContext.Target.Path)
 			if len(updateContext.AppsToUninstall) == 0 {
-				log.Info().Msgf("No apps to uninstall for target %s", updateContext.Target.Path)
-				return false, nil
+				log.Debug().Msgf("No apps to uninstall for target %s", updateContext.Target.Path)
+				if updateContext.opts.DoFetch && updateContext.opts.TargetId == "" {
+					return false, nil
+				}
 			} else {
 				log.Info().Msgf("Uninstalling apps for target %s: %v", updateContext.Target.Path, updateContext.AppsToUninstall)
 			}
