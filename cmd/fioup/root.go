@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/foundriesio/fioconfig/sotatoml"
+	"github.com/moby/term"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -27,8 +28,9 @@ var (
 			} else {
 				zerolog.SetGlobalLevel(zerolog.InfoLevel)
 			}
+
 			// Output pretty console if terminal (optional)
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: !term.IsTerminal(uintptr(os.Stderr.Fd()))})
 
 			var err error
 			config, err = sotatoml.NewAppConfig(configPaths)
