@@ -48,13 +48,11 @@ type (
 		ComposeConfig *compose.Config
 		Runner        update.Runner
 
-		PendingRunner        update.Runner
-		PendingTargetName    string
-		PendingCorrelationId string
-		PendingApps          []string
+		PendingRunner     update.Runner
+		PendingTargetName string
+		PendingApps       []string
 
-		Resuming      bool
-		CorrelationId string
+		Resuming bool
 	}
 )
 
@@ -577,7 +575,7 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 func GenAndSaveEvent(updateContext *UpdateContext, eventType events.EventTypeValue, details string, success *bool) error {
 	version, _ := GetVersion(updateContext.Target)
 	targetName := updateContext.Target.Path
-	evt := events.NewEvent(eventType, details, success, updateContext.CorrelationId, targetName, version)
+	evt := events.NewEvent(eventType, details, success, updateContext.Runner.Status().ID, targetName, version)
 	return events.SaveEvent(updateContext.DbFilePath, &evt[0])
 }
 
@@ -773,7 +771,7 @@ func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 
 	if updateContext.PendingRunner != nil {
 		log.Info().Msgf("Ongoing update for target %s", updateContext.PendingTargetName)
-		log.Info().Msgf("  Correlation ID: %s", updateContext.PendingCorrelationId)
+		log.Info().Msgf("  Correlation ID: %s", updateContext.PendingRunner.Status().ID)
 		log.Info().Msgf("  Apps: %v", updateContext.PendingApps)
 		log.Info().Msgf("  State: %s", updateContext.PendingRunner.Status().State.String())
 	}

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
-	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
@@ -42,33 +40,24 @@ func GetPendingUpdate(updateContext *UpdateContext) error {
 	updateStatus := updateRunner.Status()
 	log.Debug().Msgf("Pending update: %v", updateStatus)
 
-	clientRef := updateStatus.ClientRef
-	clientRefSplit := strings.Split(clientRef, "|")
-
-	if updateStatus.State == update.StateStarted {
+	switch updateStatus.State {
+	case update.StateStarted:
 		log.Debug().Msgf("Completing current update that was started")
 		err = updateRunner.Complete(updateContext.Context, update.CompleteWithPruning())
 		if err != nil {
 			log.Warn().Msgf("Error completing update: %v", err)
 		}
-	} else if updateStatus.State == update.StateInitializing || updateStatus.State == update.StateCreated {
+	case update.StateInitializing, update.StateCreated:
 		log.Info().Msgf("Canceling current update that was not initialized")
 		err = updateRunner.Cancel(updateContext.Context)
 		if err != nil {
 			log.Warn().Msgf("Error cancelling update: %v", err)
 		}
-	} else if (clientRefSplit == nil) || (len(clientRefSplit) != 2) {
-		log.Warn().Msgf("Invalid clientRef: %s", clientRef)
-		err = updateRunner.Cancel(updateContext.Context)
-		if err != nil {
-			log.Warn().Msgf("Error cancelling update: %v", err)
-		}
-	} else {
+	default:
 		updateContext.PendingRunner = updateRunner
-		updateContext.PendingTargetName = clientRefSplit[0]
-		updateContext.PendingCorrelationId = clientRefSplit[1]
+		updateContext.PendingTargetName = updateStatus.ClientRef
 		updateContext.PendingApps = updateStatus.URIs
-		log.Debug().Msgf("Pending target name: %s, correlation ID: %s, state: %s, pendingApps: %v", updateContext.PendingTargetName, updateContext.PendingCorrelationId, updateStatus.State, updateContext.PendingApps)
+		log.Debug().Msgf("Pending target name: %s, correlation ID: %s, state: %s, pendingApps: %v", updateContext.PendingTargetName, updateRunner.Status().ID, updateStatus.State, updateContext.PendingApps)
 	}
 
 	return nil
@@ -78,16 +67,9 @@ func InitUpdate(updateContext *UpdateContext) error {
 	if updateContext.PendingRunner != nil {
 		updateContext.Resuming = true
 		updateContext.Runner = updateContext.PendingRunner
-		updateContext.CorrelationId = updateContext.PendingCorrelationId
 	} else {
 		log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
-		version, err := GetVersion(updateContext.Target)
-		if err != nil {
-			return fmt.Errorf("error getting version: %w", err)
-		}
-		updateContext.CorrelationId = fmt.Sprintf("%d-%d", version, time.Now().Unix())
-
-		updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+updateContext.CorrelationId)
+		updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path)
 		if err != nil {
 			return err
 		}
@@ -105,7 +87,7 @@ func InitUpdate(updateContext *UpdateContext) error {
 		if len(us.URIs) > 0 {
 			fmt.Printf("Diff summary:\t\t\t\t  %d blobs (%s) to fetch\n", len(us.Blobs), compose.FormatBytesInt64(us.TotalBlobsBytes))
 		}
-		log.Debug().Msgf("Initialized new update. Status: %v, CorrelationId: %s", us.State, updateContext.CorrelationId)
+		log.Debug().Msgf("Initialized new update. Status: %v, CorrelationId: %s", us.State, us.ID)
 		updateContext.Runner = updateRunner
 	}
 	return nil
@@ -166,7 +148,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 		}
 	}
 
-	err := targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+	err := targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
 	if err != nil {
 		log.Err(err).Msg("error registering installation started")
 	}
@@ -235,7 +217,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 			log.Err(errEvt).Msg("error on GenAndSaveEvent")
 		}
 
-		errDb := targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+		errDb := targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
 		if errDb != nil {
 			log.Err(errDb).Msg("error registering installation failed")
 		}
@@ -256,7 +238,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
-	err = targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateContext.CorrelationId)
+	err = targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
 	if err != nil {
 		log.Err(err).Msg("error registering installation succeeded")
 	}
@@ -290,7 +272,6 @@ func rollback(updateContext *UpdateContext) error {
 		updateContext.Runner = nil
 		updateContext.Resuming = false
 		updateContext.PendingApps = nil
-		updateContext.PendingCorrelationId = ""
 		updateContext.PendingRunner = nil
 		updateContext.PendingTargetName = ""
 	} else {
@@ -304,12 +285,8 @@ func rollback(updateContext *UpdateContext) error {
 	if err != nil {
 		log.Err(err).Msg("Rollback: Error calling FillAppsList")
 	}
-	currentVersion, err := GetVersion(updateContext.CurrentTarget)
-	if err != nil {
-		return fmt.Errorf("error getting version: %w", err)
-	}
-	updateContext.CorrelationId = fmt.Sprintf("%d-%d", currentVersion, time.Now().Unix())
-	updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path+"|"+updateContext.CorrelationId)
+
+	updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path)
 	if err != nil {
 		log.Err(err).Msg("Rollback: Error calling update.NewUpdate")
 		return err
