@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/foundriesio/composeapp/pkg/compose"
 	v1 "github.com/foundriesio/composeapp/pkg/compose/v1"
 	"github.com/foundriesio/composeapp/pkg/update"
@@ -756,25 +757,95 @@ func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return fmt.Errorf("error getting current target: %w", err)
 	}
 
-	log.Info().Msgf("Current target: %s", target.Path)
-	installedApps, installedAppsNames, err := getInstalledApps(updateContext)
+	var currentUpdateURIs []string
+	var lastSuccessfulUpdate *update.Update
+	if lastSuccessfulUpdate, err = update.GetLastSuccessfulUpdate(updateContext.ComposeConfig); err == nil {
+		currentUpdateURIs = lastSuccessfulUpdate.URIs
+	}
+	appStatuses, err := compose.CheckAppsStatus(updateContext.Context, updateContext.ComposeConfig, currentUpdateURIs)
 	if err != nil {
-		log.Err(err).Msg("Error getting installed apps")
+		return fmt.Errorf("error checking apps status: %w", err)
 	}
 
-	if len(installedApps) > 0 {
-		log.Info().Msgf("Installed apps:")
-		for i, app := range installedApps {
-			log.Info().Msgf("  %s -> %s", installedAppsNames[i], app)
-		}
+	fmt.Printf("Current: %s\n", target.Path)
+	fmt.Printf("\tID:\t\t%s\n", lastSuccessfulUpdate.ID)
+	fmt.Printf("\tCompleted:\t%s\n", lastSuccessfulUpdate.UpdateTime.Local().Format(time.DateTime))
+	fmt.Println("\tApps:")
+	printApps(lastSuccessfulUpdate.URIs)
+	fmt.Println("\tStatus:")
+	fmt.Printf("\t  Fetched:\t")
+	if appStatuses.AreFetched() {
+		fmt.Printf("Yes\n")
+	} else {
+		fmt.Printf("No\n")
+	}
+	fmt.Printf("\t  Installed:\t")
+	if appStatuses.AreInstalled() {
+		fmt.Printf("Yes\n")
+	} else {
+		fmt.Printf("No\n")
+	}
+	fmt.Printf("\t  Running:\t")
+	if appStatuses.AreRunning() {
+		fmt.Printf("Yes\n")
+	} else {
+		fmt.Printf("No\n")
 	}
 
+	var updateStatus *update.Update
+	var updateType string
+	var targetName string
 	if updateContext.PendingRunner != nil {
-		log.Info().Msgf("Ongoing update for target %s", updateContext.PendingTargetName)
-		log.Info().Msgf("  Correlation ID: %s", updateContext.PendingRunner.Status().ID)
-		log.Info().Msgf("  Apps: %v", updateContext.PendingApps)
-		log.Info().Msgf("  State: %s", updateContext.PendingRunner.Status().State.String())
+		upd := updateContext.PendingRunner.Status()
+		updateStatus = &upd
+		updateType = "Ongoing"
+	} else {
+		updateStatus, err = update.GetFinalizedUpdate(updateContext.ComposeConfig)
+		if err != nil {
+			return fmt.Errorf("error getting last finalized update: %w", err)
+		}
+		updateType = "Last update"
+	}
+	targetName = updateStatus.ClientRef
+
+	fmt.Printf("\n%s: %s\n", updateType, targetName)
+	fmt.Printf("\tID:\t\t%s\n", updateStatus.ID)
+	fmt.Printf("\tStarted:\t%s\n", updateStatus.CreationTime.Local().Format(time.DateTime))
+
+	var updateTimeTitle string
+	switch updateStatus.State {
+	case update.StateCompleted:
+		updateTimeTitle = "Completed"
+	case update.StateFailed:
+		updateTimeTitle = "Failed"
+	case update.StateCanceled:
+		updateTimeTitle = "Canceled"
+	default:
+		updateTimeTitle = "Last modified"
+	}
+	fmt.Printf("\t%s:\t%s\n", updateTimeTitle, updateStatus.UpdateTime.Local().Format(time.DateTime))
+	fmt.Println("\tApps:")
+	printApps(updateStatus.URIs)
+	fmt.Printf("\tSize: \t\t%s; %d blobs\n", units.BytesSize(float64(updateStatus.TotalBlobsBytes)), len(updateStatus.Blobs))
+
+	fmt.Printf("\tState: \t\t%s\n", updateStatus.State)
+	if updateStatus.State == update.StateFetching {
+		fmt.Printf("\t\tProgress: %d%%\n", updateStatus.Progress)
+		fmt.Printf("\t\tBytes: %s; %d blobs\n", units.BytesSize(float64(updateStatus.FetchedBytes)), updateStatus.FetchedBlobs)
 	}
 
 	return nil
+}
+
+func printApps(appURIs []string) {
+	for _, appURI := range appURIs {
+		appName := "n/a"
+		if ref, err := compose.ParseAppRef(appURI); err == nil {
+			appName = ref.Name
+		} else {
+			log.Warn().Msgf("error parsing app ref %s: %v", appURI, err)
+		}
+		fmt.Printf("\t\t\t%s\n", appName)
+		fmt.Printf("\t\t\t  - %s\n", appURI)
+	}
 }
