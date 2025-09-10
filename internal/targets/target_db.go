@@ -1,5 +1,5 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 package targets
 
 import (
@@ -52,7 +52,7 @@ func CreateTargetsTable(dbFilePath string) error {
 
 	_, err = db.Exec(`
 CREATE TABLE IF NOT EXISTS installed_versions(
-	id INTEGER PRIMARY KEY, 
+	id INTEGER PRIMARY KEY,
 	ecu_serial TEXT NOT NULL,
 	sha256 TEXT NOT NULL,
 	name TEXT NOT NULL,
