@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=makefile
+
+override_dh_auto_clean:
+	rm -rf bin
+
+override_dh_auto_build:
+	CGO_ENABLED=0 make build
+
+override_dh_auto_install:
+	mkdir -p ./debian/fioup/usr/bin
+	cp bin/fioup debian/fioup/usr/bin/fioup
+
+# golang already compresses this DWARF section, so skip this
+override_dh_dwz:
