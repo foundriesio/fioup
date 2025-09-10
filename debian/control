@@ -5,6 +5,7 @@ Maintainer: Foundries Team <support@foundries.io>
 Uploaders: Andy Doan <andy@foundries.io>, Andre Detsch <andre.detsch@foundries.io>, Mykhaylo Sul <mike.sul@foundries.io>
 Rules-Requires-Root: no
 Build-Depends: debhelper-compat (= 13),
+               dh-sequence-bash-completion,
                golang,
 Testsuite: autopkgtest-pkg-go
 Standards-Version: 4.7.0

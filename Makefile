@@ -4,12 +4,18 @@ MAIN := ./cmd/fioup
 LINTER = golangci-lint
 TAGS = disable_pkcs11
 
-.PHONY: all build clean test format
+.PHONY: all build clean test format manpages bash-completion
 
-all: build
+all: build manpages bash-completion
 
 build:
 	@go build -o $(BUILD_DIR)/$(BINARY_NAME) -tags $(TAGS) $(MAIN)
+
+manpages:
+	@go run -tags disable_pkcs11,disable_main $(MAIN) manpages $(BUILD_DIR)/man
+
+bash-completion:
+	@go run -tags disable_pkcs11,disable_main $(MAIN) bash-completion $(BUILD_DIR)/bash-completion
 
 format:
 	@go fmt ./...
