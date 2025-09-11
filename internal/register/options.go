@@ -111,7 +111,7 @@ func getUUID(opt *RegisterOptions) error {
 	return validateUUID(opt)
 }
 
-func UpdateOptions(args []string, opt *RegisterOptions) error {
+func updateOptions(opt *RegisterOptions) error {
 	factory, fsrc, tag, tsrc := getFactoryTagsInfo(LMP_OS_STR)
 	if opt.Factory == "" || opt.Factory == "lmp" {
 		return errors.New("missing factory definition")

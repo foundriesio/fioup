@@ -230,7 +230,7 @@ func setSignals(opt *RegisterOptions) func() {
 }
 
 func RegisterDevice(opt *RegisterOptions) error {
-	err := UpdateOptions(os.Args, opt)
+	err := updateOptions(opt)
 	if err != nil {
 		log.Err(err).Msg("Error parsing options")
 		return err
