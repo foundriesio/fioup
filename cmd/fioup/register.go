@@ -38,7 +38,7 @@ func init() {
 func doRegister(opts *register.RegisterOptions) {
 	h := oauthHandler{}
 	err := register.RegisterDevice(opts, &h)
-	DieNotNil(err, "Failed to register device")
+	cobra.CheckErr(err)
 	fmt.Println("Device is now registered.")
 }
 
