@@ -160,7 +160,7 @@ func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{})
 			"type":              "\"ostree+compose_apps\"",
 			"reset_apps_root":   "\"" + filepath.Join(opt.SotaDir, "reset-apps") + "\"",
 			"compose_apps_root": "\"" + filepath.Join(opt.SotaDir, "compose-apps") + "\"",
-			"tags":              "\"" + opt.PacmanTags + "\"",
+			"tags":              "\"" + opt.PacmanTag + "\"",
 		},
 	}
 

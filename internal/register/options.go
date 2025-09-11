@@ -22,7 +22,7 @@ type RegisterOptions struct {
 	Factory     string
 	Vuuid       bool
 	Hwid        string
-	PacmanTags  string
+	PacmanTag   string
 	ApiToken    string
 	HsmModule   string
 	HsmPin      string
@@ -130,11 +130,11 @@ func getUUID(opt *RegisterOptions) error {
 }
 
 func UpdateOptions(args []string, opt *RegisterOptions) error {
-	factory, fsrc, tags, tsrc := getFactoryTagsInfo(LMP_OS_STR)
+	factory, fsrc, tag, tsrc := getFactoryTagsInfo(LMP_OS_STR)
 	if opt.Factory == "" || opt.Factory == "lmp" {
 		return errors.New("missing factory definition")
 	}
-	if opt.PacmanTags == "" {
+	if opt.PacmanTag == "" {
 		return errors.New("missing tag definition")
 	}
 	if factory != opt.Factory {
@@ -142,10 +142,10 @@ func UpdateOptions(args []string, opt *RegisterOptions) error {
 	} else {
 		log.Info().Msgf("Factory read from %s", fsrc)
 	}
-	if tags != opt.PacmanTags {
-		log.Info().Msg("Tags read from command line")
+	if tag != opt.PacmanTag {
+		log.Info().Msg("Tag read from command line")
 	} else {
-		log.Info().Msgf("Tags read from %s", tsrc)
+		log.Info().Msgf("Tag read from %s", tsrc)
 	}
 	// if err := validateHSM(opt); err != nil {
 	// 	return err
