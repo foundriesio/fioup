@@ -229,7 +229,7 @@ func setSignals(opt *RegisterOptions) func() {
 	return func() { signal.Stop(sigs); close(done) }
 }
 
-func RegisterDevice(opt *RegisterOptions) error {
+func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	err := updateOptions(opt)
 	if err != nil {
 		log.Err(err).Msg("Error parsing options")
@@ -241,7 +241,7 @@ func RegisterDevice(opt *RegisterOptions) error {
 		return err
 	}
 
-	headers, err := AuthGetHttpHeaders(opt)
+	headers, err := AuthGetHttpHeaders(opt, cb)
 	if err != nil {
 		log.Err(err).Msg("Error getting HTTP headers")
 		return err
@@ -284,7 +284,6 @@ func RegisterDevice(opt *RegisterOptions) error {
 		return err
 	}
 
-	log.Info().Msg("Device is now registered.")
 	// if opt.StartDaemon {
 	// 	fmt.Printf("Starting %s daemon\n", SOTA_CLIENT)
 	// 	spawn("systemctl", "start", SOTA_CLIENT)

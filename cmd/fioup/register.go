@@ -4,6 +4,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/foundriesio/fioup/internal/register"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +36,26 @@ func init() {
 }
 
 func doRegister(opts *register.RegisterOptions) {
-	err := register.RegisterDevice(opts)
+	h := oauthHandler{}
+	err := register.RegisterDevice(opts, &h)
 	DieNotNil(err, "Failed to register device")
+	fmt.Println("Device is now registered.")
+}
+
+type oauthHandler struct {
+	i int
+}
+
+func (oauthHandler) ShowAuthInfo(deviceName, userCode, url string, expiresMinutes int) {
+	fmt.Printf("Visit the link below in your browser to authorize this new device. This link will expire in %d minutes.\n", expiresMinutes)
+	fmt.Println("  Device UUID:", deviceName)
+	fmt.Println("  User code:", userCode)
+	fmt.Println("  Browser URL:", url)
+	fmt.Println()
+}
+
+func (h *oauthHandler) Tick() {
+	wheels := []rune{'|', '/', '-', '\\'}
+	fmt.Printf("Waiting for authorization %c\r", wheels[h.i%len(wheels)])
+	h.i++
 }

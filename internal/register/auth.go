@@ -21,6 +21,11 @@ const (
 	OAUTH_API  = "https://app.foundries.io/oauth"
 )
 
+type OauthCallback interface {
+	ShowAuthInfo(deviceUuid, userCode, url string, expiresMinutes int)
+	Tick()
+}
+
 type HttpHeaders map[string]string
 
 func dumpRespError(message string, code int, resp map[string]interface{}) {
@@ -34,9 +39,8 @@ func dumpRespError(message string, code int, resp map[string]interface{}) {
 }
 
 // Returns the access_token on success, and empty string on errors
-func getOauthToken(factory, deviceUUID string) string {
+func getOauthToken(cb OauthCallback, factory, deviceUUID string) string {
 	env := os.Getenv(ENV_OAUTH_BASE)
-	wheels := []rune{'|', '/', '-', '\\'}
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
@@ -52,19 +56,16 @@ func getOauthToken(factory, deviceUUID string) string {
 		return ""
 	}
 
-	log.Info().Msg("----------------------------------------------------------------------------")
-	log.Info().Msg("Visit the link below in your browser to authorize this new device. This link")
-	log.Info().Msgf("will expire in %d minutes.", int(resp["expires_in"].(float64))/60)
-	log.Info().Msgf("  Device Name: %s", deviceUUID)
-	log.Info().Msgf("  User code: %s", resp["user_code"])
-	log.Info().Msgf("  Browser URL: %s", resp["verification_uri"])
+	expiresMinutes := int(resp["expires_in"].(float64)) / 60
+	uc := resp["user_code"].(string)
+	uri := resp["verification_uri"].(string)
+	cb.ShowAuthInfo(deviceUUID, uc, uri, expiresMinutes)
 
 	data = fmt.Sprintf(
 		"grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code=%s&client_id=%s&scope=%s:devices:create",
 		resp["device_code"], deviceUUID, factory,
 	)
 	interval := int(resp["interval"].(float64))
-	i := 0
 
 	log.Debug().Str("data", data).Msg("oauth data")
 	for {
@@ -78,8 +79,7 @@ func getOauthToken(factory, deviceUUID string) string {
 			continue
 		}
 		if tokenResp["error"] == "authorization_pending" {
-			fmt.Printf("Waiting for authorization %c\r", wheels[i%len(wheels)])
-			i++
+			cb.Tick()
 			time.Sleep(time.Duration(interval) * time.Second)
 		} else {
 			dumpRespError("Error authorizing device", code, tokenResp)
@@ -118,14 +118,14 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	return jsonResp, resp.StatusCode, nil
 }
 
-func AuthGetHttpHeaders(opt *RegisterOptions) (HttpHeaders, error) {
+func AuthGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, error) {
 	headers := map[string]string{"Content-type": "application/json"}
 	if opt.ApiToken != "" {
 		headers[opt.ApiTokenHeader] = opt.ApiToken
 		return headers, nil
 	}
-	log.Debug().Msg("Foundries providing auth token")
-	token := getOauthToken(opt.Factory, opt.UUID)
+	log.Info().Msg("Foundries providing auth token")
+	token := getOauthToken(cb, opt.Factory, opt.UUID)
 	if token == "" {
 		return nil, fmt.Errorf("failed to get OAuth token for factory %s and device %s", opt.Factory, opt.UUID)
 	}
