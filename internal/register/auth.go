@@ -66,14 +66,14 @@ func getOauthToken(factory, deviceUUID string) string {
 	interval := int(resp["interval"].(float64))
 	i := 0
 
-	log.Info().Msgf("oauth data=%s", data)
+	log.Debug().Str("data", data).Msg("oauth data")
 	for {
 		tokenResp, code, err := httpPost(url+"/token/", headers, data)
 		if err == nil && code == 200 {
 			return tokenResp["access_token"].(string)
 		}
 		if code != 400 {
-			log.Info().Msgf("HTTP(%d) error...\n", code)
+			log.Warn().Int("code", code).Msg("HTTP error...")
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -124,7 +124,7 @@ func AuthGetHttpHeaders(opt *RegisterOptions) (HttpHeaders, error) {
 		headers[opt.ApiTokenHeader] = opt.ApiToken
 		return headers, nil
 	}
-	log.Info().Msgf("Foundries providing auth token")
+	log.Debug().Msg("Foundries providing auth token")
 	token := getOauthToken(opt.Factory, opt.UUID)
 	if token == "" {
 		return nil, fmt.Errorf("failed to get OAuth token for factory %s and device %s", opt.Factory, opt.UUID)
@@ -142,9 +142,11 @@ func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map
 	}
 	data, _ := json.MarshalIndent(device, "", "  ")
 
-	log.Info().Msgf("Registering device %s with API: %s", device["name"], api)
-	log.Info().Msgf("Headers: %s", headers)
-	log.Info().Msgf("Data: %s", string(data))
+	log.Debug().
+		Str("name", device["name"].(string)).
+		Str("url", api).
+		Str("csr", string(data)).
+		Msg("Registering device")
 	jsonResp, code, err := httpPost(api, headers, string(data))
 	if code != 201 || err != nil {
 		dumpRespError("Unable to create device", code, jsonResp)
@@ -158,10 +160,9 @@ func AuthPingServer() error {
 	if api == "" {
 		api = DEVICE_API
 	}
-	log.Info().Msgf("Using DEVICE_API: %s", api)
+	log.Debug().Str("url", api).Msg("Using DEVICE_API")
 	resp, err := http.Get(api)
 	if err != nil || resp.StatusCode > 500 {
-		log.Err(err).Msg("Ping failed")
 		return fmt.Errorf("ping failed %w", err)
 	}
 	return nil
