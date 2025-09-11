@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"github.com/rs/zerolog/log"
@@ -149,7 +148,7 @@ func putHSMInfo(opt *RegisterOptions, dev map[string]interface{}) {
 }
 
 func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{}) {
-	dev["use-ostree-server"] = strconv.FormatBool(opt.UseServer)
+	dev["use-ostree-server"] = "true"
 	dev["sota-config-dir"] = opt.SotaDir
 	dev["hardware-id"] = opt.Hwid
 	dev["name"] = opt.Name

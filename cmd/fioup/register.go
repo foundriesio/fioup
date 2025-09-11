@@ -18,7 +18,6 @@ func init() {
 			doRegister(&opt)
 		},
 	}
-	cmd.Flags().BoolVar(&opt.UseServer, "use-ostree-server", true, "Use OSTree Proxy server instead of the Device Gateway to pull the ostree repo.")
 	cmd.Flags().BoolVar(&opt.Production, "production", false, "Mark the device as a production device.")
 	// cmd.Flags().BoolVar(&opt.StartDaemon, "start-daemon", true, "Start the "+SOTA_CLIENT+" systemd service after registration.")
 	cmd.Flags().StringVar(&opt.SotaDir, "sota-dir", register.SOTA_DIR, "The directory to install to keys and configuration to.")

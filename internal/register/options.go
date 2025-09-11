@@ -15,7 +15,6 @@ import (
 )
 
 type RegisterOptions struct {
-	UseServer  bool
 	Production bool
 	// StartDaemon bool
 	SotaDir     string
