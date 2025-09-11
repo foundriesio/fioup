@@ -24,7 +24,6 @@ func init() {
 	cmd.Flags().StringVar(&opt.DeviceGroup, "device-group", "", "Assign this device to a device group.")
 	cmd.Flags().StringVar(&opt.Factory, "factory", "", "The factory name to subscribe to.")
 	// cmd.Flags().StringVar(&opt.HsmSoPin, "hsm-so-pin", "", "The PKCS#11 security officer pin - HSM only.")
-	cmd.Flags().BoolVar(&opt.Vuuid, "validate-uuid", true, "Validate the UUID before calling the remote service.")
 	cmd.Flags().StringVar(&opt.Hwid, "hwid", register.HARDWARE_ID, "The hardware identifier for the device type.")
 	cmd.Flags().StringVar(&opt.PacmanTag, "tag", "", "Configure "+register.SOTA_CLIENT+" to only apply updates from Targets with this tag.")
 	cmd.Flags().StringVar(&opt.ApiToken, "api-token", "", "API token for authentication. If not provided, oauth2 will be used instead.")
