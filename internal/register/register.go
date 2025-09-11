@@ -240,13 +240,13 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 		return err
 	}
 
-	headers, err := AuthGetHttpHeaders(opt, cb)
+	headers, err := authGetHttpHeaders(opt, cb)
 	if err != nil {
 		return err
 	}
 
 	// Check server reachability
-	if err := AuthPingServer(); err != nil {
+	if err := authPingServer(); err != nil {
 		return err
 	}
 
@@ -255,7 +255,7 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	defer unsetSignals()
 
 	// Create the key pair and the certificate request
-	_, csr, err := OpenSSLCreateCSR(opt)
+	_, csr, err := openSSLCreateCSR(opt)
 	if err != nil {
 		cleanup(opt)
 		return err
@@ -270,7 +270,7 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 		Str("name", opt.Name).
 		Str("factory", opt.Factory).
 		Msg("Registering device")
-	resp, err := AuthRegisterDevice(headers, info)
+	resp, err := authRegisterDevice(headers, info)
 	if err != nil {
 		cleanup(opt)
 		return err

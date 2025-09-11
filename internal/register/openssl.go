@@ -14,35 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Generate a CSR using external keys
-func OpenSSLGenCSR(opt *RegisterOptions, pub, priv interface{}) (string, error) {
-	subj := pkix.Name{
-		CommonName:   opt.UUID,
-		Organization: []string{opt.Factory},
-	}
-	if opt.Production {
-		subj.ExtraNames = append(subj.ExtraNames, pkix.AttributeTypeAndValue{
-			Type:  []int{2, 5, 4, 15}, // businessCategory OID
-			Value: "production",
-		})
-	}
-
-	template := x509.CertificateRequest{
-		Subject:            subj,
-		SignatureAlgorithm: x509.ECDSAWithSHA256,
-	}
-
-	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
-	if err != nil {
-		return "", err
-	}
-
-	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
-	return string(csrPEM), nil
-}
-
 // Create a new EC key and CSR
-func OpenSSLCreateCSR(opt *RegisterOptions) (key string, csr string, err error) {
+func openSSLCreateCSR(opt *RegisterOptions) (key string, csr string, err error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return "", "", err

@@ -123,7 +123,7 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	return jsonResp, resp.StatusCode, nil
 }
 
-func AuthGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, error) {
+func authGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, error) {
 	headers := map[string]string{"Content-type": "application/json"}
 	if opt.ApiToken != "" {
 		headers[opt.ApiTokenHeader] = opt.ApiToken
@@ -140,7 +140,7 @@ func AuthGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, er
 }
 
 // Register device using the oauth token. Token need "devices:create" scope
-func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map[string]interface{}, error) {
+func authRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map[string]interface{}, error) {
 	api := os.Getenv(ENV_DEVICE_API)
 	if api == "" {
 		api = DEVICE_API
@@ -159,7 +159,7 @@ func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map
 	return jsonResp, nil
 }
 
-func AuthPingServer() error {
+func authPingServer() error {
 	api := os.Getenv(ENV_DEVICE_API)
 	if api == "" {
 		api = DEVICE_API
