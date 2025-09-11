@@ -769,10 +769,12 @@ func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	}
 
 	fmt.Printf("Current: %s\n", target.Path)
-	fmt.Printf("\tID:\t\t%s\n", lastSuccessfulUpdate.ID)
-	fmt.Printf("\tCompleted:\t%s\n", lastSuccessfulUpdate.UpdateTime.Local().Format(time.DateTime))
-	fmt.Println("\tApps:")
-	printApps(lastSuccessfulUpdate.URIs)
+	if lastSuccessfulUpdate != nil {
+		fmt.Printf("\tID:\t\t%s\n", lastSuccessfulUpdate.ID)
+		fmt.Printf("\tCompleted:\t%s\n", lastSuccessfulUpdate.UpdateTime.Local().Format(time.DateTime))
+		fmt.Println("\tApps:")
+		printApps(lastSuccessfulUpdate.URIs)
+	}
 	fmt.Println("\tStatus:")
 	fmt.Printf("\t  Fetched:\t")
 	if appStatuses.AreFetched() {
