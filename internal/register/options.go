@@ -33,8 +33,6 @@ type RegisterOptions struct {
 	Name           string
 	ApiTokenHeader string
 	Force          bool
-	Apps           string
-	RestorableApps string
 }
 
 const (
