@@ -6,6 +6,7 @@ package register
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,18 +29,22 @@ type OauthCallback interface {
 
 type HttpHeaders map[string]string
 
-func dumpRespError(message string, code int, resp map[string]interface{}) {
-	fmt.Fprintf(os.Stderr, "%s: HTTP_%d", message, code)
+func respToErr(code int, resp map[string]any) error {
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "HTTP_%d\n", code)
+
 	if data, ok := resp["data"].(string); ok && len(data) > 0 {
-		fmt.Fprintln(os.Stderr, data)
+		fmt.Fprintln(&buf, data)
 	}
 	for k, v := range resp {
-		fmt.Fprintf(os.Stderr, "%s: %v", k, v)
+		fmt.Fprintf(&buf, " | %s: %v\n", k, v)
 	}
+
+	return errors.New(buf.String())
 }
 
 // Returns the access_token on success, and empty string on errors
-func getOauthToken(cb OauthCallback, factory, deviceUUID string) string {
+func getOauthToken(cb OauthCallback, factory, deviceUUID string) (string, error) {
 	env := os.Getenv(ENV_OAUTH_BASE)
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
@@ -51,9 +56,10 @@ func getOauthToken(cb OauthCallback, factory, deviceUUID string) string {
 
 	data := fmt.Sprintf("client_id=%s&scope=%s:devices:create", deviceUUID, factory)
 	resp, code, err := httpPost(url+"/authorization/device/", headers, data)
-	if err != nil || code != 200 {
-		dumpRespError("Unable to create device authorization request", code, resp)
-		return ""
+	if err != nil {
+		return "", err
+	} else if code != 200 {
+		return "", fmt.Errorf("unable to create device authorization request: %w", respToErr(code, resp))
 	}
 
 	expiresMinutes := int(resp["expires_in"].(float64)) / 60
@@ -71,7 +77,7 @@ func getOauthToken(cb OauthCallback, factory, deviceUUID string) string {
 	for {
 		tokenResp, code, err := httpPost(url+"/token/", headers, data)
 		if err == nil && code == 200 {
-			return tokenResp["access_token"].(string)
+			return tokenResp["access_token"].(string), nil
 		}
 		if code != 400 {
 			log.Warn().Int("code", code).Msg("HTTP error...")
@@ -82,8 +88,7 @@ func getOauthToken(cb OauthCallback, factory, deviceUUID string) string {
 			cb.Tick()
 			time.Sleep(time.Duration(interval) * time.Second)
 		} else {
-			dumpRespError("Error authorizing device", code, tokenResp)
-			return ""
+			return "", fmt.Errorf("unable to authorize device: %w", respToErr(code, resp))
 		}
 	}
 }
@@ -124,10 +129,10 @@ func AuthGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, er
 		headers[opt.ApiTokenHeader] = opt.ApiToken
 		return headers, nil
 	}
-	log.Info().Msg("Foundries providing auth token")
-	token := getOauthToken(cb, opt.Factory, opt.UUID)
-	if token == "" {
-		return nil, fmt.Errorf("failed to get OAuth token for factory %s and device %s", opt.Factory, opt.UUID)
+	log.Debug().Msg("Foundries providing auth token")
+	token, err := getOauthToken(cb, opt.Factory, opt.UUID)
+	if err != nil {
+		return nil, err
 	}
 	tokenBase64 := base64.StdEncoding.EncodeToString([]byte(token))
 	headers["Authorization"] = "Bearer " + tokenBase64
@@ -149,8 +154,7 @@ func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map
 		Msg("Registering device")
 	jsonResp, code, err := httpPost(api, headers, string(data))
 	if code != 201 || err != nil {
-		dumpRespError("Unable to create device", code, jsonResp)
-		return nil, fmt.Errorf("unable to create device %w %d %s", err, code, jsonResp)
+		return nil, fmt.Errorf("unable to create device: %w", respToErr(code, jsonResp))
 	}
 	return jsonResp, nil
 }

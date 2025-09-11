@@ -232,7 +232,6 @@ func setSignals(opt *RegisterOptions) func() {
 func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	err := updateOptions(opt)
 	if err != nil {
-		log.Err(err).Msg("Error parsing options")
 		return err
 	}
 
@@ -243,7 +242,6 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 
 	headers, err := AuthGetHttpHeaders(opt, cb)
 	if err != nil {
-		log.Err(err).Msg("Error getting HTTP headers")
 		return err
 	}
 
