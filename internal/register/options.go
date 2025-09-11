@@ -20,7 +20,6 @@ type RegisterOptions struct {
 	SotaDir     string
 	DeviceGroup string
 	Factory     string
-	Vuuid       bool
 	Hwid        string
 	PacmanTag   string
 	ApiToken    string
@@ -97,12 +96,7 @@ func validateUUID(opt *RegisterOptions) error {
 	if err == nil {
 		return nil
 	}
-	msg := fmt.Sprintf("Invalid UUID: %s", opt.UUID)
-	if opt.Vuuid {
-		return errors.New(msg + ", aborting")
-	}
-	log.Info().Msg(msg + ", please consider using a valid format")
-	return nil
+	return fmt.Errorf("invalid UUID: %s", opt.UUID)
 }
 
 // func validateHSM(opt *LmpOptions) error {
