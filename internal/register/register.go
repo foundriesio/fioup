@@ -21,18 +21,17 @@ func sotaCleanup(opt *RegisterOptions) error {
 	crt := opt.SotaDir + SOTA_PEM
 	sql := opt.SotaDir + SOTA_SQL
 
-	log.Info().Msg("Cleaning up SOTA files")
+	log.Debug().Str("directory", opt.SotaDir).Msg("Cleaning up SOTA files")
 
 	if fileExists(sql) {
-		log.Info().Msgf("Removing %s", sql)
+		log.Debug().Str("file", sql).Msg("Removing file")
 		if err := os.Remove(sql); err != nil {
-			log.Err(err).Msgf("unable to remove %s", sql)
 			return err
 		}
 	}
 
 	if fileExists(crt) {
-		log.Info().Msgf("Removing %s", crt)
+		log.Debug().Str("file", crt).Msg("Removing file")
 		if err := os.Remove(crt); err != nil {
 			log.Err(err).Msgf("unable to remove %s", crt)
 			return err
@@ -283,8 +282,10 @@ func pkcs11CreateCSR(opt *RegisterOptions) (string, string, error) {
 
 // cleanup cleans up partial registration.
 func cleanup(opt *RegisterOptions) {
-	log.Info().Msg("Cleaning up partial registration before leaving")
-	_ = sotaCleanup(opt)
+	log.Debug().Msg("Cleaning up partial registration before leaving")
+	if err := sotaCleanup(opt); err != nil {
+		log.Err(err).Msg("Unable to clean up")
+	}
 	pkcs11Cleanup(opt)
 }
 
@@ -352,7 +353,10 @@ func RegisterDevice(opt *RegisterOptions) error {
 	getDeviceInfo(opt, csr, info)
 
 	// Register the device with the factory
-	log.Info().Msgf("Registering device %s with factory %s\n", opt.Name, opt.Factory)
+	log.Debug().
+		Str("name", opt.Name).
+		Str("factory", opt.Factory).
+		Msg("Registering device")
 	resp, err := AuthRegisterDevice(headers, info)
 	if err != nil {
 		cleanup(opt)

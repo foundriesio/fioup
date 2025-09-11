@@ -72,7 +72,7 @@ func getFactoryTagsInfo(osRelease string) (factory, fsrc, tag, tsrc string) {
 	}
 	cfg, err := ini.Load(osRelease)
 	if err != nil {
-		log.Info().Msgf("Can't parse file %s", osRelease)
+		log.Warn().Msgf("Can't parse file %s", osRelease)
 		return
 	}
 	tag = cfg.Section("").Key(OS_FACTORY_TAG).String()
@@ -118,7 +118,7 @@ func getUUID(opt *RegisterOptions) error {
 	}
 	if opt.UUID == "" {
 		opt.UUID = uuid.Generate().String()
-		log.Info().Msgf("UUID: %s [Random]", opt.UUID)
+		log.Debug().Str("uuid", opt.UUID).Msg("Generated UUID")
 	}
 	return validateUUID(opt)
 }
@@ -132,15 +132,14 @@ func UpdateOptions(args []string, opt *RegisterOptions) error {
 		return errors.New("missing tag definition")
 	}
 	if factory != opt.Factory {
-		log.Info().Msg("Factory read from command line")
-	} else {
-		log.Info().Msgf("Factory read from %s", fsrc)
+		fsrc = "cli"
 	}
+	log.Debug().Str("source", fsrc).Msg("Factory source")
+
 	if tag != opt.PacmanTag {
-		log.Info().Msg("Tag read from command line")
-	} else {
-		log.Info().Msgf("Tag read from %s", tsrc)
+		tsrc = "cli"
 	}
+	log.Debug().Str("source", tsrc).Msg("Tag source")
 	// if err := validateHSM(opt); err != nil {
 	// 	return err
 	// }
@@ -151,7 +150,7 @@ func UpdateOptions(args []string, opt *RegisterOptions) error {
 		return err
 	}
 	if opt.Name == "" {
-		log.Info().Msg("Setting device name to UUID")
+		log.Debug().Msg("Setting device name to UUID")
 		opt.Name = opt.UUID
 	}
 	return nil
