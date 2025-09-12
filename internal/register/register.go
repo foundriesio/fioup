@@ -51,9 +51,7 @@ func checkSotaFiles(opt *RegisterOptions) error {
 	}
 
 	if !opt.Force {
-		log.Info().Msgf("ERROR: Device already registered in %s", opt.SotaDir)
-		log.Info().Msg("Re-run with --force 1 to remove existing registration data")
-		return fmt.Errorf("device already registered")
+		return os.ErrExist
 	}
 
 	return sotaCleanup(opt)
@@ -180,7 +178,7 @@ func writeSafely(name, content string) error {
 }
 
 func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}) error {
-	log.Info().Msg("Populate sota directory.")
+	log.Debug().Msg("Populate sota directory.")
 
 	var sotaToml string
 	for name, data := range resp {

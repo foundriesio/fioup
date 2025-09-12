@@ -4,7 +4,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/foundriesio/fioup/internal/register"
 	"github.com/spf13/cobra"
@@ -38,6 +40,11 @@ func init() {
 func doRegister(opts *register.RegisterOptions) {
 	h := oauthHandler{}
 	err := register.RegisterDevice(opts, &h)
+	if err != nil && errors.Is(err, os.ErrExist) {
+		fmt.Printf("ERROR: Device already registered under %s. ", opts.SotaDir)
+		fmt.Println("Re-run with `--force 1` to remove existing registration data.")
+		os.Exit(1)
+	}
 	cobra.CheckErr(err)
 	fmt.Println("Device is now registered.")
 }
