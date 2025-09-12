@@ -38,7 +38,6 @@ type RegisterOptions struct {
 }
 
 const (
-	HARDWARE_ID    = "unknown"
 	LMP_OS_STR     = "/etc/os-release"
 	OS_FACTORY_TAG = "LMP_FACTORY_TAG"
 	OS_FACTORY     = "LMP_FACTORY"
