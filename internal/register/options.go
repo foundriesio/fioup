@@ -20,7 +20,6 @@ type RegisterOptions struct {
 	SotaDir     string
 	DeviceGroup string
 	Factory     string
-	Hwid        string
 	PacmanTag   string
 	ApiToken    string
 	UUID        string
