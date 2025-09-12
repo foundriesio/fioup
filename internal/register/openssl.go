@@ -64,7 +64,7 @@ func OpenSSLCreateCSR(opt *RegisterOptions) (key string, csr string, err error) 
 		SignatureAlgorithm: x509.ECDSAWithSHA256,
 	}
 
-	log.Info().Msgf("Generating CSR for Factory: %s", opt.Factory)
+	log.Debug().Str("factory", opt.Factory).Msg("Generating CSR")
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
 		return "", "", err

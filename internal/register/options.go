@@ -15,15 +15,13 @@ import (
 )
 
 type RegisterOptions struct {
-	UseServer  bool
 	Production bool
 	// StartDaemon bool
 	SotaDir     string
 	DeviceGroup string
 	Factory     string
-	Vuuid       bool
 	Hwid        string
-	PacmanTags  string
+	PacmanTag   string
 	ApiToken    string
 	HsmModule   string
 	HsmPin      string
@@ -33,8 +31,6 @@ type RegisterOptions struct {
 	Name           string
 	ApiTokenHeader string
 	Force          bool
-	Apps           string
-	RestorableApps string
 }
 
 const (
@@ -76,7 +72,7 @@ func getFactoryTagsInfo(osRelease string) (factory, fsrc, tag, tsrc string) {
 	}
 	cfg, err := ini.Load(osRelease)
 	if err != nil {
-		log.Info().Msgf("Can't parse file %s", osRelease)
+		log.Warn().Msgf("Can't parse file %s", osRelease)
 		return
 	}
 	tag = cfg.Section("").Key(OS_FACTORY_TAG).String()
@@ -100,12 +96,7 @@ func validateUUID(opt *RegisterOptions) error {
 	if err == nil {
 		return nil
 	}
-	msg := fmt.Sprintf("Invalid UUID: %s", opt.UUID)
-	if opt.Vuuid {
-		return errors.New(msg + ", aborting")
-	}
-	log.Info().Msg(msg + ", please consider using a valid format")
-	return nil
+	return fmt.Errorf("invalid UUID: %s", opt.UUID)
 }
 
 // func validateHSM(opt *LmpOptions) error {
@@ -127,29 +118,28 @@ func getUUID(opt *RegisterOptions) error {
 	}
 	if opt.UUID == "" {
 		opt.UUID = uuid.Generate().String()
-		log.Info().Msgf("UUID: %s [Random]", opt.UUID)
+		log.Debug().Str("uuid", opt.UUID).Msg("Generated UUID")
 	}
 	return validateUUID(opt)
 }
 
 func UpdateOptions(args []string, opt *RegisterOptions) error {
-	factory, fsrc, tags, tsrc := getFactoryTagsInfo(LMP_OS_STR)
+	factory, fsrc, tag, tsrc := getFactoryTagsInfo(LMP_OS_STR)
 	if opt.Factory == "" || opt.Factory == "lmp" {
 		return errors.New("missing factory definition")
 	}
-	if opt.PacmanTags == "" {
+	if opt.PacmanTag == "" {
 		return errors.New("missing tag definition")
 	}
 	if factory != opt.Factory {
-		log.Info().Msg("Factory read from command line")
-	} else {
-		log.Info().Msgf("Factory read from %s", fsrc)
+		fsrc = "cli"
 	}
-	if tags != opt.PacmanTags {
-		log.Info().Msg("Tags read from command line")
-	} else {
-		log.Info().Msgf("Tags read from %s", tsrc)
+	log.Debug().Str("source", fsrc).Msg("Factory source")
+
+	if tag != opt.PacmanTag {
+		tsrc = "cli"
 	}
+	log.Debug().Str("source", tsrc).Msg("Tag source")
 	// if err := validateHSM(opt); err != nil {
 	// 	return err
 	// }
@@ -160,7 +150,7 @@ func UpdateOptions(args []string, opt *RegisterOptions) error {
 		return err
 	}
 	if opt.Name == "" {
-		log.Info().Msg("Setting device name to UUID")
+		log.Debug().Msg("Setting device name to UUID")
 		opt.Name = opt.UUID
 	}
 	return nil
