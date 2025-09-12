@@ -23,7 +23,6 @@ func init() {
 		},
 	}
 	cmd.Flags().BoolVar(&opt.Production, "production", false, "Mark the device as a production device.")
-	// cmd.Flags().BoolVar(&opt.StartDaemon, "start-daemon", true, "Start the "+SOTA_CLIENT+" systemd service after registration.")
 	cmd.Flags().StringVar(&opt.SotaDir, "sota-dir", register.SOTA_DIR, "The directory to install to keys and configuration to.")
 	cmd.Flags().StringVar(&opt.DeviceGroup, "device-group", "", "Assign this device to a device group.")
 	cmd.Flags().StringVar(&opt.Factory, "factory", "", "The factory name to subscribe to.")

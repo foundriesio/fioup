@@ -15,8 +15,7 @@ import (
 )
 
 type RegisterOptions struct {
-	Production bool
-	// StartDaemon bool
+	Production  bool
 	SotaDir     string
 	DeviceGroup string
 	Factory     string
