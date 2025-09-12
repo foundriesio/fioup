@@ -156,18 +156,20 @@ func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{})
 	dev["uuid"] = opt.UUID
 	dev["csr"] = csr
 
+	dev["overrides"] = map[string]any{
+		"pacman": map[string]any{
+			"type":              "\"ostree+compose_apps\"",
+			"reset_apps_root":   "\"" + filepath.Join(opt.SotaDir, "reset-apps") + "\"",
+			"compose_apps_root": "\"" + filepath.Join(opt.SotaDir, "compose-apps") + "\"",
+			"tags":              "\"" + opt.PacmanTags + "\"",
+		},
+	}
+
 	putHSMInfo(opt, dev)
 	// putComposeAppInfo(opt, dev) // Implement as needed
 
 	if opt.DeviceGroup != "" {
 		dev["group"] = opt.DeviceGroup
-	}
-	if opt.PacmanTags != "" {
-		dev["overrides"] = map[string]interface{}{
-			"pacman": map[string]interface{}{
-				"tags": fmt.Sprintf("\"%s\"", opt.PacmanTags),
-			},
-		}
 	}
 }
 
