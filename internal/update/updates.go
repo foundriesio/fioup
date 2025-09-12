@@ -174,7 +174,9 @@ func InstallTarget(updateContext *UpdateContext) error {
 	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
 	err = updateContext.Runner.Install(updateContext.Context, installOptions...)
 	if err != nil {
-		err := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false))
+		if err2 := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false)); err2 != nil {
+			err = errors.Join(err, err2)
+		}
 		return fmt.Errorf("error installing target: %w", err)
 	}
 

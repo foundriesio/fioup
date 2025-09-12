@@ -105,7 +105,7 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTa
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d from %s", res.StatusCode, urlPath)
+		return nil, fmt.Errorf("unexpected status code HTTP_%d from %s: %s", res.StatusCode, urlPath, string(res.Body))
 	}
 	return res.Body, nil
 }
