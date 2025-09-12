@@ -4,8 +4,6 @@
 package register
 
 import (
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -134,18 +132,6 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 	return nil
 }
 
-func putHSMInfo(opt *RegisterOptions, dev map[string]interface{}) {
-	if opt.HsmModule == "" {
-		return
-	}
-	dev["overrides.tls.pkey_source"] = "\"pkcs11\""
-	dev["overrides.tls.cert_source"] = "\"pkcs11\""
-	dev["overrides.storage.tls_pkey_path"] = ""
-	dev["overrides.storage.tls_clientcert_path"] = ""
-	dev["overrides.import.tls_pkey_path"] = ""
-	dev["overrides.import.tls_clientcert_path"] = ""
-}
-
 func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{}) {
 	dev["use-ostree-server"] = "true"
 	dev["sota-config-dir"] = opt.SotaDir
@@ -163,7 +149,6 @@ func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{})
 		},
 	}
 
-	putHSMInfo(opt, dev)
 	// putComposeAppInfo(opt, dev) // Implement as needed
 
 	if opt.DeviceGroup != "" {
@@ -194,53 +179,15 @@ func writeSafely(name, content string) error {
 	return nil
 }
 
-// We additionally write the entire p11 section. We can't tell the server the
-// * PIN, and don't want to parse/modify TOML to add it, so just write the whole
-// thing to /var/sota/
-func fillP11EngineInfo(opt *RegisterOptions, toml *string) {
-	*toml += "[p11]\n"
-	*toml += fmt.Sprintf("module = \"%s\"\n", opt.HsmModule)
-	*toml += fmt.Sprintf("pass = \"%s\"\n", opt.HsmPin)
-	*toml += "tls_pkey_id = \"01\"\n"
-	*toml += "tls_clientcert_id = \"03\"\n\n"
-}
-
-func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}, pkey string) error {
+func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}) error {
 	log.Info().Msg("Populate sota directory.")
-
-	if opt.HsmModule == "" {
-		// Write the private key
-		if err := writeSafely(filepath.Join(opt.SotaDir, "pkey.pem"), pkey); err != nil {
-			return err
-		}
-	}
 
 	var sotaToml string
 	for name, data := range resp {
 		strData := fmt.Sprintf("%v", data)
 		fullName := filepath.Join(opt.SotaDir, name)
-		if filepath.Base(fullName) == "sota.toml" {
-			sotaToml += strData + "\n"
-			if opt.HsmModule != "" {
-				fillP11EngineInfo(opt, &sotaToml)
-			}
-			continue
-		}
 		if err := writeSafely(fullName, strData); err != nil {
 			goto errorHandler
-		}
-		if filepath.Ext(fullName) != ".pem" {
-			continue
-		}
-		// Import the certificate to PKCS#11 if HSM is enabled
-		if opt.HsmModule != "" {
-			crt, err := readX509FromFile(fullName)
-			if err != nil {
-				goto errorHandler
-			}
-			if err := pkcs11StoreCert(opt, crt); err != nil {
-				goto errorHandler
-			}
 		}
 	}
 	if err := writeSafely(filepath.Join(opt.SotaDir, "sota.toml"), sotaToml); err != nil {
@@ -252,44 +199,12 @@ errorHandler:
 	return errors.New("failed to populate sota directory")
 }
 
-func readX509FromFile(filename string) (*x509.Certificate, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, errors.New("failed to decode PEM")
-	}
-	return x509.ParseCertificate(block.Bytes)
-}
-
-func pkcs11StoreCert(opt *RegisterOptions, crt *x509.Certificate) error {
-	return nil
-}
-
-// Create a Certificate Signing Request
-func createCSR(opt *RegisterOptions) (key string, csr string, err error) {
-	if opt.HsmModule == "" {
-		return OpenSSLCreateCSR(opt)
-	}
-	return pkcs11CreateCSR(opt)
-}
-
-func pkcs11CreateCSR(opt *RegisterOptions) (string, string, error) {
-	return "", "", nil
-}
-
 // cleanup cleans up partial registration.
 func cleanup(opt *RegisterOptions) {
 	log.Debug().Msg("Cleaning up partial registration before leaving")
 	if err := sotaCleanup(opt); err != nil {
 		log.Err(err).Msg("Unable to clean up")
 	}
-	pkcs11Cleanup(opt)
-}
-
-func pkcs11Cleanup(opt *RegisterOptions) {
 }
 
 // signalHandler handles signals for cleanup.
@@ -342,7 +257,7 @@ func RegisterDevice(opt *RegisterOptions) error {
 	defer unsetSignals()
 
 	// Create the key pair and the certificate request
-	key, csr, err := createCSR(opt)
+	_, csr, err := OpenSSLCreateCSR(opt)
 	if err != nil {
 		cleanup(opt)
 		return err
@@ -364,7 +279,7 @@ func RegisterDevice(opt *RegisterOptions) error {
 	}
 
 	// Store the login details
-	if err := populateSotaDir(opt, resp, key); err != nil {
+	if err := populateSotaDir(opt, resp); err != nil {
 		cleanup(opt)
 		return err
 	}

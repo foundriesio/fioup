@@ -23,9 +23,6 @@ type RegisterOptions struct {
 	Hwid        string
 	PacmanTag   string
 	ApiToken    string
-	HsmModule   string
-	HsmPin      string
-	HsmSoPin    string
 	UUID        string
 
 	Name           string
@@ -44,14 +41,6 @@ const (
 	ENV_PRODUCTION     = "PRODUCTION"
 	ENV_OAUTH_BASE     = "OAUTH_BASE"
 	ENV_DEVICE_API     = "DEVICE_API"
-
-	// HSM definitions
-	// HSM_TOKEN_STR   = "aktualizr"
-	// HSM_TLS_STR     = "tls"
-	// HSM_TLS_ID_STR  = "01"
-	// HSM_CRT_STR     = "client"
-	// HSM_CRT_ID      = 3
-	// HSM_CRT_ID_STR  = "03"
 
 	// Files
 	AKLITE_LOCK = "/var/lock/aklite.lock"
