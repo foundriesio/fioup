@@ -266,12 +266,6 @@ func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 		return err
 	}
 
-	err = InitializeDatabase(updateContext.DbFilePath)
-	if err != nil {
-		log.Err(err).Msg("Error initializing database")
-		return err
-	}
-
 	updateContext.CurrentTarget, err = targets.GetCurrentTarget(updateContext.DbFilePath)
 	if err != nil {
 		log.Err(err).Msg("Error getting current target")
@@ -737,12 +731,6 @@ func Status(config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	updateContext.ComposeConfig, err = getComposeConfig(config)
 	updateContext.opts = opts
 	if err != nil {
-		return err
-	}
-
-	err = InitializeDatabase(updateContext.DbFilePath)
-	if err != nil {
-		log.Err(err).Msg("Error initializing database")
 		return err
 	}
 
