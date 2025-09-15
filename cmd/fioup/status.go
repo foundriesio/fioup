@@ -50,9 +50,9 @@ func init() {
 }
 
 func doStatus(cmd *cobra.Command, opts *statusOptions) {
-	cs, err := fioup.GetCurrentStatus(cmd.Context(), composeConfig)
+	cs, err := fioup.GetCurrentStatus(cmd.Context(), config1.ComposeConfig())
 	DieNotNil(err, "failed to get current status")
-	us, err := fioup.GetUpdateStatus(composeConfig)
+	us, err := fioup.GetUpdateStatus(config1.ComposeConfig())
 	DieNotNil(err, "failed to get update status")
 
 	if opts.Format == "json" {
