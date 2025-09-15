@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/foundriesio/fioup/pkg/fioup"
 	"os"
 	"strings"
 
@@ -18,6 +19,7 @@ var (
 	verbose     bool
 	configPaths []string
 	config      *sotatoml.AppConfig
+	config1     *fioup.Config
 
 	rootCmd = &cobra.Command{
 		Use:   "fioup",
@@ -36,6 +38,8 @@ var (
 			var err error
 			config, err = sotatoml.NewAppConfig(configPaths)
 			DieNotNil(err, "failed to load configuration from paths: "+strings.Join(configPaths, ", "))
+			config1, err = fioup.NewConfig(config)
+			DieNotNil(err, "failed to load configuration")
 		},
 	}
 )
