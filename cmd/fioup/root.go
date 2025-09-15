@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/foundriesio/fioup/internal/update"
 	"github.com/foundriesio/fioup/pkg/fioup"
 	"os"
 	"strings"
@@ -40,6 +41,7 @@ var (
 			DieNotNil(err, "failed to load configuration from paths: "+strings.Join(configPaths, ", "))
 			config1, err = fioup.NewConfig(config)
 			DieNotNil(err, "failed to load configuration")
+			DieNotNil(update.InitializeDatabase(config1.GetDBPath()), "failed to initialize database")
 		},
 	}
 )
