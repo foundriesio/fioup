@@ -110,7 +110,7 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTa
 	return res.Body, nil
 }
 
-func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
+func GetTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
 	var targetsBytes []byte
 	var err error
 
@@ -155,7 +155,7 @@ func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.C
 	if enableTuf {
 		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	} else {
-		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
+		return GetTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	}
 }
 
