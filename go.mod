@@ -6,9 +6,8 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/go-units v0.5.0
 	github.com/foundriesio/composeapp v0.0.0-20250918132054-f0fe7ca465a4
-	github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9
+	github.com/foundriesio/fioconfig v0.0.0-20250922142016-4dd6f59a2fcc
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
 	github.com/moby/term v0.5.0
@@ -36,6 +35,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
+	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect

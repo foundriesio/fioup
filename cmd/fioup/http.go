@@ -54,8 +54,8 @@ fioup http post https://ostree.foundries.io:8443/ostree/download-urls - get down
 }
 
 func doRequest(endpointOrUrl string, request func(*http.Client, string) (*transport.HttpRes, error)) {
-	url := getUrl(config, endpointOrUrl)
-	client, err := transport.CreateClient(config)
+	url := getUrl(config.TomlConfig(), endpointOrUrl)
+	client, err := transport.CreateClient(config.TomlConfig())
 	DieNotNil(err, "failed to create HTTPS client with the given configuration")
 	processResponse(request(client, url))
 }
