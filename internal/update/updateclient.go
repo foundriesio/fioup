@@ -17,13 +17,13 @@ import (
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
-	v1 "github.com/foundriesio/composeapp/pkg/compose/v1"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/foundriesio/fioconfig/transport"
 	"github.com/foundriesio/fiotuf/tuf"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
+	"github.com/foundriesio/fioup/pkg/fioup/config"
 	"github.com/rs/zerolog/log"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	_ "modernc.org/sqlite"
@@ -224,20 +224,15 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 	return nil
 }
 
-func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) error {
+func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error {
 	updateContext := &UpdateContext{
-		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
+		Context:       ctx,
+		DbFilePath:    cfg.GetDBPath(),
+		ComposeConfig: cfg.ComposeConfig(),
+		opts:          opts,
 	}
 
-	var err error
-	updateContext.Context = ctx
-	updateContext.ComposeConfig, err = getComposeConfig(config)
-	updateContext.opts = opts
-	if err != nil {
-		return err
-	}
-
-	err = GetPendingUpdate(updateContext)
+	err := GetPendingUpdate(updateContext)
 	if err != nil {
 		log.Err(err).Msg("Error getting pending update")
 		return fmt.Errorf("error getting pending update: %w", err)
@@ -259,7 +254,7 @@ func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions
 		localRepoPath = path.Join(opts.SrcDir, "repo")
 	}
 
-	client, err := transport.CreateClient(config)
+	client, err := transport.CreateClient(cfg.TomlConfig())
 	if err != nil {
 		log.Err(err).Msg("Error creating HTTP client")
 		return err
@@ -282,7 +277,7 @@ func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions
 	}
 
 	var tufTargets map[string]*metadata.TargetFiles
-	tufTargets, err = getTargets(config, localRepoPath, client, updateContext.CurrentTarget.Path, updateContext.InstalledAppsNames, opts.EnableTuf, opts.DoCheck)
+	tufTargets, err = getTargets(cfg.TomlConfig(), localRepoPath, client, updateContext.CurrentTarget.Path, updateContext.InstalledAppsNames, opts.EnableTuf, opts.DoCheck)
 	if err != nil {
 		log.Err(err).Msg("Error getting targets")
 		return err
@@ -303,7 +298,7 @@ func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions
 		targetId = opts.TargetId
 	}
 
-	err = GetTargetToInstall(updateContext, config, tufTargets, targetId)
+	err = GetTargetToInstall(updateContext, cfg, tufTargets, targetId)
 	if err != nil {
 		return fmt.Errorf("error getting target to install %w", err)
 	}
@@ -329,9 +324,9 @@ func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions
 		}
 	}
 
-	_ = ReportAppsStates(config, client, updateContext)
+	_ = ReportAppsStates(cfg.TomlConfig(), client, updateContext)
 
-	eventsUrl := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/events"
+	eventsUrl := cfg.TomlConfig().GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/events"
 	errFlush := events.FlushEvents(updateContext.DbFilePath, client, eventsUrl)
 	if errFlush != nil {
 		log.Err(errFlush).Msg("Error flushing events")
@@ -468,7 +463,7 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 
 // Returns information about the apps to install and to remove, as long as the corresponding target
 // No update operation is performed at this point. Not even apps stopping
-func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig, tufTargets map[string]*metadata.TargetFiles, targetId string) error {
+func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, tufTargets map[string]*metadata.TargetFiles, targetId string) error {
 	var err error
 
 	specificVersion := -1
@@ -497,9 +492,9 @@ func GetTargetToInstall(updateContext *UpdateContext, config *sotatoml.AppConfig
 
 	updateContext.Target = candidateTarget
 
-	apps := config.GetDefault("pacman.compose_apps", "-")
-	if apps != "-" {
-		updateContext.ConfiguredAppNames = strings.Split(apps, ",")
+	apps := cfg.GetEnabledApps()
+	if apps != nil {
+		updateContext.ConfiguredAppNames = apps
 		log.Debug().Msgf("pacman.compose_apps=%v", updateContext.ConfiguredAppNames)
 	}
 
@@ -660,33 +655,15 @@ func selectTarget(allTargets map[string]*metadata.TargetFiles, specificVersion i
 	return selectedTarget, nil
 }
 
-func getComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
-	cfg, err := v1.NewDefaultConfig(
-		v1.WithStoreRoot(config.GetDefault("pacman.reset_apps_root", "/var/sota/reset-apps")),
-		v1.WithComposeRoot(config.GetDefault("pacman.compose_apps_root", "/var/sota/compose-apps")),
-		v1.WithUpdateDB(path.Join(config.GetDefault("storage.path", "/var/sota"), "updates.db")),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
-
-func CancelPendingUpdate(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) error {
+func CancelPendingUpdate(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error {
 	updateContext := &UpdateContext{
-		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
+		Context:       ctx,
+		ComposeConfig: cfg.ComposeConfig(),
+		DbFilePath:    cfg.GetDBPath(),
+		opts:          opts,
 	}
 
-	var err error
-	updateContext.Context = ctx
-	updateContext.ComposeConfig, err = getComposeConfig(config)
-	updateContext.opts = opts
-	if err != nil {
-		return err
-	}
-
-	err = GetPendingUpdate(updateContext)
+	err := GetPendingUpdate(updateContext)
 	if err != nil {
 		log.Err(err).Msg("Error getting pending update")
 		return fmt.Errorf("error getting pending update: %w", err)
@@ -705,8 +682,8 @@ func CancelPendingUpdate(ctx context.Context, config *sotatoml.AppConfig, opts *
 	return nil
 }
 
-func Daemon(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) {
-	intervalStr := config.GetDefault("uptane.polling_seconds", "60")
+func Daemon(ctx context.Context, cfg *config.Config, opts *UpdateOptions) {
+	intervalStr := cfg.TomlConfig().GetDefault("uptane.polling_seconds", "60")
 	interval, err := strconv.Atoi(intervalStr)
 	if err != nil {
 		log.Err(err).Msgf("Invalid interval %s, using default 60 seconds", intervalStr)
@@ -717,7 +694,7 @@ func Daemon(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions
 		opts.DoFetch = true
 		opts.DoInstall = true
 		opts.DoStart = true
-		err := Update(ctx, config, opts)
+		err := Update(ctx, cfg, opts)
 		if err != nil {
 			log.Err(err).Msg("Error during update")
 		}
