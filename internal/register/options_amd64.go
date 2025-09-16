@@ -5,4 +5,4 @@
 
 package register
 
-const HARDWARE_ID = "amd64"
+const HARDWARE_ID = "amd64-linux"

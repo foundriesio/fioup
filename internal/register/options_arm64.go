@@ -5,4 +5,4 @@
 
 package register
 
-const HARDWARE_ID = "arm64"
+const HARDWARE_ID = "arm64-linux"
