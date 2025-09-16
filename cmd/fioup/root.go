@@ -41,6 +41,17 @@ var (
 )
 
 func Execute() error {
+	overrides := [][2]string{
+		{"FIOUP_CFG_DIRS", "cfg-dirs"},
+		{"FIOUP_VERBOSE", "verbose"},
+	}
+	for _, override := range overrides {
+		val := os.Getenv(override[0])
+		if len(val) > 0 {
+			flag := rootCmd.PersistentFlags().Lookup(override[1])
+			cobra.CheckErr(flag.Value.Set(val))
+		}
+	}
 	return rootCmd.Execute()
 }
 
