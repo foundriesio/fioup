@@ -177,19 +177,19 @@ func writeSafely(name, content string) error {
 	return nil
 }
 
-func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}) error {
+func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}, pkey string) error {
 	log.Debug().Msg("Populate sota directory.")
 
-	var sotaToml string
+	if err := writeSafely(filepath.Join(opt.SotaDir, "pkey.pem"), pkey); err != nil {
+		return err
+	}
+
 	for name, data := range resp {
 		strData := fmt.Sprintf("%v", data)
 		fullName := filepath.Join(opt.SotaDir, name)
 		if err := writeSafely(fullName, strData); err != nil {
 			goto errorHandler
 		}
-	}
-	if err := writeSafely(filepath.Join(opt.SotaDir, "sota.toml"), sotaToml); err != nil {
-		goto errorHandler
 	}
 	return nil
 errorHandler:
@@ -253,7 +253,7 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	defer unsetSignals()
 
 	// Create the key pair and the certificate request
-	_, csr, err := openSSLCreateCSR(opt)
+	key, csr, err := openSSLCreateCSR(opt)
 	if err != nil {
 		cleanup(opt)
 		return err
@@ -275,7 +275,7 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	}
 
 	// Store the login details
-	if err := populateSotaDir(opt, resp); err != nil {
+	if err := populateSotaDir(opt, resp, key); err != nil {
 		cleanup(opt)
 		return err
 	}
