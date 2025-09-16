@@ -37,12 +37,12 @@ type (
 	}
 )
 
-func NewUnsafeTargetProvider(cfg *Config) (TargetProvider, error) {
+func NewTargetProvider(cfg *Config) (TargetProvider, error) {
 	client, err := transport.CreateClient(cfg.TomlConfig())
 	if err != nil {
 		return nil, err
 	}
-	targets, err := update.GetTargetsUnsafe(cfg.TomlConfig(),
+	targets, err := update.GetTargets(cfg.TomlConfig(),
 		"",
 		client,
 		false,
@@ -70,7 +70,7 @@ func (p *targetProvider) UpdateTargets(cfg *Config) error {
 	// 1. Local provider - read from local file
 	// 2. TUF remote provider
 	// 3. TUF local provider
-	targets, err := update.GetTargetsUnsafe(cfg.TomlConfig(),
+	targets, err := update.GetTargets(cfg.TomlConfig(),
 		"",
 		p.client,
 		true,

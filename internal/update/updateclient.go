@@ -110,12 +110,12 @@ func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTa
 	return res.Body, nil
 }
 
-func GetTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
+func GetTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
 	var targetsBytes []byte
 	var err error
 
 	// Store unverified targets.json outside "tuf" directory
-	unsafeTargetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
+	targetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
 	if refreshTargets {
 		if localRepoPath == "" {
 			targetsBytes, err = fetchTargetsJson(config, client, currentTargetName, appsNames)
@@ -130,14 +130,14 @@ func GetTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *
 			}
 		}
 		// Write contents of targetsBytes to local file
-		err = os.WriteFile(unsafeTargetsPath, targetsBytes, 0644)
+		err = os.WriteFile(targetsPath, targetsBytes, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("error writing targets.json to %s: %w", unsafeTargetsPath, err)
+			return nil, fmt.Errorf("error writing targets.json to %s: %w", targetsPath, err)
 		}
 	} else {
-		targetsBytes, err = os.ReadFile(unsafeTargetsPath)
+		targetsBytes, err = os.ReadFile(targetsPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading targets.json from %s: %w", unsafeTargetsPath, err)
+			return nil, fmt.Errorf("error reading targets.json from %s: %w", targetsPath, err)
 		}
 	}
 
@@ -155,7 +155,7 @@ func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.C
 	if enableTuf {
 		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	} else {
-		return GetTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
+		return GetTargets(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
 	}
 }
 

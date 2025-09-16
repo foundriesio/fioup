@@ -14,7 +14,7 @@ func Fetch(ctx context.Context, cfg *Config, toVersion int) error {
 	var targetProvider TargetProvider
 	var fromTarget Target
 
-	targetProvider, err = NewUnsafeTargetProvider(cfg)
+	targetProvider, err = NewTargetProvider(cfg)
 	if err != nil {
 		return err
 	}
