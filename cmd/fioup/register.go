@@ -4,6 +4,10 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"os"
+
 	"github.com/foundriesio/fioup/internal/register"
 	"github.com/spf13/cobra"
 )
@@ -19,11 +23,9 @@ func init() {
 		},
 	}
 	cmd.Flags().BoolVar(&opt.Production, "production", false, "Mark the device as a production device.")
-	// cmd.Flags().BoolVar(&opt.StartDaemon, "start-daemon", true, "Start the "+SOTA_CLIENT+" systemd service after registration.")
 	cmd.Flags().StringVar(&opt.SotaDir, "sota-dir", register.SOTA_DIR, "The directory to install to keys and configuration to.")
 	cmd.Flags().StringVar(&opt.DeviceGroup, "device-group", "", "Assign this device to a device group.")
 	cmd.Flags().StringVar(&opt.Factory, "factory", "", "The factory name to subscribe to.")
-	cmd.Flags().StringVar(&opt.Hwid, "hwid", register.HARDWARE_ID, "The hardware identifier for the device type.")
 	cmd.Flags().StringVar(&opt.PacmanTag, "tag", "", "Configure "+register.SOTA_CLIENT+" to only apply updates from Targets with this tag.")
 	cmd.Flags().StringVar(&opt.ApiToken, "api-token", "", "API token for authentication. If not provided, oauth2 will be used instead.")
 	cmd.Flags().StringVar(&opt.UUID, "uuid", "", "A per-device UUID. If not provided, one will be generated.")
@@ -35,6 +37,31 @@ func init() {
 }
 
 func doRegister(opts *register.RegisterOptions) {
-	err := register.RegisterDevice(opts)
-	DieNotNil(err, "Failed to register device")
+	h := oauthHandler{}
+	err := register.RegisterDevice(opts, &h)
+	if err != nil && errors.Is(err, os.ErrExist) {
+		fmt.Printf("ERROR: Device already registered under %s. ", opts.SotaDir)
+		fmt.Println("Re-run with `--force 1` to remove existing registration data.")
+		os.Exit(1)
+	}
+	cobra.CheckErr(err)
+	fmt.Println("Device is now registered.")
+}
+
+type oauthHandler struct {
+	i int
+}
+
+func (oauthHandler) ShowAuthInfo(deviceName, userCode, url string, expiresMinutes int) {
+	fmt.Printf("Visit the link below in your browser to authorize this new device. This link will expire in %d minutes.\n", expiresMinutes)
+	fmt.Println("  Device UUID:", deviceName)
+	fmt.Println("  User code:", userCode)
+	fmt.Println("  Browser URL:", url)
+	fmt.Println()
+}
+
+func (h *oauthHandler) Tick() {
+	wheels := []rune{'|', '/', '-', '\\'}
+	fmt.Printf("Waiting for authorization %c\r", wheels[h.i%len(wheels)])
+	h.i++
 }

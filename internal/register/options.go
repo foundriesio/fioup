@@ -15,12 +15,10 @@ import (
 )
 
 type RegisterOptions struct {
-	Production bool
-	// StartDaemon bool
+	Production  bool
 	SotaDir     string
 	DeviceGroup string
 	Factory     string
-	Hwid        string
 	PacmanTag   string
 	ApiToken    string
 	UUID        string
@@ -112,7 +110,7 @@ func getUUID(opt *RegisterOptions) error {
 	return validateUUID(opt)
 }
 
-func UpdateOptions(args []string, opt *RegisterOptions) error {
+func updateOptions(opt *RegisterOptions) error {
 	factory, fsrc, tag, tsrc := getFactoryTagsInfo(LMP_OS_STR)
 	if opt.Factory == "" || opt.Factory == "lmp" {
 		return errors.New("missing factory definition")

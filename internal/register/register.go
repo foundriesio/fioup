@@ -51,9 +51,7 @@ func checkSotaFiles(opt *RegisterOptions) error {
 	}
 
 	if !opt.Force {
-		log.Info().Msgf("ERROR: Device already registered in %s", opt.SotaDir)
-		log.Info().Msg("Re-run with --force 1 to remove existing registration data")
-		return fmt.Errorf("device already registered")
+		return os.ErrExist
 	}
 
 	return sotaCleanup(opt)
@@ -135,7 +133,7 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{}) {
 	dev["use-ostree-server"] = "true"
 	dev["sota-config-dir"] = opt.SotaDir
-	dev["hardware-id"] = opt.Hwid
+	dev["hardware-id"] = HARDWARE_ID
 	dev["name"] = opt.Name
 	dev["uuid"] = opt.UUID
 	dev["csr"] = csr
@@ -180,7 +178,7 @@ func writeSafely(name, content string) error {
 }
 
 func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}) error {
-	log.Info().Msg("Populate sota directory.")
+	log.Debug().Msg("Populate sota directory.")
 
 	var sotaToml string
 	for name, data := range resp {
@@ -229,10 +227,9 @@ func setSignals(opt *RegisterOptions) func() {
 	return func() { signal.Stop(sigs); close(done) }
 }
 
-func RegisterDevice(opt *RegisterOptions) error {
-	err := UpdateOptions(os.Args, opt)
+func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
+	err := updateOptions(opt)
 	if err != nil {
-		log.Err(err).Msg("Error parsing options")
 		return err
 	}
 
@@ -241,14 +238,13 @@ func RegisterDevice(opt *RegisterOptions) error {
 		return err
 	}
 
-	headers, err := AuthGetHttpHeaders(opt)
+	headers, err := authGetHttpHeaders(opt, cb)
 	if err != nil {
-		log.Err(err).Msg("Error getting HTTP headers")
 		return err
 	}
 
 	// Check server reachability
-	if err := AuthPingServer(); err != nil {
+	if err := authPingServer(); err != nil {
 		return err
 	}
 
@@ -257,7 +253,7 @@ func RegisterDevice(opt *RegisterOptions) error {
 	defer unsetSignals()
 
 	// Create the key pair and the certificate request
-	_, csr, err := OpenSSLCreateCSR(opt)
+	_, csr, err := openSSLCreateCSR(opt)
 	if err != nil {
 		cleanup(opt)
 		return err
@@ -272,7 +268,7 @@ func RegisterDevice(opt *RegisterOptions) error {
 		Str("name", opt.Name).
 		Str("factory", opt.Factory).
 		Msg("Registering device")
-	resp, err := AuthRegisterDevice(headers, info)
+	resp, err := authRegisterDevice(headers, info)
 	if err != nil {
 		cleanup(opt)
 		return err
@@ -284,7 +280,6 @@ func RegisterDevice(opt *RegisterOptions) error {
 		return err
 	}
 
-	log.Info().Msg("Device is now registered.")
 	// if opt.StartDaemon {
 	// 	fmt.Printf("Starting %s daemon\n", SOTA_CLIENT)
 	// 	spawn("systemctl", "start", SOTA_CLIENT)

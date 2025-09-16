@@ -6,6 +6,7 @@ package register
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,22 +22,30 @@ const (
 	OAUTH_API  = "https://app.foundries.io/oauth"
 )
 
+type OauthCallback interface {
+	ShowAuthInfo(deviceUuid, userCode, url string, expiresMinutes int)
+	Tick()
+}
+
 type HttpHeaders map[string]string
 
-func dumpRespError(message string, code int, resp map[string]interface{}) {
-	fmt.Fprintf(os.Stderr, "%s: HTTP_%d", message, code)
+func respToErr(code int, resp map[string]any) error {
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "HTTP_%d\n", code)
+
 	if data, ok := resp["data"].(string); ok && len(data) > 0 {
-		fmt.Fprintln(os.Stderr, data)
+		fmt.Fprintln(&buf, data)
 	}
 	for k, v := range resp {
-		fmt.Fprintf(os.Stderr, "%s: %v", k, v)
+		fmt.Fprintf(&buf, " | %s: %v\n", k, v)
 	}
+
+	return errors.New(buf.String())
 }
 
 // Returns the access_token on success, and empty string on errors
-func getOauthToken(factory, deviceUUID string) string {
+func getOauthToken(cb OauthCallback, factory, deviceUUID string) (string, error) {
 	env := os.Getenv(ENV_OAUTH_BASE)
-	wheels := []rune{'|', '/', '-', '\\'}
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
@@ -47,30 +56,28 @@ func getOauthToken(factory, deviceUUID string) string {
 
 	data := fmt.Sprintf("client_id=%s&scope=%s:devices:create", deviceUUID, factory)
 	resp, code, err := httpPost(url+"/authorization/device/", headers, data)
-	if err != nil || code != 200 {
-		dumpRespError("Unable to create device authorization request", code, resp)
-		return ""
+	if err != nil {
+		return "", err
+	} else if code != 200 {
+		return "", fmt.Errorf("unable to create device authorization request: %w", respToErr(code, resp))
 	}
 
-	log.Info().Msg("----------------------------------------------------------------------------")
-	log.Info().Msg("Visit the link below in your browser to authorize this new device. This link")
-	log.Info().Msgf("will expire in %d minutes.", int(resp["expires_in"].(float64))/60)
-	log.Info().Msgf("  Device Name: %s", deviceUUID)
-	log.Info().Msgf("  User code: %s", resp["user_code"])
-	log.Info().Msgf("  Browser URL: %s", resp["verification_uri"])
+	expiresMinutes := int(resp["expires_in"].(float64)) / 60
+	uc := resp["user_code"].(string)
+	uri := resp["verification_uri"].(string)
+	cb.ShowAuthInfo(deviceUUID, uc, uri, expiresMinutes)
 
 	data = fmt.Sprintf(
 		"grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code=%s&client_id=%s&scope=%s:devices:create",
 		resp["device_code"], deviceUUID, factory,
 	)
 	interval := int(resp["interval"].(float64))
-	i := 0
 
 	log.Debug().Str("data", data).Msg("oauth data")
 	for {
 		tokenResp, code, err := httpPost(url+"/token/", headers, data)
 		if err == nil && code == 200 {
-			return tokenResp["access_token"].(string)
+			return tokenResp["access_token"].(string), nil
 		}
 		if code != 400 {
 			log.Warn().Int("code", code).Msg("HTTP error...")
@@ -78,12 +85,10 @@ func getOauthToken(factory, deviceUUID string) string {
 			continue
 		}
 		if tokenResp["error"] == "authorization_pending" {
-			fmt.Printf("Waiting for authorization %c\r", wheels[i%len(wheels)])
-			i++
+			cb.Tick()
 			time.Sleep(time.Duration(interval) * time.Second)
 		} else {
-			dumpRespError("Error authorizing device", code, tokenResp)
-			return ""
+			return "", fmt.Errorf("unable to authorize device: %w", respToErr(code, resp))
 		}
 	}
 }
@@ -118,16 +123,16 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	return jsonResp, resp.StatusCode, nil
 }
 
-func AuthGetHttpHeaders(opt *RegisterOptions) (HttpHeaders, error) {
+func authGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, error) {
 	headers := map[string]string{"Content-type": "application/json"}
 	if opt.ApiToken != "" {
 		headers[opt.ApiTokenHeader] = opt.ApiToken
 		return headers, nil
 	}
 	log.Debug().Msg("Foundries providing auth token")
-	token := getOauthToken(opt.Factory, opt.UUID)
-	if token == "" {
-		return nil, fmt.Errorf("failed to get OAuth token for factory %s and device %s", opt.Factory, opt.UUID)
+	token, err := getOauthToken(cb, opt.Factory, opt.UUID)
+	if err != nil {
+		return nil, err
 	}
 	tokenBase64 := base64.StdEncoding.EncodeToString([]byte(token))
 	headers["Authorization"] = "Bearer " + tokenBase64
@@ -135,7 +140,7 @@ func AuthGetHttpHeaders(opt *RegisterOptions) (HttpHeaders, error) {
 }
 
 // Register device using the oauth token. Token need "devices:create" scope
-func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map[string]interface{}, error) {
+func authRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map[string]interface{}, error) {
 	api := os.Getenv(ENV_DEVICE_API)
 	if api == "" {
 		api = DEVICE_API
@@ -149,13 +154,12 @@ func AuthRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map
 		Msg("Registering device")
 	jsonResp, code, err := httpPost(api, headers, string(data))
 	if code != 201 || err != nil {
-		dumpRespError("Unable to create device", code, jsonResp)
-		return nil, fmt.Errorf("unable to create device %w %d %s", err, code, jsonResp)
+		return nil, fmt.Errorf("unable to create device: %w", respToErr(code, jsonResp))
 	}
 	return jsonResp, nil
 }
 
-func AuthPingServer() error {
+func authPingServer() error {
 	api := os.Getenv(ENV_DEVICE_API)
 	if api == "" {
 		api = DEVICE_API
