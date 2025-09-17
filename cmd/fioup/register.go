@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/foundriesio/fioup/internal/register"
 	"github.com/spf13/cobra"
@@ -19,6 +20,9 @@ func init() {
 		Use:   "register",
 		Short: "Register device with Foundries.io",
 		Run: func(cmd *cobra.Command, args []string) {
+			var err error
+			opt.SotaDir, err = filepath.Abs(opt.SotaDir)
+			cobra.CheckErr(err)
 			doRegister(&opt)
 		},
 	}
