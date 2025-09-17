@@ -33,6 +33,8 @@ func init() {
 	cmd.Flags().StringVar(&opt.ApiTokenHeader, "api-token-header", "OSF-TOKEN", "The HTTP header to use for authentication.")
 	cmd.Flags().BoolVar(&opt.Force, "force", false, "Force registration, removing data from previous execution.")
 
+	cobra.CheckErr(cmd.Flags().MarkHidden("api-token-header"))
+
 	rootCmd.AddCommand(cmd)
 }
 
