@@ -57,7 +57,7 @@ func doRegister(opts *register.RegisterOptions) {
 		os.Exit(1)
 	}
 	cobra.CheckErr(err)
-	fmt.Println("Device is now registered.")
+	fmt.Printf("Device %s is now registered at factory %s\n", opts.Name, opts.Factory)
 }
 
 type oauthHandler struct {
