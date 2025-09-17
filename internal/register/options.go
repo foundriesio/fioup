@@ -26,6 +26,8 @@ type RegisterOptions struct {
 	Name           string
 	ApiTokenHeader string
 	Force          bool
+
+	dockerCfgPath string
 }
 
 const (
@@ -140,5 +142,6 @@ func updateOptions(opt *RegisterOptions) error {
 		log.Debug().Msg("Setting device name to UUID")
 		opt.Name = opt.UUID
 	}
+
 	return nil
 }

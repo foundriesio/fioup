@@ -4,7 +4,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/foundriesio/fioconfig/sotatoml"
 	cfg "github.com/foundriesio/fioup/pkg/fioup/config"
@@ -51,6 +53,15 @@ func Execute() error {
 			flag := rootCmd.PersistentFlags().Lookup(override[1])
 			cobra.CheckErr(flag.Value.Set(val))
 		}
+	}
+
+	if strings.HasSuffix(os.Args[0], "docker-credential-fioup") {
+		if len(os.Args) != 2 || os.Args[1] != "get" {
+			fmt.Printf("Usage: %s get\n", os.Args[0])
+			os.Exit(1)
+		}
+		rootCmd.PersistentPreRun(rootCmd, nil)
+		os.Exit(runDockerCredsHelper())
 	}
 	return rootCmd.Execute()
 }
