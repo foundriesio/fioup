@@ -34,6 +34,10 @@ func init() {
 	cmd.Flags().BoolVar(&opt.Force, "force", false, "Force registration, removing data from previous execution.")
 
 	cobra.CheckErr(cmd.Flags().MarkHidden("api-token-header"))
+	cobra.CheckErr(cmd.Flags().MarkHidden("api-token"))
+	cobra.CheckErr(cmd.Flags().MarkHidden("device-group"))
+	cobra.CheckErr(cmd.Flags().MarkHidden("production"))
+	cobra.CheckErr(cmd.Flags().MarkHidden("uuid"))
 
 	rootCmd.AddCommand(cmd)
 }
