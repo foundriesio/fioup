@@ -36,7 +36,6 @@ services:
         - AUTH_TOKEN=${AUTH_TOKEN}
         - DEVICE_TAG=${DEVICE_TAG}
         - DOCKER_HOST=unix:///var/run/docker/docker.sock
-        - DOCKER_CONFIG=/usr/lib/docker
       depends_on:
       - dockerd
       networks: {}
