@@ -26,7 +26,7 @@ func init() {
 	cmd.Flags().StringVar(&opt.SotaDir, "sota-dir", register.SOTA_DIR, "The directory to install to keys and configuration to.")
 	cmd.Flags().StringVar(&opt.DeviceGroup, "device-group", "", "Assign this device to a device group.")
 	cmd.Flags().StringVar(&opt.Factory, "factory", "", "The factory name to subscribe to.")
-	cmd.Flags().StringVar(&opt.PacmanTag, "tag", "", "Configure "+register.SOTA_CLIENT+" to only apply updates from Targets with this tag.")
+	cmd.Flags().StringVar(&opt.PacmanTag, "tag", "main", "Configure "+register.SOTA_CLIENT+" to only apply updates from Targets with this tag.")
 	cmd.Flags().StringVar(&opt.ApiToken, "api-token", "", "API token for authentication. If not provided, oauth2 will be used instead.")
 	cmd.Flags().StringVar(&opt.UUID, "uuid", "", "A per-device UUID. If not provided, one will be generated.")
 	cmd.Flags().StringVar(&opt.Name, "name", "", "The name of the device as it should appear in the dashboard. When not specified, the device's UUID will be used instead.")
