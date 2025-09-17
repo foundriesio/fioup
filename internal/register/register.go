@@ -95,6 +95,24 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+func checkAndCreateSotaDir(sotaDir string) error {
+	info, err := os.Stat(sotaDir)
+	if os.IsNotExist(err) {
+		slog.Debug("creating sota directory", "path", sotaDir)
+		err = os.MkdirAll(sotaDir, 0700)
+		if err != nil {
+			return fmt.Errorf("unable to create %s: %w", sotaDir, err)
+		}
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("unable to access %s: %w", sotaDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", sotaDir)
+	}
+	return nil
+}
+
 func checkDeviceStatus(opt *RegisterOptions) error {
 	tmp := opt.SotaDir + "/.tmp"
 
@@ -230,7 +248,10 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	if err != nil {
 		return err
 	}
-
+	// Check and create sota directory if needed and possible
+	if err := checkAndCreateSotaDir(opt.SotaDir); err != nil {
+		return err
+	}
 	// Check if this device can be registered
 	if err := checkDeviceStatus(opt); err != nil {
 		return err
