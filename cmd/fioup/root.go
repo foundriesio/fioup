@@ -5,7 +5,7 @@ package main
 
 import (
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/foundriesio/fioup/pkg/fioup"
+	fioup "github.com/foundriesio/fioup/pkg/fioup/config"
 	"os"
 	"strings"
 

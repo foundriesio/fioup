@@ -7,14 +7,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/foundriesio/fioup/internal/targets"
+	"github.com/foundriesio/fioup/pkg/fioup/config"
+	"github.com/foundriesio/fioup/pkg/fioup/states"
+	"github.com/foundriesio/fioup/pkg/fioup/target"
 )
 
-func Fetch(ctx context.Context, cfg *Config, toVersion int) error {
+func Fetch(ctx context.Context, cfg *config.Config, toVersion int) error {
 	var err error
-	var targetProvider TargetProvider
-	var fromTarget Target
+	var targetProvider target.TargetProvider
+	var fromTarget target.Target
 
-	targetProvider, err = NewTargetProvider(cfg)
+	targetProvider, err = target.NewTargetProvider(cfg)
 	if err != nil {
 		return err
 	}
@@ -22,19 +25,19 @@ func Fetch(ctx context.Context, cfg *Config, toVersion int) error {
 	if err != nil {
 		return err
 	}
-	fromTarget, err = NewTarget(t, cfg.GetEnabledApps())
+	fromTarget, err = target.NewTarget(t, cfg.GetEnabledApps())
 	if err != nil {
 		return err
 	}
-	stateMachine, err := NewStateMachine(cfg, &UpdateContext{
+	stateMachine, err := states.NewStateMachine(cfg, &states.UpdateContext{
 		Config:         cfg,
 		TargetProvider: targetProvider,
 		FromTarget:     fromTarget,
 		ToVersion:      toVersion,
-	}, []State{
-		&CheckingState{UpdateTargets: false},
-		&StagingState{},
-		&FetchingState{},
+	}, []states.State{
+		&states.CheckingState{UpdateTargets: false},
+		&states.StagingState{},
+		&states.FetchingState{},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create state machine for fetching update: %w", err)

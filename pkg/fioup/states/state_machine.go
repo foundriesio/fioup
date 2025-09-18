@@ -1,11 +1,12 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package fioup
+package states
 
 import (
 	"context"
 	"fmt"
+	"github.com/foundriesio/fioup/pkg/fioup/config"
 )
 
 type (
@@ -16,7 +17,7 @@ type (
 	}
 )
 
-func NewStateMachine(cfg *Config, ctx *UpdateContext, states []State) (*StateMachine, error) {
+func NewStateMachine(cfg *config.Config, ctx *UpdateContext, states []State) (*StateMachine, error) {
 	return &StateMachine{
 		ctx:    ctx,
 		states: states,
