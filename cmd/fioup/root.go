@@ -5,8 +5,11 @@ package main
 
 import (
 	"os"
+	"path"
 	"strings"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
+	v1 "github.com/foundriesio/composeapp/pkg/compose/v1"
 	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/moby/term"
 	"github.com/rs/zerolog"
@@ -17,7 +20,9 @@ import (
 var (
 	verbose     bool
 	configPaths []string
-	config      *sotatoml.AppConfig
+	// TODO: introduce a notion of fioup config that encapsulates these two types of configs
+	config        *sotatoml.AppConfig
+	composeConfig *compose.Config
 
 	rootCmd = &cobra.Command{
 		Use:   "fioup",
@@ -36,6 +41,8 @@ var (
 			var err error
 			config, err = sotatoml.NewAppConfig(configPaths)
 			DieNotNil(err, "failed to load configuration from paths: "+strings.Join(configPaths, ", "))
+			composeConfig, err = getComposeConfig(config)
+			DieNotNil(err, "failed to get compose configuration")
 		},
 	}
 )
@@ -48,4 +55,17 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose debug logging")
 	rootCmd.PersistentFlags().StringSliceVarP(&configPaths, "cfg-dirs", "c",
 		sotatoml.DEF_CONFIG_ORDER, "A comma-separated list of paths to search for .toml configuration files")
+}
+
+func getComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
+	cfg, err := v1.NewDefaultConfig(
+		v1.WithStoreRoot(config.GetDefault("pacman.reset_apps_root", "/var/sota/reset-apps")),
+		v1.WithComposeRoot(config.GetDefault("pacman.compose_apps_root", "/var/sota/compose-apps")),
+		v1.WithUpdateDB(path.Join(config.GetDefault("storage.path", "/var/sota"), "updates.db")),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
