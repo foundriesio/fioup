@@ -1,7 +1,7 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package fioup
+package target
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fioconfig/transport"
 	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/fioup/config"
 	tuf "github.com/theupdateframework/go-tuf/v2/metadata"
 	"net/http"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 
 type (
 	TargetProvider interface {
-		UpdateTargets(cfg *Config) error
+		UpdateTargets(cfg *config.Config) error
 		GetTargetByName(name string) (Target, error)
 		GetTargetByVersion(version int) (Target, error)
 		GetLatestTarget() (Target, error)
@@ -37,7 +38,7 @@ type (
 	}
 )
 
-func NewTargetProvider(cfg *Config) (TargetProvider, error) {
+func NewTargetProvider(cfg *config.Config) (TargetProvider, error) {
 	client, err := transport.CreateClient(cfg.TomlConfig())
 	if err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func NewTargetProvider(cfg *Config) (TargetProvider, error) {
 	return p, nil
 }
 
-func (p *targetProvider) UpdateTargets(cfg *Config) error {
+func (p *targetProvider) UpdateTargets(cfg *config.Config) error {
 	// TODO: implement fetching targets.json from DG, the other types of fetching targets should
 	// be implemented in other TargetProvider implementations:
 	// 1. Local provider - read from local file

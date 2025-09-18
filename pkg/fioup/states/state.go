@@ -1,11 +1,13 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package fioup
+package states
 
 import (
 	"context"
 	"github.com/foundriesio/composeapp/pkg/update"
+	"github.com/foundriesio/fioup/pkg/fioup/config"
+	"github.com/foundriesio/fioup/pkg/fioup/target"
 )
 
 // StateName represents all possible states (both action and status)
@@ -33,11 +35,11 @@ type (
 
 	// UpdateContext holds the state machine context
 	UpdateContext struct {
-		Config         *Config
-		TargetProvider TargetProvider
-		FromTarget     Target
+		Config         *config.Config
+		TargetProvider target.TargetProvider
+		FromTarget     target.Target
 		ToVersion      int
-		ToTarget       Target
+		ToTarget       target.Target
 		CurrentState   StateName
 		Runner         update.Runner
 	}
