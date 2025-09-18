@@ -265,7 +265,7 @@ func rollback(updateContext *UpdateContext) error {
 			if err != nil {
 				log.Err(err).Msg("Rollback: Error updateContext.Runner.Complete")
 			}
-		} else {
+		} else if updateStatus.State != update.StateFailed {
 			err := updateContext.Runner.Cancel(updateContext.Context)
 			if err != nil {
 				log.Err(err).Msg("Rollback: Error updateContext.Runner.Cancel")
