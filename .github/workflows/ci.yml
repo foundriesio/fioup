@@ -14,3 +14,16 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4.0
+
+  e2e-test:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory /__w/fioup/fioup
+      - run: ./dev-shell.sh make test-e2e
+        env:
+          FACTORY: ${{ secrets.E2E_TEST_FACTORY }}
+          BASE_TARGET_VERSION: ${{ secrets.E2E_TEST_BASE_TARGET_VERSION }}
+          USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
+          TAG: ${{secrets.E2E_TEST_TAG}}
