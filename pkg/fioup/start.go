@@ -5,43 +5,25 @@ package fioup
 
 import (
 	"context"
-	"fmt"
-	"github.com/foundriesio/fioup/internal/targets"
+	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/fioup/config"
-	"github.com/foundriesio/fioup/pkg/fioup/states"
-	"github.com/foundriesio/fioup/pkg/fioup/target"
+	"github.com/foundriesio/fioup/pkg/fioup/state"
 )
 
 func Start(ctx context.Context, cfg *config.Config) error {
-	var err error
-	var targetProvider target.TargetProvider
-	var fromTarget target.Target
-
-	targetProvider, err = target.NewTargetProvider(cfg)
-	if err != nil {
-		return err
-	}
-	t, err := targets.GetCurrentTarget(cfg.GetDBPath())
-	if err != nil {
-		return err
-	}
-	fromTarget, err = target.NewTarget(t, cfg.GetEnabledApps())
-	if err != nil {
-		return err
-	}
-	stateMachine, err := states.NewStateMachine(cfg, &states.UpdateContext{
-		Config:         cfg,
-		TargetProvider: targetProvider,
-		FromTarget:     fromTarget,
-	}, []states.State{
-		&states.CheckingState{UpdateTargets: false},
-		&states.StagingState{},
-		&states.FetchingState{},
-		&states.InstallingState{},
-		&states.StartingState{},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create state machine for starting update: %w", err)
-	}
-	return stateMachine.Run(ctx)
+	return state.NewUpdateRunner([]state.ActionState{
+		&state.Check{
+			Action:         "start",
+			UpdateTargets:  false,
+			AllowNewUpdate: false,
+			AllowedStates: []update.State{
+				update.StateInstalled,
+				update.StateStarting,
+			},
+		},
+		&state.Init{},
+		&state.Fetch{},
+		&state.Install{},
+		&state.Start{},
+	}).Run(ctx, cfg)
 }
