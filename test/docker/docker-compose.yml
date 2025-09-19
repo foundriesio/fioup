@@ -12,7 +12,7 @@ services:
 
   fioup-e2e-test:
       build:
-        context: ${FIOUP_E2E_TEST_DOCKER_DIR}
+        context: ${FIOUP_DOCKER_DIR}
         args:
           FIOUP_VER: master
         dockerfile: Dockerfile
