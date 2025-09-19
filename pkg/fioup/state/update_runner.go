@@ -1,30 +1,32 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package states
+package state
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/foundriesio/fioup/pkg/fioup/config"
 )
 
 type (
-	// StateMachine runs the OTA update states
-	StateMachine struct {
+	// UpdateRunner runs the OTA update states
+	UpdateRunner struct {
 		ctx    *UpdateContext
-		states []State
+		states []ActionState
 	}
 )
 
-func NewStateMachine(cfg *config.Config, ctx *UpdateContext, states []State) (*StateMachine, error) {
-	return &StateMachine{
-		ctx:    ctx,
+func NewUpdateRunner(states []ActionState) *UpdateRunner {
+	return &UpdateRunner{
+		ctx:    &UpdateContext{},
 		states: states,
-	}, nil
+	}
 }
 
-func (sm *StateMachine) Run(ctx context.Context) error {
+func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
+	sm.ctx.Config = cfg
 	stateCounter := 1
 	for _, s := range sm.states {
 		sm.ctx.CurrentState = s.Name()

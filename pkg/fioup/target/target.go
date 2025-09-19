@@ -16,7 +16,7 @@ import (
 )
 
 type (
-	TargetProvider interface {
+	Provider interface {
 		UpdateTargets(cfg *config.Config) error
 		GetTargetByName(name string) (Target, error)
 		GetTargetByVersion(version int) (Target, error)
@@ -36,9 +36,14 @@ type (
 		version int
 		apps    []string
 	}
+	unknownTarget struct {
+		name    string
+		version int
+		apps    []string
+	}
 )
 
-func NewTargetProvider(cfg *config.Config) (TargetProvider, error) {
+func NewTargetProvider(cfg *config.Config) (Provider, error) {
 	client, err := transport.CreateClient(cfg.TomlConfig())
 	if err != nil {
 		return nil, err
@@ -67,7 +72,7 @@ func NewTargetProvider(cfg *config.Config) (TargetProvider, error) {
 
 func (p *targetProvider) UpdateTargets(cfg *config.Config) error {
 	// TODO: implement fetching targets.json from DG, the other types of fetching targets should
-	// be implemented in other TargetProvider implementations:
+	// be implemented in other Provider implementations:
 	// 1. Local provider - read from local file
 	// 2. TUF remote provider
 	// 3. TUF local provider
@@ -121,6 +126,26 @@ func (p *targetProvider) GetLatestTarget() (Target, error) {
 		return latestTarget, nil
 	}
 	return nil, fmt.Errorf("latest target not found")
+}
+
+func NewUnknownTarget() Target {
+	return &unknownTarget{
+		name:    "Unknown",
+		version: -1,
+		apps:    []string{},
+	}
+}
+
+func (t *unknownTarget) Name() string {
+	return t.name
+}
+
+func (t *unknownTarget) Version() int {
+	return t.version
+}
+
+func (t *unknownTarget) Apps() []string {
+	return t.apps
 }
 
 func NewTarget(tufTarget *tuf.TargetFiles, appShortlist []string) (Target, error) {

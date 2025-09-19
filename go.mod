@@ -7,11 +7,12 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 require (
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/foundriesio/composeapp v0.0.0-20250916132811-0a18ed355834
+	github.com/foundriesio/composeapp v0.0.0-20250919070804-86dbe5c66b56
 	github.com/foundriesio/fioconfig v0.0.0-20250731132857-67e18d0272e9
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
 	github.com/moby/term v0.5.0
+	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/theupdateframework/go-tuf/v2 v2.0.2
@@ -63,7 +64,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
