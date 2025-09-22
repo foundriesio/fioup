@@ -15,7 +15,7 @@ func init() {
 		Use:   "check",
 		Short: "Update TUF metadata",
 		Run: func(cmd *cobra.Command, args []string) {
-			doCheck(&opts)
+			doCheck(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
 	}
@@ -23,9 +23,9 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doCheck(opts *update.UpdateOptions) {
+func doCheck(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoCheck = true
-	err := update.Update(config, opts)
+	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform check operation")
 	log.Info().Msgf("Check operation complete")
 }

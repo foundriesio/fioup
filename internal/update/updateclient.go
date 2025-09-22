@@ -224,13 +224,13 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 	return nil
 }
 
-func Update(config *sotatoml.AppConfig, opts *UpdateOptions) error {
+func Update(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	updateContext := &UpdateContext{
 		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
 	}
 
 	var err error
-	updateContext.Context = context.Background()
+	updateContext.Context = ctx
 	updateContext.ComposeConfig, err = getComposeConfig(config)
 	updateContext.opts = opts
 	if err != nil {
@@ -673,13 +673,13 @@ func getComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
 	return cfg, nil
 }
 
-func CancelPendingUpdate(config *sotatoml.AppConfig, opts *UpdateOptions) error {
+func CancelPendingUpdate(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) error {
 	updateContext := &UpdateContext{
 		DbFilePath: path.Join(config.GetDefault("storage.path", "/var/sota"), config.GetDefault("storage.sqldb_path", "sql.db")),
 	}
 
 	var err error
-	updateContext.Context = context.Background()
+	updateContext.Context = ctx
 	updateContext.ComposeConfig, err = getComposeConfig(config)
 	updateContext.opts = opts
 	if err != nil {
@@ -705,7 +705,7 @@ func CancelPendingUpdate(config *sotatoml.AppConfig, opts *UpdateOptions) error 
 	return nil
 }
 
-func Daemon(config *sotatoml.AppConfig, opts *UpdateOptions) {
+func Daemon(ctx context.Context, config *sotatoml.AppConfig, opts *UpdateOptions) {
 	intervalStr := config.GetDefault("uptane.polling_seconds", "60")
 	interval, err := strconv.Atoi(intervalStr)
 	if err != nil {
@@ -717,7 +717,7 @@ func Daemon(config *sotatoml.AppConfig, opts *UpdateOptions) {
 		opts.DoFetch = true
 		opts.DoInstall = true
 		opts.DoStart = true
-		err := Update(config, opts)
+		err := Update(ctx, config, opts)
 		if err != nil {
 			log.Err(err).Msg("Error during update")
 		}

@@ -24,7 +24,7 @@ func init() {
 			if len(args) > 0 {
 				opts.TargetId = args[0]
 			}
-			doUpdate(&opts)
+			doUpdate(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
@@ -32,12 +32,12 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doUpdate(opts *update.UpdateOptions) {
+func doUpdate(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoCheck = true
 	opts.DoFetch = true
 	opts.DoInstall = true
 	opts.DoStart = true
-	err := update.Update(config, opts)
+	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform update")
 	log.Info().Msgf("Update operation complete")
 }

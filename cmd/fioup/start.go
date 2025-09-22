@@ -15,16 +15,16 @@ func init() {
 		Use:   "start",
 		Short: "Start execution of the updated target. A install operation must be performed first.",
 		Run: func(cmd *cobra.Command, args []string) {
-			doStart(&opts)
+			doStart(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
 	}
 	rootCmd.AddCommand(cmd)
 }
 
-func doStart(opts *update.UpdateOptions) {
+func doStart(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoStart = true
-	err := update.Update(config, opts)
+	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform start operation")
 	log.Info().Msgf("Start operation complete")
 }
