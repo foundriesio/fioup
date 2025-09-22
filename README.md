@@ -26,4 +26,4 @@ As a result, the `fioup` binary should appear in the `./bin` directory.
 
 ## License
 
-*fioup* is licensed under the [BSD-3-clause License](https://spdx.org/licenses/BSD-3-Clause.html). See [LICENSE](LICENSE) for the full license text.
+*fioup* is licensed under the [BSD 3-Clause Clear License](https://spdx.org/licenses/BSD-3-Clause-Clear.html). See [LICENSE](LICENSE) for the full license text.
