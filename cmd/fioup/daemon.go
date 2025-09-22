@@ -15,7 +15,7 @@ func init() {
 		Use:   "daemon",
 		Short: "Start the update agent daemon",
 		Run: func(cmd *cobra.Command, args []string) {
-			doDaemon(&opts)
+			doDaemon(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
 	}
@@ -23,7 +23,7 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doDaemon(opts *update.UpdateOptions) {
-	update.Daemon(config, opts)
+func doDaemon(cmd *cobra.Command, opts *update.UpdateOptions) {
+	update.Daemon(cmd.Context(), config, opts)
 	log.Info().Msgf("Daemon exited")
 }

@@ -18,7 +18,7 @@ func init() {
 			if len(args) > 0 {
 				opts.TargetId = args[0]
 			}
-			doFetch(&opts)
+			doFetch(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
@@ -26,9 +26,9 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doFetch(opts *update.UpdateOptions) {
+func doFetch(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoFetch = true
-	err := update.Update(config, opts)
+	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform fetch operation")
 	log.Info().Msgf("Fetch operation complete")
 }

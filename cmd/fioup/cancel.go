@@ -15,15 +15,15 @@ func init() {
 		Use:   "cancel",
 		Short: "Cancel the current update operation",
 		Run: func(cmd *cobra.Command, args []string) {
-			doCancel(&opts)
+			doCancel(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
 	}
 	rootCmd.AddCommand(cmd)
 }
 
-func doCancel(opts *update.UpdateOptions) {
-	err := update.CancelPendingUpdate(config, opts)
+func doCancel(cmd *cobra.Command, opts *update.UpdateOptions) {
+	err := update.CancelPendingUpdate(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform cancel")
 	log.Info().Msgf("Cancel operation complete")
 }
