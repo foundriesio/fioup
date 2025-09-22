@@ -1,13 +1,13 @@
 #!/bin/bash
 
-docker_dir=docker
+docker_dir=test/docker
 docker_path=${PWD}/${docker_dir}
 
 # Function to execute custom commands before exiting
 down() {
 	docker compose --env-file=${docker_path}/.env.dev -f ${docker_path}/docker-compose.yml down --remove-orphans
 	# remove the docker runtime part
-	docker volume rm ${docker_dir}_docker-runtime
+	docker volume rm `basename ${docker_dir}`_docker-runtime
 }
 
 # Register the cleanup function to be called on EXIT
