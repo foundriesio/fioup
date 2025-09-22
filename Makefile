@@ -20,6 +20,9 @@ check: format
 test:
 	@go test ./...
 
+test-e2e: build
+	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-True-False or test_incremental_updates[False-False-True'
+
 clean:
 	@rm -rf $(BUILD_DIR)
 
