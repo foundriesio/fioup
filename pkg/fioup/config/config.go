@@ -5,6 +5,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -18,7 +19,18 @@ type (
 	Config struct {
 		tomlConfig    *sotatoml.AppConfig
 		composeConfig *compose.Config
+		dgBaseURL     *url.URL
 	}
+)
+
+const (
+	TagKey           = "pacman.tags"
+	ServerBaseUrlKey = "tls.server"
+	StorageDirKey    = "storage.path"
+	HardwareIDKey    = "provision.primary_ecu_hardware_id"
+
+	StorageDefaultDir      = "/var/sota"
+	TargetsDefaultFilename = "targets.json"
 )
 
 func NewConfig(tomlConfigPaths []string) (*Config, error) {
@@ -32,11 +44,41 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 		return nil, fmt.Errorf("config: failed to load TOML from paths %q: %w",
 			strings.Join(tomlConfigPaths, ", "), err)
 	}
+	// Check mandatory fields in the TOML config
+	if !cfg.tomlConfig.Has(ServerBaseUrlKey) {
+		return nil, fmt.Errorf("no %q is found in the TOML config;"+
+			" it defines the device gateway base URL", ServerBaseUrlKey)
+	}
+	cfg.dgBaseURL, err = url.Parse(cfg.tomlConfig.Get(ServerBaseUrlKey))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value of the device gateway base URL: %w", err)
+	}
+
 	if cfg.composeConfig, err = newComposeConfig(cfg.tomlConfig); err != nil {
 		return nil, fmt.Errorf("failed to create compose config: %w", err)
 	}
 
 	return cfg, nil
+}
+
+func (c *Config) GetHardwareID() string {
+	return c.tomlConfig.Get(HardwareIDKey)
+}
+
+func (c *Config) GetTargetsFilepath() string {
+	return filepath.Join(c.GetStorageDir(), TargetsDefaultFilename)
+}
+
+func (c *Config) GetStorageDir() string {
+	return c.tomlConfig.GetDefault(StorageDirKey, StorageDefaultDir)
+}
+
+func (c *Config) GetTag() string {
+	return c.tomlConfig.Get(TagKey)
+}
+
+func (c *Config) GetServerBaseURL() *url.URL {
+	return c.dgBaseURL
 }
 
 func (c *Config) TomlConfig() *sotatoml.AppConfig {
