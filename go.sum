@@ -30,6 +30,7 @@ github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
 github.com/containerd/log v0.1.0/go.mod h1:VRRf09a7mHDIRezVKTRCrOq78v577GXq3bSa3EhrzVo=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
+github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/creack/pty v1.1.18 h1:n56/Zwd5o6whRC5PMGretI4IdRLlmBXYNjScPaBgsbY=
 github.com/creack/pty v1.1.18/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr4O4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -61,8 +62,6 @@ github.com/foundriesio/composeapp v0.0.0-20250918132054-f0fe7ca465a4 h1:zFlbEux9
 github.com/foundriesio/composeapp v0.0.0-20250918132054-f0fe7ca465a4/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
 github.com/foundriesio/fioconfig v0.0.0-20250922142016-4dd6f59a2fcc h1:dinC6WgwZJfHgd0t/T55b5ZmEBM+f6s0eulNIPa/QVI=
 github.com/foundriesio/fioconfig v0.0.0-20250922142016-4dd6f59a2fcc/go.mod h1:J3pslinCE6G5lqeAU5EY7/KBGKWRTq53P16eUH9zgG4=
-github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
-github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8/go.mod h1:FgQ6Kc6zP1/+sEXbJjl76WwcCyPe/KrYuCNdkNz0cW0=
 github.com/foundriesio/go-tuf/v2 v2.0.2-fio h1:adV2lRCEcWxBSAIYRT69gTIq2GwkpzGnQucONWHkPoo=
 github.com/foundriesio/go-tuf/v2 v2.0.2-fio/go.mod h1:t6EpmESDnXjVcmGE2ZijOQGyEcsOBxCqotOMssOkAVQ=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=

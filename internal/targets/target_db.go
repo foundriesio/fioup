@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/foundriesio/fioup/pkg/fioup/target"
 	"github.com/rs/zerolog/log"
-	"github.com/theupdateframework/go-tuf/v2/metadata"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,15 +28,15 @@ const (
 	updateModeFailed  int = 3
 )
 
-func RegisterInstallationStarted(dbFilePath string, target *metadata.TargetFiles, correlationId string) error {
+func RegisterInstallationStarted(dbFilePath string, target *target.Target, correlationId string) error {
 	return saveInstalledVersions(dbFilePath, target, correlationId, updateModePending)
 }
 
-func RegisterInstallationSuceeded(dbFilePath string, target *metadata.TargetFiles, correlationId string) error {
+func RegisterInstallationSuceeded(dbFilePath string, target *target.Target, correlationId string) error {
 	return saveInstalledVersions(dbFilePath, target, correlationId, updateModeCurrent)
 }
 
-func RegisterInstallationFailed(dbFilePath string, target *metadata.TargetFiles, correlationId string) error {
+func RegisterInstallationFailed(dbFilePath string, target *target.Target, correlationId string) error {
 	return saveInstalledVersions(dbFilePath, target, correlationId, updateModeFailed)
 }
 
@@ -100,14 +100,10 @@ func IsFailingTarget(dbFilePath string, name string) (bool, error) {
 	return false, nil
 }
 
-func GetCurrentTarget(dbFilePath string) (*metadata.TargetFiles, error) {
-	target := &metadata.TargetFiles{}
-	target.Custom = &json.RawMessage{}
-	target.Path = "Initial Target" // default value, if there is no target data in DB
-
+func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
-		return target, err
+		return target.UnknownTarget, err
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
@@ -117,7 +113,7 @@ func GetCurrentTarget(dbFilePath string) (*metadata.TargetFiles, error) {
 
 	rows, err := db.Query("SELECT name, custom_meta FROM installed_versions WHERE is_current = 1;")
 	if err != nil {
-		return target, err
+		return target.UnknownTarget, err
 	}
 
 	var name string
@@ -125,28 +121,27 @@ func GetCurrentTarget(dbFilePath string) (*metadata.TargetFiles, error) {
 
 	for rows.Next() {
 		if err = rows.Scan(&name, &customMeta); err != nil {
-			return target, err
+			return target.UnknownTarget, err
 		}
 	}
 
 	if err = rows.Err(); err != nil {
-		return target, err
+		return target.UnknownTarget, err
 	}
 
 	log.Debug().Msgf("Current target: %s", name)
 
+	var t target.Target
 	if name != "" {
-		target.Path = name
-		if err = json.Unmarshal([]byte(customMeta), target.Custom); err != nil {
-			return target, fmt.Errorf("failed to unmarshal custom metadata: %v '%s'", err, customMeta)
+		if err = json.Unmarshal([]byte(customMeta), &t); err != nil {
+			return target.UnknownTarget, fmt.Errorf("failed to unmarshal custom metadata: %v '%s'", err, customMeta)
 		}
 	}
-
-	return target, nil
+	return t, nil
 }
 
-func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, correlationId string, updateMode int) error {
-	log.Debug().Msgf("Saving installed version: %s, correlation ID: %s, mode: %d", target.Path, correlationId, updateMode)
+func saveInstalledVersions(dbFilePath string, target *target.Target, correlationId string, updateMode int) error {
+	log.Debug().Msgf("Saving installed version: %s, correlation ID: %s, mode: %d", target.ID, correlationId, updateMode)
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return err
@@ -171,7 +166,7 @@ func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, corr
 			return fmt.Errorf("get name: %w", err)
 		}
 
-		if name == target.Path {
+		if name == target.ID {
 			log.Debug().Msg("DB: Target was installed before")
 			oldWasInstalled = BoolPointer(wasInstalled)
 			// oldName = name
@@ -198,7 +193,7 @@ func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, corr
 		if updateMode == updateModeFailed {
 			_, err = db.Exec(
 				"UPDATE installed_versions SET is_pending = 0, was_installed = 0 WHERE name = ?;",
-				target.Path,
+				target.ID,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to save installed versions: %w", err)
@@ -210,25 +205,25 @@ func saveInstalledVersions(dbFilePath string, target *metadata.TargetFiles, corr
 				updateMode == updateModeCurrent,                     // is_current
 				updateMode == updateModePending,                     // is_pending
 				updateMode == updateModeCurrent || *oldWasInstalled, // was_installed
-				target.Path,
+				target.ID,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to save installed versions: %w", err)
 			}
 		}
 	} else {
-		customMeta, err := json.Marshal(target.Custom)
+		customMeta, err := json.Marshal(target)
 		if err != nil {
 			return fmt.Errorf("failed to marshal custom metadata: %w", err)
 		}
-		sha256 := hex.EncodeToString(target.Hashes["sha256"])
+		sha256 := hex.EncodeToString([]byte("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
 		_, err = db.Exec(
 			"INSERT INTO installed_versions (ecu_serial, sha256, name, hashes, length, custom_meta, correlation_id, is_current, is_pending, was_installed) VALUES (?,?,?,?,?,?,?,?,?,?);",
 			"",
 			sha256,
-			target.Path,
+			target.ID,
 			"sha256:"+sha256,
-			target.Length,
+			0,
 			string(customMeta),
 			correlationId,
 			updateMode == updateModeCurrent, // is_current

@@ -12,6 +12,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
+	"github.com/foundriesio/fioup/pkg/fioup/target"
 	"github.com/rs/zerolog/log"
 	_ "modernc.org/sqlite"
 )
@@ -69,8 +70,8 @@ func InitUpdate(updateContext *UpdateContext) error {
 		updateContext.Resuming = true
 		updateContext.Runner = updateContext.PendingRunner
 	} else {
-		log.Info().Msgf("Initializing update for target %s", updateContext.Target.Path)
-		updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path)
+		log.Info().Msgf("Initializing update for target %s", updateContext.Target.ID)
+		updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.ID)
 		if err != nil {
 			return err
 		}
@@ -95,7 +96,7 @@ func InitUpdate(updateContext *UpdateContext) error {
 }
 
 func PullTarget(updateContext *UpdateContext) error {
-	log.Info().Msgf("Pulling target %v", updateContext.Target.Path)
+	log.Info().Msgf("Pulling target %v", updateContext.Target.ID)
 
 	var updateStatus update.Update
 	updateStatus = updateContext.Runner.Status()
@@ -149,7 +150,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 		}
 	}
 
-	err := targets.RegisterInstallationStarted(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
+	err := targets.RegisterInstallationStarted(updateContext.DbFilePath, &updateContext.Target, updateStatus.ID)
 	if err != nil {
 		log.Err(err).Msg("error registering installation started")
 	}
@@ -163,7 +164,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 		compose.WithInstallProgress(update.GetInstallProgressPrinter())}
 
 	if len(updateContext.AppsToUninstall) > 0 {
-		log.Info().Msgf("Stopping apps not included in target %v", updateContext.Target.Path)
+		log.Info().Msgf("Stopping apps not included in target %v", updateContext.Target.ID)
 		log.Debug().Msgf("Apps being stopped: %v", updateContext.AppsToUninstall)
 		err = compose.StopApps(updateContext.Context, updateContext.ComposeConfig, updateContext.AppsToUninstall)
 		if err != nil {
@@ -171,7 +172,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 		}
 	}
 
-	log.Info().Msgf("Installing target %v", updateContext.Target.Path)
+	log.Info().Msgf("Installing target %v", updateContext.Target.ID)
 	err = updateContext.Runner.Install(updateContext.Context, installOptions...)
 	if err != nil {
 		if err2 := GenAndSaveEvent(updateContext, events.DownloadCompleted, err.Error(), targets.BoolPointer(false)); err2 != nil {
@@ -196,7 +197,7 @@ func InstallTarget(updateContext *UpdateContext) error {
 }
 
 func StartTarget(updateContext *UpdateContext) (bool, error) {
-	log.Info().Msgf("Starting target %v", updateContext.Target.Path)
+	log.Info().Msgf("Starting target %v", updateContext.Target.ID)
 
 	var err error
 	updateStatus := updateContext.Runner.Status()
@@ -220,7 +221,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 			log.Err(errEvt).Msg("error on GenAndSaveEvent")
 		}
 
-		errDb := targets.RegisterInstallationFailed(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
+		errDb := targets.RegisterInstallationFailed(updateContext.DbFilePath, &updateContext.Target, updateStatus.ID)
 		if errDb != nil {
 			log.Err(errDb).Msg("error registering installation failed")
 		}
@@ -241,7 +242,7 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 	if err != nil {
 		log.Err(err).Msg("error on GenAndSaveEvent")
 	}
-	err = targets.RegisterInstallationSuceeded(updateContext.DbFilePath, updateContext.Target, updateStatus.ID)
+	err = targets.RegisterInstallationSuceeded(updateContext.DbFilePath, &updateContext.Target, updateStatus.ID)
 	if err != nil {
 		log.Err(err).Msg("error registering installation succeeded")
 	}
@@ -252,12 +253,12 @@ func StartTarget(updateContext *UpdateContext) (bool, error) {
 		log.Err(err).Msg("error completing update:")
 	}
 
-	log.Info().Msgf("Target %v has been started", updateContext.Target.Path)
+	log.Info().Msgf("Target %v has been started", updateContext.Target.ID)
 	return false, nil
 }
 
 func rollback(updateContext *UpdateContext) error {
-	log.Info().Msgf("Rolling back to target %v", updateContext.CurrentTarget.Path)
+	log.Info().Msgf("Rolling back to target %v", updateContext.CurrentTarget.ID)
 	if updateContext.Runner != nil {
 		updateStatus := updateContext.Runner.Status()
 		if updateStatus.State == update.StateStarted {
@@ -281,7 +282,7 @@ func rollback(updateContext *UpdateContext) error {
 		log.Info().Msg("Rollback: No installation to cancel")
 	}
 
-	updateContext.Reason = "Rolling back to " + updateContext.CurrentTarget.Path
+	updateContext.Reason = "Rolling back to " + updateContext.CurrentTarget.ID
 	updateContext.Target = updateContext.CurrentTarget
 
 	err := FillAppsList(updateContext)
@@ -289,7 +290,7 @@ func rollback(updateContext *UpdateContext) error {
 		log.Err(err).Msg("Rollback: Error calling FillAppsList")
 	}
 
-	updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.Path)
+	updateRunner, err := update.NewUpdate(updateContext.ComposeConfig, updateContext.Target.ID)
 	if err != nil {
 		log.Err(err).Msg("Rollback: Error calling update.NewUpdate")
 		return err
@@ -301,7 +302,7 @@ func rollback(updateContext *UpdateContext) error {
 		return err
 	}
 
-	if updateContext.Target == nil {
+	if updateContext.Target.ID == target.UnknownTarget.ID {
 		// Target is already running
 		log.Info().Msgf("Rollback: Target is already running %v", updateContext.Target)
 		return nil
@@ -328,27 +329,27 @@ func rollback(updateContext *UpdateContext) error {
 	}
 
 	updateContext.Runner = updateRunner
-	log.Info().Msgf("Installing rollback target %v", updateContext.Target.Path)
+	log.Info().Msgf("Installing rollback target %v", updateContext.Target.ID)
 	err = InstallTarget(updateContext)
 	if err != nil {
 		log.Err(err).Msg("rollback error installing target")
 		return err
 	}
 
-	log.Info().Msgf("Starting rollback target %v", updateContext.Target.Path)
+	log.Info().Msgf("Starting rollback target %v", updateContext.Target.ID)
 	_, err = StartTarget(updateContext)
 	if err != nil {
-		log.Err(err).Msgf("rollback error starting target %v", updateContext.Target.Path)
+		log.Err(err).Msgf("rollback error starting target %v", updateContext.Target.ID)
 		return err
 	}
-	log.Info().Msgf("Rollback to target %v completed successfully", updateContext.Target.Path)
+	log.Info().Msgf("Rollback to target %v completed successfully", updateContext.Target.ID)
 	return nil
 }
 
 func IsTargetRunning(updateContext *UpdateContext) (bool, error) {
-	log.Debug().Msgf("Checking target %v", updateContext.Target.Path)
-	if updateContext.Target.Path != updateContext.CurrentTarget.Path {
-		log.Debug().Msgf("Running target name (%s) is different than candidate target name (%s)", updateContext.CurrentTarget.Path, updateContext.Target.Path)
+	log.Debug().Msgf("Checking target %v", updateContext.Target.ID)
+	if updateContext.Target.ID != updateContext.CurrentTarget.ID {
+		log.Debug().Msgf("Running target name (%s) is different than candidate target name (%s)", updateContext.CurrentTarget.ID, updateContext.Target.ID)
 		return false, nil
 	}
 

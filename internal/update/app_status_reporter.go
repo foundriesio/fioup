@@ -6,12 +6,11 @@ package update
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fioconfig/sotatoml"
-	"github.com/foundriesio/fioconfig/transport"
+	"github.com/foundriesio/fioup/pkg/fioup/client"
 )
 
 type (
@@ -38,7 +37,7 @@ type (
 	}
 )
 
-func ReportAppsStates(config *sotatoml.AppConfig, client *http.Client, updateContext *UpdateContext) error {
+func ReportAppsStates(config *sotatoml.AppConfig, client *client.GatewayClient, updateContext *UpdateContext) error {
 	// Get status of all apps found in the local app storage
 	status, err := compose.CheckAppsStatus(updateContext.Context, updateContext.ComposeConfig, nil)
 	if err != nil {
@@ -80,8 +79,7 @@ func ReportAppsStates(config *sotatoml.AppConfig, client *http.Client, updateCon
 	if err != nil {
 		return err
 	}
-	appsStatesUrl := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/apps-states"
-	res, err := transport.HttpPost(client, appsStatesUrl, data)
+	res, err := client.Post("/apps-states", data)
 	if err != nil {
 		return err
 	}

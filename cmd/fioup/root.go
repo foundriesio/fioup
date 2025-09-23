@@ -35,9 +35,12 @@ var (
 			// Output pretty console if terminal (optional)
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: !term.IsTerminal(uintptr(os.Stderr.Fd()))})
 
-			var err error
-			config, err = cfg.NewConfig(configPaths)
-			cobra.CheckErr(err)
+			if cmd.Name() != "register" {
+				// Load configuration unless the "register" command is invoked
+				var err error
+				config, err = cfg.NewConfig(configPaths)
+				cobra.CheckErr(err)
+			}
 		},
 	}
 )
