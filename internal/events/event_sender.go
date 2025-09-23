@@ -5,11 +5,10 @@ package events
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/foundriesio/fioconfig/transport"
+	"github.com/foundriesio/fioup/pkg/fioup/client"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -63,8 +62,8 @@ func NewEvent(eventType EventTypeValue, details string, success *bool, correlati
 	return evt
 }
 
-func SendEvent(client *http.Client, urlPath string, event []DgUpdateEvent) error {
-	res, err := transport.HttpPost(client, urlPath, event)
+func SendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
+	res, err := client.Post("/events", event)
 	if err != nil {
 		log.Err(err).Msg("Unable to send event")
 	} else if res.StatusCode < 200 || res.StatusCode > 204 {
@@ -73,7 +72,7 @@ func SendEvent(client *http.Client, urlPath string, event []DgUpdateEvent) error
 	return err
 }
 
-func FlushEvents(dbFilePath string, client *http.Client, urlPath string) error {
+func FlushEvents(dbFilePath string, client *client.GatewayClient) error {
 	evts, maxId, err := GetEvents(dbFilePath)
 	if err != nil {
 		return fmt.Errorf("error getting events: %w", err)
@@ -85,7 +84,7 @@ func FlushEvents(dbFilePath string, client *http.Client, urlPath string) error {
 	}
 
 	log.Debug().Msgf("Flushing %d events", len(evts))
-	err = SendEvent(client, urlPath, evts)
+	err = SendEvent(client, evts)
 	if err != nil {
 		return fmt.Errorf("error sending events: %w", err)
 	}

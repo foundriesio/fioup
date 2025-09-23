@@ -7,23 +7,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
-	"path"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
-	"github.com/foundriesio/fioconfig/sotatoml"
-	"github.com/foundriesio/fioconfig/transport"
-	"github.com/foundriesio/fiotuf/tuf"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
+	dg "github.com/foundriesio/fioup/pkg/fioup/client"
 	"github.com/foundriesio/fioup/pkg/fioup/config"
+	"github.com/foundriesio/fioup/pkg/fioup/target"
 	"github.com/rs/zerolog/log"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	_ "modernc.org/sqlite"
@@ -35,8 +30,8 @@ type (
 		opts       *UpdateOptions
 		DbFilePath string
 
-		Target             *metadata.TargetFiles
-		CurrentTarget      *metadata.TargetFiles
+		Target             target.Target
+		CurrentTarget      target.Target
 		Reason             string
 		RequiredApps       []string
 		AppsToUninstall    []string
@@ -69,93 +64,6 @@ func InitializeDatabase(dbFilePath string) error {
 	}
 
 	return nil
-}
-
-func getTargetsTuf(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
-	// TODO: Set currentTargetName and appsNames in Fiotuf instance, for it to update the x-ats-* headers accordingly
-	fiotuf, err := tuf.NewFioTuf(config, client)
-	if err != nil {
-		log.Err(err).Msg("Error creating fiotuf instance")
-		return nil, err
-	}
-
-	if refreshTargets {
-		err = fiotuf.RefreshTuf(localRepoPath)
-		if err != nil {
-			log.Err(err).Msg("Error refreshing TUF")
-			return nil, err
-		}
-	}
-
-	tufTargets := fiotuf.GetTargets()
-	return tufTargets, nil
-}
-
-func fetchTargetsJson(config *sotatoml.AppConfig, client *http.Client, currentTargetName string, appsNames []string) ([]byte, error) {
-	urlPath := config.GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/repo/targets.json"
-	headers := make(map[string]string)
-	headers["x-ats-tags"] = config.Get("pacman.tags")
-	headers["x-ats-target"] = currentTargetName
-	headers["x-ats-dockerapps"] = strings.Join(appsNames, ",")
-	res, err := transport.HttpGet(client, urlPath, headers)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code HTTP_%d from %s: %s", res.StatusCode, urlPath, string(res.Body))
-	}
-	return res.Body, nil
-}
-
-func getTargetsUnsafe(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, refreshTargets bool, currentTargetName string, appsNames []string) (map[string]*metadata.TargetFiles, error) {
-	var targetsBytes []byte
-	var err error
-
-	// Store unverified targets.json outside "tuf" directory
-	unsafeTargetsPath := path.Join(config.GetDefault("storage.path", "/var/sota"), "targets.json")
-	if refreshTargets {
-		if localRepoPath == "" {
-			targetsBytes, err = fetchTargetsJson(config, client, currentTargetName, appsNames)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching targets.json: %w", err)
-			}
-		} else {
-			filePath := path.Join(localRepoPath, "repo", "targets.json")
-			targetsBytes, err = os.ReadFile(filePath)
-			if err != nil {
-				return nil, fmt.Errorf("error reading targets.json from %s: %v", filePath, err)
-			}
-		}
-		// Write contents of targetsBytes to local file
-		err = os.WriteFile(unsafeTargetsPath, targetsBytes, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("error writing targets.json to %s: %w", unsafeTargetsPath, err)
-		}
-	} else {
-		targetsBytes, err = os.ReadFile(unsafeTargetsPath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading targets.json from %s: %w", unsafeTargetsPath, err)
-		}
-	}
-
-	meta, err := metadata.Targets().FromBytes(targetsBytes)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing targets.json: %w", err)
-	}
-	targets := meta.Signed.Targets
-
-	return targets, nil
-
-}
-
-func getTargets(config *sotatoml.AppConfig, localRepoPath string, client *http.Client, currentTargetName string, appsNames []string, enableTuf bool, refreshTargets bool) (map[string]*metadata.TargetFiles, error) {
-	if enableTuf {
-		return getTargetsTuf(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
-	} else {
-		return getTargetsUnsafe(config, localRepoPath, client, refreshTargets, currentTargetName, appsNames)
-	}
 }
 
 func checkUpdateState(updateContext *UpdateContext, targetId string) error {
@@ -247,19 +155,6 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 		log.Info().Msgf("Proceeding with update to target %s", updateContext.PendingTargetName)
 	}
 
-	var localRepoPath string
-	if opts.SrcDir == "" {
-		localRepoPath = ""
-	} else {
-		localRepoPath = path.Join(opts.SrcDir, "repo")
-	}
-
-	client, err := transport.CreateClient(cfg.TomlConfig())
-	if err != nil {
-		log.Err(err).Msg("Error creating HTTP client")
-		return err
-	}
-
 	err = InitializeDatabase(updateContext.DbFilePath)
 	if err != nil {
 		log.Err(err).Msg("Error initializing database")
@@ -276,13 +171,22 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 		log.Err(err).Msg("Error getting current apps")
 	}
 
-	var tufTargets map[string]*metadata.TargetFiles
-	tufTargets, err = getTargets(cfg.TomlConfig(), localRepoPath, client, updateContext.CurrentTarget.Path, updateContext.InstalledAppsNames, opts.EnableTuf, opts.DoCheck)
+	var client *dg.GatewayClient
+	var targetsRepo target.Repo
+	client, err = dg.NewGatewayClient(cfg, updateContext.CurrentTarget.AppNames(), updateContext.CurrentTarget.ID)
 	if err != nil {
-		log.Err(err).Msg("Error getting targets")
+		log.Err(err).Msg("Error creating HTTP client")
 		return err
 	}
-
+	targetsRepo, err = target.NewPlainRepo(client, cfg.GetTargetsFilepath())
+	if err != nil {
+		return err
+	}
+	var targetList target.Targets
+	targetList, err = targetsRepo.LoadTargets(opts.DoCheck)
+	if err != nil {
+		return err
+	}
 	var targetId string
 	if opts.DoInstall || opts.DoStart {
 		if !opts.DoFetch && updateContext.PendingTargetName == "" {
@@ -298,20 +202,20 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 		targetId = opts.TargetId
 	}
 
-	err = GetTargetToInstall(updateContext, cfg, tufTargets, targetId)
+	err = GetTargetToInstall(updateContext, cfg, targetList, targetId)
 	if err != nil {
 		return fmt.Errorf("error getting target to install %w", err)
 	}
 
 	if opts.DoCheck && !opts.DoFetch {
-		// Log targets info when running standalone check command
-		dumpTargetsInfo(tufTargets, updateContext)
+		// Log targetList info when running standalone check command
+		dumpTargetsInfo(targetList, updateContext)
 	}
 
 	if opts.DoFetch || opts.DoInstall || opts.DoStart {
 		doRollback, err := PerformUpdate(updateContext)
 		if doRollback {
-			log.Err(err).Msgf("Error during update to target %s, rolling back", updateContext.Target.Path)
+			log.Err(err).Msgf("Error during update to target %s, rolling back", updateContext.Target.ID)
 			rollbackErr := rollback(updateContext)
 			if rollbackErr != nil {
 				log.Err(rollbackErr).Msgf("Error rolling back")
@@ -319,101 +223,68 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 			}
 		} else {
 			if err != nil {
-				log.Err(err).Msgf("Error updating to target %s", updateContext.Target.Path)
+				log.Err(err).Msgf("Error updating to target %s", updateContext.Target.ID)
 			}
 		}
 	}
 
+	if err == nil {
+		client.UpdateHeaders(updateContext.Target.AppNames(), updateContext.Target.ID)
+	}
 	_ = ReportAppsStates(cfg.TomlConfig(), client, updateContext)
 
-	eventsUrl := cfg.TomlConfig().GetDefault("tls.server", "https://ota-lite.foundries.io:8443") + "/events"
-	errFlush := events.FlushEvents(updateContext.DbFilePath, client, eventsUrl)
+	errFlush := events.FlushEvents(updateContext.DbFilePath, client)
 	if errFlush != nil {
 		log.Err(errFlush).Msg("Error flushing events")
 	}
 	return err
 }
 
-func dumpTargetsInfo(tufTargets map[string]*metadata.TargetFiles, updateContext *UpdateContext) {
+func dumpTargetsInfo(targets target.Targets, updateContext *UpdateContext) {
 	log.Info().Msgf("Available targets:")
 
-	// Sort targets by version
-	type targetInfo struct {
-		Name    string
-		Version int
-	}
-	var targetsList []targetInfo
-	for name, t := range tufTargets {
-		version, err := GetVersion(t)
-		if err != nil {
-			log.Err(err).Msgf("Error getting version for target %s", name)
-			continue
-		}
-		targetsList = append(targetsList, targetInfo{Name: name, Version: version})
-	}
-	sort.Slice(targetsList, func(i, j int) bool {
-		return targetsList[i].Version < targetsList[j].Version
-	})
+	targetsList := targets.GetSortedList()
 
 	// Print sorted list of targets
 	for _, ti := range targetsList {
-		log.Info().Msgf("  %s (version: %d)", ti.Name, ti.Version)
-		apps, err := GetAppsUris(tufTargets[ti.Name])
-		if err != nil {
-			log.Err(err).Msgf("Error getting apps uris for target %s", ti.Name)
-			continue
-		}
-		if len(apps) > 0 {
+		log.Info().Msgf("  %s (version: %d)", ti.ID, ti.Version)
+		if len(ti.Apps) > 0 {
 			log.Info().Msgf("    apps:")
-			for _, app := range apps {
-				log.Info().Msgf("      %s -> %s", getAppNameFromUri(app), app)
+			for _, app := range ti.Apps {
+				log.Info().Msgf("      %s -> %s", app.Name, app.URI)
 			}
 		}
 		log.Info().Msg("")
 	}
 
-	if updateContext.Target.Path == updateContext.CurrentTarget.Path {
+	if updateContext.Target.ID == updateContext.CurrentTarget.ID {
 		if updateContext.TargetIsRunning {
 			if len(updateContext.AppsToUninstall) == 0 {
-				log.Info().Msgf("Selected Target %s is already running", updateContext.Target.Path)
+				log.Info().Msgf("Selected Target %s is already running", updateContext.Target.ID)
 			} else {
-				log.Info().Msgf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.Path, updateContext.AppsToUninstall)
+				log.Info().Msgf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.ID, updateContext.AppsToUninstall)
 			}
 		} else {
-			log.Info().Msgf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.Path)
+			log.Info().Msgf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.ID)
 		}
 	} else {
-		log.Info().Msgf("Target %s needs to be installed", updateContext.Target.Path)
+		log.Info().Msgf("Target %s needs to be installed", updateContext.Target.ID)
 	}
-}
-
-func getAppNameFromUri(uri string) string {
-	parts := strings.Split(uri, "/")
-	if len(parts) == 0 {
-		return ""
-	}
-	appNameWithTag := parts[len(parts)-1]
-	appNameParts := strings.Split(appNameWithTag, "@")
-	return appNameParts[0]
 }
 
 func FillAppsList(updateContext *UpdateContext) error {
 	var requiredApps []string
 	if updateContext.PendingApps == nil {
-		targetApps, err := GetAppsUris(updateContext.Target)
-		if err != nil {
-			log.Err(err).Msg("Error getting apps uris")
-			return fmt.Errorf("error getting apps uris: %w", err)
-		}
+		targetApps := updateContext.Target.Apps
 		requiredApps = []string{}
 		for _, appUri := range targetApps {
-			appName := getAppNameFromUri(appUri)
+			appName := appUri.Name
 			if appName == "" {
 				log.Warn().Msgf("App URI %s does not contain a valid app name", appUri)
 				continue
 			}
 			if updateContext.ConfiguredAppNames == nil || slices.Contains(updateContext.ConfiguredAppNames, appName) {
-				requiredApps = append(requiredApps, appUri)
+				requiredApps = append(requiredApps, appUri.URI)
 			}
 		}
 		log.Debug().Msgf("targetApps: %v", targetApps)
@@ -443,7 +314,7 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 		return fmt.Errorf("error filling apps list: %w", err)
 	}
 
-	log.Debug().Msgf("Checking if candidate target %s is running", updateContext.Target.Path)
+	log.Debug().Msgf("Checking if candidate target %s is running", updateContext.Target.ID)
 	isRunning, err := IsTargetRunning(updateContext)
 	if err != nil {
 		return fmt.Errorf("error checking target: %w", err)
@@ -463,9 +334,8 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 
 // Returns information about the apps to install and to remove, as long as the corresponding target
 // No update operation is performed at this point. Not even apps stopping
-func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, tufTargets map[string]*metadata.TargetFiles, targetId string) error {
+func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, targetList target.Targets, targetId string) error {
 	var err error
-
 	specificVersion := -1
 	specificName := ""
 	if targetId != "" {
@@ -475,21 +345,22 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, tufTar
 		}
 	}
 
-	candidateTarget, _ := selectTarget(tufTargets, specificVersion, specificName)
-	if candidateTarget == nil {
+	candidateTarget, _ := selectTarget(targetList, specificVersion, specificName)
+	if candidateTarget.ID == target.UnknownTarget.ID {
 		log.Info().Msgf("No target found for version %d", specificVersion)
 		return fmt.Errorf("no target found for version %d", specificVersion)
 	}
 
 	if targetId == "" {
 		// If no target is specified, check if automatically selected target is marked as failing
-		failing, _ := targets.IsFailingTarget(updateContext.DbFilePath, candidateTarget.Path)
+		failing, _ := targets.IsFailingTarget(updateContext.DbFilePath, candidateTarget.ID)
 		if failing {
-			log.Info().Msg("Skipping failing target " + candidateTarget.Path + " using " + updateContext.CurrentTarget.Path + " instead")
+			log.Info().Msg("Skipping failing target " + candidateTarget.ID + " using " + updateContext.CurrentTarget.ID + " instead")
 			candidateTarget = updateContext.CurrentTarget
 		}
 	}
 
+	candidateTarget.ShortlistApps(cfg.GetEnabledApps())
 	updateContext.Target = candidateTarget
 
 	apps := cfg.GetEnabledApps()
@@ -505,8 +376,8 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, tufTar
 	}
 
 	if !updateContext.TargetIsRunning {
-		if updateContext.CurrentTarget.Path != updateContext.Target.Path {
-			updateContext.Reason = "Updating from " + updateContext.CurrentTarget.Path + " to " + updateContext.Target.Path
+		if updateContext.CurrentTarget.ID != updateContext.Target.ID {
+			updateContext.Reason = "Updating from " + updateContext.CurrentTarget.ID + " to " + updateContext.Target.ID
 		} else {
 			updateContext.Reason = "Syncing Active Target Apps"
 		}
@@ -518,19 +389,19 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, tufTar
 func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 	// updateContext.Target must be set
 	// updateContext.AppsToInstall might be empty
-	if updateContext.Target.Path == updateContext.CurrentTarget.Path {
+	if updateContext.Target.ID == updateContext.CurrentTarget.ID {
 		if updateContext.TargetIsRunning {
-			log.Info().Msgf("Target %s is already running", updateContext.Target.Path)
+			log.Info().Msgf("Target %s is already running", updateContext.Target.ID)
 			if len(updateContext.AppsToUninstall) == 0 {
-				log.Debug().Msgf("No apps to uninstall for target %s", updateContext.Target.Path)
+				log.Debug().Msgf("No apps to uninstall for target %s", updateContext.Target.ID)
 				if updateContext.opts.DoFetch && updateContext.opts.TargetId == "" {
 					return false, nil
 				}
 			} else {
-				log.Info().Msgf("Uninstalling apps for target %s: %v", updateContext.Target.Path, updateContext.AppsToUninstall)
+				log.Info().Msgf("Uninstalling apps for target %s: %v", updateContext.Target.ID, updateContext.AppsToUninstall)
 			}
 		} else {
-			log.Info().Msgf("Target %s is already running, but some apps need to be started", updateContext.Target.Path)
+			log.Info().Msgf("Target %s is already running, but some apps need to be started", updateContext.Target.ID)
 		}
 	} else {
 		log.Info().Msgf("%s", updateContext.Reason)
@@ -569,9 +440,7 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 }
 
 func GenAndSaveEvent(updateContext *UpdateContext, eventType events.EventTypeValue, details string, success *bool) error {
-	version, _ := GetVersion(updateContext.Target)
-	targetName := updateContext.Target.Path
-	evt := events.NewEvent(eventType, details, success, updateContext.Runner.Status().ID, targetName, version)
+	evt := events.NewEvent(eventType, details, success, updateContext.Runner.Status().ID, updateContext.Target.ID, updateContext.Target.Version)
 	return events.SaveEvent(updateContext.DbFilePath, &evt[0])
 }
 
@@ -622,37 +491,15 @@ func GetVersion(target *metadata.TargetFiles) (int, error) {
 	return version, nil
 }
 
-func selectTarget(allTargets map[string]*metadata.TargetFiles, specificVersion int, specificName string) (*metadata.TargetFiles, error) {
+func selectTarget(targets target.Targets, specificVersion int, specificName string) (target.Target, error) {
 	log.Debug().Msgf("selectTarget: specificVersion=%d, specificName=%s", specificVersion, specificName)
-	latest := -1
-	var selectedTarget *metadata.TargetFiles
-	for targetName := range allTargets {
-		if specificName != "" && targetName == specificName {
-			selectedTarget = allTargets[targetName]
-			break
-		}
 
-		var tc targets.TargetCustom
-		var b []byte
-		b, _ = (*allTargets[targetName].Custom).MarshalJSON()
-		err := json.Unmarshal(b, &tc)
-		if err != nil {
-			continue
-		}
-
-		v, err := strconv.Atoi(tc.Version)
-		if err != nil {
-			continue
-		}
-		if (specificVersion > 0 && specificVersion == v) || (specificVersion <= 0 && v > latest) {
-			selectedTarget = allTargets[targetName]
-			latest = v
-			if specificVersion > 0 {
-				break
-			}
-		}
+	if len(specificName) > 0 {
+		return targets.GetTargetByID(specificName), nil
+	} else if specificVersion != -1 {
+		return targets.GetTargetByVersion(specificVersion), nil
 	}
-	return selectedTarget, nil
+	return targets.GetLatestTarget(), nil
 }
 
 func CancelPendingUpdate(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error {
