@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -25,5 +26,5 @@ func init() {
 
 func doDaemon(cmd *cobra.Command, opts *update.UpdateOptions) {
 	update.Daemon(cmd.Context(), config, opts)
-	log.Info().Msgf("Daemon exited")
+	slog.Info("Daemon exited")
 }

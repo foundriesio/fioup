@@ -7,14 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 func getDockerConfigPath() (string, error) {
@@ -52,20 +51,22 @@ func stageDockerChanges(opt *RegisterOptions) error {
 		}
 		hubUrl = strings.Replace(uri.Hostname(), "api.", "hub.", 1)
 	}
-	log.Debug().Str("uri", hubUrl).Msg("Factory registry")
+	slog.Debug("Factory registry",
+		"uri", hubUrl)
 
 	path, err := getDockerConfigPath()
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("path", path).Msg("Docker config")
+	slog.Debug("Docker config",
+		"path", path)
 
 	opt.dockerCfgPath = filepath.Join(path, "config.json")
 	var config map[string]any
 	if configBytes, err := os.ReadFile(opt.dockerCfgPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("unable to read docker configuration: %w", err)
 	} else if err == nil {
-		log.Debug().Msg("Ammending existing docker config.json")
+		slog.Debug("Ammending existing docker config.json")
 		if err = json.Unmarshal(configBytes, &config); err != nil {
 			return fmt.Errorf("unable to update docker configuration for credential helper: %w", err)
 		}
@@ -97,7 +98,8 @@ func commitDockerChanges(opt *RegisterOptions) error {
 	if err != nil {
 		return fmt.Errorf("unable to configure docker-credential-helper. Can't find self: %w", err)
 	}
-	log.Debug().Str("self", self).Msg("fioup binary found")
+	slog.Debug("fioup binary found",
+		"self", self)
 
 	if path, err := exec.LookPath("docker-credential-fioup"); err != nil {
 		if os.Getegid() == 0 {
@@ -106,7 +108,8 @@ func commitDockerChanges(opt *RegisterOptions) error {
 			}
 		} else {
 			paths := strings.Split(os.Getenv("PATH"), ":")
-			log.Debug().Any("paths", paths).Msg("Looking for writable location")
+			slog.Debug("Looking for writable location",
+				"paths", paths)
 			found := false
 			for _, path := range paths {
 				dst := filepath.Join(path, "docker-credential-fioup")
@@ -120,7 +123,8 @@ func commitDockerChanges(opt *RegisterOptions) error {
 			}
 		}
 	} else {
-		log.Debug().Str("path", path).Msg("Credential helper already installed")
+		slog.Debug("Credential helper already installed",
+			"path", path)
 	}
 
 	// complete transaction by setting the config file

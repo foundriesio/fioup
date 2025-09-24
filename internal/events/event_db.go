@@ -7,10 +7,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	_ "github.com/foundriesio/composeapp/pkg/compose"
 	_ "github.com/foundriesio/composeapp/pkg/update"
-	"github.com/rs/zerolog/log"
 	_ "modernc.org/sqlite"
 )
 
@@ -21,7 +21,7 @@ func CreateEventsTable(dbFilePath string) error {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -40,7 +40,7 @@ func SaveEvent(dbFilePath string, event *DgUpdateEvent) error {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -64,7 +64,7 @@ func DeleteEvents(dbFilePath string, maxId int) error {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -83,7 +83,7 @@ func GetEvents(dbFilePath string) ([]DgUpdateEvent, int, error) {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -93,7 +93,7 @@ func GetEvents(dbFilePath string) ([]DgUpdateEvent, int, error) {
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close rows")
+			slog.Error("failed to close rows", "error", closeErr)
 		}
 	}()
 

@@ -4,9 +4,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 // DieNotNil logs the error and exits with code 1.
@@ -17,11 +18,12 @@ func DieNotNil(err error, message ...string) {
 // DieNotNilWithCode logs the error and exits with the given code.
 func DieNotNilWithCode(err error, exitCode int, message ...string) {
 	if err != nil {
-		event := log.Error().Err(err)
-		for _, m := range message {
-			event = event.Str("msg", m)
+		parts := []interface{}{"ERROR:"}
+		for _, p := range message {
+			parts = append(parts, p)
 		}
-		event.Msg("fatal error")
+		parts = append(parts, err)
+		slog.Error(fmt.Sprintln(parts))
 		os.Exit(exitCode)
 	}
 }

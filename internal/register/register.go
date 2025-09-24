@@ -7,31 +7,33 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
-
-	"github.com/rs/zerolog/log"
 )
 
 func sotaCleanup(opt *RegisterOptions) error {
 	crt := opt.SotaDir + SOTA_PEM
 	sql := opt.SotaDir + SOTA_SQL
 
-	log.Debug().Str("directory", opt.SotaDir).Msg("Cleaning up SOTA files")
+	slog.Debug("Cleaning up SOTA files",
+		"directory", opt.SotaDir)
 
 	if fileExists(sql) {
-		log.Debug().Str("file", sql).Msg("Removing file")
+		slog.Debug("Removing file",
+			"file", sql)
 		if err := os.Remove(sql); err != nil {
 			return err
 		}
 	}
 
 	if fileExists(crt) {
-		log.Debug().Str("file", crt).Msg("Removing file")
+		slog.Debug("Removing file",
+			"file", crt)
 		if err := os.Remove(crt); err != nil {
-			log.Err(err).Msgf("unable to remove %s", crt)
+			slog.Error(fmt.Sprintf("unable to remove %s", crt), "error", err)
 			return err
 		}
 	}
@@ -67,13 +69,13 @@ func checkUpdateClientNotRunning() error {
 
 	lock, err := os.OpenFile(aklock, os.O_RDONLY, 0600)
 	if err != nil {
-		log.Err(err).Msgf("is %s running?", SOTA_CLIENT)
+		slog.Error(fmt.Sprintf("is %s running?", SOTA_CLIENT), "error", err)
 		return fmt.Errorf("unable to open update client lock file: %w", err)
 	}
 
 	defer func() {
 		if closeErr := lock.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close lock")
+			slog.Error("failed to close lock", "error", closeErr)
 		}
 	}()
 
@@ -82,11 +84,11 @@ func checkUpdateClientNotRunning() error {
 		// Lock acquired, so aklite is not running
 		errFlock := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 		if errFlock != nil {
-			log.Err(errFlock).Msgf("failed to unlock %s", aklock)
+			slog.Error(fmt.Sprintf("failed to unlock %s", aklock), "error", errFlock)
 		}
 		return nil
 	} else {
-		log.Err(err).Msgf("%s already running", SOTA_CLIENT)
+		slog.Error(fmt.Sprintf("%s already running", SOTA_CLIENT), "error", err)
 		return fmt.Errorf("%s already running", SOTA_CLIENT)
 	}
 }
@@ -102,19 +104,19 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 	// Check directory is writable
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Err(err).Msgf("Unable to write to %s", opt.SotaDir)
+		slog.Error(fmt.Sprintf("Unable to write to %s", opt.SotaDir), "error", err)
 		return err
 	}
 
 	defer func() {
 		if closeErr := f.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close temp file")
+			slog.Error("failed to close temp file", "error", closeErr)
 		}
 	}()
 
 	err = os.Remove(tmp)
 	if err != nil {
-		log.Err(err).Msgf("Unable to remove %s", tmp)
+		slog.Error(fmt.Sprintf("Unable to remove %s", tmp), "error", err)
 	}
 
 	// Update client must not be running
@@ -162,7 +164,7 @@ func writeSafely(name, content string) error {
 	}
 	defer func() {
 		if closeErr := f.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close temp file")
+			slog.Error("failed to close temp file", "error", closeErr)
 		}
 	}()
 	if _, err := io.WriteString(f, content); err != nil {
@@ -178,7 +180,7 @@ func writeSafely(name, content string) error {
 }
 
 func populateSotaDir(opt *RegisterOptions, resp map[string]interface{}, pkey string) error {
-	log.Debug().Msg("Populate sota directory.")
+	slog.Debug("Populate sota directory.")
 
 	if err := writeSafely(filepath.Join(opt.SotaDir, "pkey.pem"), pkey); err != nil {
 		return err
@@ -199,16 +201,16 @@ errorHandler:
 
 // cleanup cleans up partial registration.
 func cleanup(opt *RegisterOptions) {
-	log.Debug().Msg("Cleaning up partial registration before leaving")
+	slog.Debug("Cleaning up partial registration before leaving")
 	if err := sotaCleanup(opt); err != nil {
-		log.Err(err).Msg("Unable to clean up")
+		slog.Error("Unable to clean up", "error", err)
 	}
 }
 
 // signalHandler handles signals for cleanup.
 func signalHandler(opt *RegisterOptions) func(os.Signal) {
 	return func(sig os.Signal) {
-		log.Info().Msgf("Handling %s signal\n", sig)
+		slog.Info(fmt.Sprintf("Handling %s signal\n", sig))
 		cleanup(opt)
 		os.Exit(1)
 	}
@@ -269,10 +271,9 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	}
 
 	// Register the device with the factory
-	log.Debug().
-		Str("name", opt.Name).
-		Str("factory", opt.Factory).
-		Msg("Registering device")
+	slog.Debug("Registering device",
+		"name", opt.Name,
+		"factory", opt.Factory)
 	resp, err := authRegisterDevice(headers, info)
 	if err != nil {
 		cleanup(opt)

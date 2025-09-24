@@ -8,9 +8,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/foundriesio/fioup/pkg/fioup/target"
-	"github.com/rs/zerolog/log"
 	_ "modernc.org/sqlite"
 )
 
@@ -47,7 +47,7 @@ func CreateTargetsTable(dbFilePath string) error {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close db")
+			slog.Error("failed to close db", "error", closeErr)
 		}
 	}()
 
@@ -79,7 +79,7 @@ func IsFailingTarget(dbFilePath string, name string) (bool, error) {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -107,7 +107,7 @@ func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -129,7 +129,7 @@ func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 		return target.UnknownTarget, err
 	}
 
-	log.Debug().Msgf("Current target: %s", name)
+	slog.Debug(fmt.Sprintf("Current target: %s", name))
 
 	var t target.Target
 	if name != "" {
@@ -141,14 +141,14 @@ func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 }
 
 func saveInstalledVersions(dbFilePath string, target *target.Target, correlationId string, updateMode int) error {
-	log.Debug().Msgf("Saving installed version: %s, correlation ID: %s, mode: %d", target.ID, correlationId, updateMode)
+	slog.Debug(fmt.Sprintf("Saving installed version: %s, correlation ID: %s, mode: %d", target.ID, correlationId, updateMode))
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close database")
+			slog.Error("failed to close database", "error", closeErr)
 		}
 	}()
 
@@ -167,7 +167,7 @@ func saveInstalledVersions(dbFilePath string, target *target.Target, correlation
 		}
 
 		if name == target.ID {
-			log.Debug().Msg("DB: Target was installed before")
+			slog.Debug("DB: Target was installed before")
 			oldWasInstalled = BoolPointer(wasInstalled)
 			// oldName = name
 		}

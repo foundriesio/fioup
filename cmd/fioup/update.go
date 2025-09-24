@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,5 +39,5 @@ func doUpdate(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoStart = true
 	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform update")
-	log.Info().Msgf("Update operation complete")
+	slog.Info("Update operation complete")
 }

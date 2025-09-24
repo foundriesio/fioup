@@ -9,12 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -73,14 +72,16 @@ func getOauthToken(cb OauthCallback, factory, deviceUUID string) (string, error)
 	)
 	interval := int(resp["interval"].(float64))
 
-	log.Debug().Str("data", data).Msg("oauth data")
+	slog.Debug("oauth data",
+		"data", data)
 	for {
 		tokenResp, code, err := httpPost(url+"/token/", headers, data)
 		if err == nil && code == 200 {
 			return tokenResp["access_token"].(string), nil
 		}
 		if code != 400 {
-			log.Warn().Int("code", code).Msg("HTTP error...")
+			slog.Warn("HTTP error...",
+				"code", code)
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -108,7 +109,7 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			log.Err(closeErr).Msgf("failed to close resp.Body")
+			slog.Error("failed to close resp.Body", "error", closeErr)
 		}
 	}()
 	body, _ := io.ReadAll(resp.Body)
@@ -116,7 +117,7 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 
 	err = json.Unmarshal(body, &jsonResp)
 	if err != nil {
-		log.Err(err).Msgf("failed to unmarshal response body: %s", string(body))
+		slog.Error(fmt.Sprintf("failed to unmarshal response body: %s", string(body)), "error", err)
 		return nil, resp.StatusCode, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
@@ -129,7 +130,7 @@ func authGetHttpHeaders(opt *RegisterOptions, cb OauthCallback) (HttpHeaders, er
 		headers[opt.ApiTokenHeader] = opt.ApiToken
 		return headers, nil
 	}
-	log.Debug().Msg("Foundries providing auth token")
+	slog.Debug("Foundries providing auth token")
 	token, err := getOauthToken(cb, opt.Factory, opt.UUID)
 	if err != nil {
 		return nil, err
@@ -147,11 +148,10 @@ func authRegisterDevice(headers HttpHeaders, device map[string]interface{}) (map
 	}
 	data, _ := json.MarshalIndent(device, "", "  ")
 
-	log.Debug().
-		Str("name", device["name"].(string)).
-		Str("url", api).
-		Str("csr", string(data)).
-		Msg("Registering device")
+	slog.Debug("Registering device",
+		"name", device["name"].(string),
+		"url", api,
+		"csr", string(data))
 	jsonResp, code, err := httpPost(api, headers, string(data))
 	if code != 201 || err != nil {
 		return nil, fmt.Errorf("unable to create device: %w", respToErr(code, jsonResp))
@@ -164,7 +164,8 @@ func authPingServer() error {
 	if api == "" {
 		api = DEVICE_API
 	}
-	log.Debug().Str("url", api).Msg("Using DEVICE_API")
+	slog.Debug("Using DEVICE_API",
+		"url", api)
 	resp, err := http.Get(api)
 	if err != nil || resp.StatusCode > 500 {
 		return fmt.Errorf("ping failed %w", err)

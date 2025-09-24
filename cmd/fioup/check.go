@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -27,5 +28,5 @@ func doCheck(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoCheck = true
 	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform check operation")
-	log.Info().Msgf("Check operation complete")
+	slog.Info("Check operation complete")
 }
