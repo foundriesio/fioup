@@ -1,0 +1,13 @@
+# Updating a device
+
+## Prerequisites
+This document assumes an application has been built in the Factory. If
+this is not the case, please follow the documentation for
+[building and deploying application](https://docs.foundries.io/latest/getting-started/building-deploying-app/index.html).
+
+## Applying update
+You can verify an update is available by running `sudo fioup check`. If an
+update is available, it may be applied by running:
+```
+ $ sudo fioup update
+```
