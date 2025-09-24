@@ -175,10 +175,13 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 	var targetsRepo target.Repo
 	client, err = dg.NewGatewayClient(cfg, updateContext.CurrentTarget.AppNames(), updateContext.CurrentTarget.ID)
 	if err != nil {
-		log.Err(err).Msg("Error creating HTTP client")
 		return err
 	}
-	targetsRepo, err = target.NewPlainRepo(client, cfg.GetTargetsFilepath())
+	if opts.EnableTuf {
+		targetsRepo, err = target.NewTufRepo(cfg, client)
+	} else {
+		targetsRepo, err = target.NewPlainRepo(client, cfg.GetTargetsFilepath())
+	}
 	if err != nil {
 		return err
 	}
@@ -229,6 +232,8 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 	}
 
 	if err == nil {
+		// If successful update then update headers of the gateway client so it knows about
+		// the current target name and apps
 		client.UpdateHeaders(updateContext.Target.AppNames(), updateContext.Target.ID)
 	}
 	_ = ReportAppsStates(cfg.TomlConfig(), client, updateContext)
