@@ -26,6 +26,7 @@ chown -R dev:devgrp /etc/sota/conf.d
 chown -R dev:devgrp /var/lib/docker
 
 ln -sfn ${PWD}/bin/fioup /usr/local/bin/fioup
+ln -sfn ${PWD}/bin/fioup /usr/local/bin/docker-credential-fioup
 
 # Run the command as the created user
 exec gosu $DEV_USER:$DEV_GROUP "$@"

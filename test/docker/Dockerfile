@@ -45,10 +45,6 @@ RUN apt-get update && apt-get -y install --no-install-suggests --no-install-reco
   docker-ce \
   docker-ce-cli
 
-# Install docker credential helper and auth configuration
-COPY config.json /usr/lib/docker/config.json
-COPY docker-credential-fioup-helper /usr/bin/docker-credential-fioup-helper
-
 # Install gosu required for the entry/startup script to add a user and group in the container
 RUN wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64" && \
     chmod +x /usr/local/bin/gosu && \

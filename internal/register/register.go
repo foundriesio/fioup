@@ -263,6 +263,11 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	info := make(map[string]interface{})
 	getDeviceInfo(opt, csr, info)
 
+	if err := stageDockerChanges(opt); err != nil {
+		cleanup(opt)
+		return err
+	}
+
 	// Register the device with the factory
 	log.Debug().
 		Str("name", opt.Name).
@@ -277,6 +282,10 @@ func RegisterDevice(opt *RegisterOptions, cb OauthCallback) error {
 	// Store the login details
 	if err := populateSotaDir(opt, resp, key); err != nil {
 		cleanup(opt)
+		return err
+	}
+
+	if err := commitDockerChanges(opt); err != nil {
 		return err
 	}
 
