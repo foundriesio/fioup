@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,7 +20,6 @@ import (
 	dg "github.com/foundriesio/fioup/pkg/fioup/client"
 	"github.com/foundriesio/fioup/pkg/fioup/config"
 	"github.com/foundriesio/fioup/pkg/fioup/target"
-	"github.com/rs/zerolog/log"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	_ "modernc.org/sqlite"
 )
@@ -67,10 +67,10 @@ func InitializeDatabase(dbFilePath string) error {
 }
 
 func checkUpdateState(updateContext *UpdateContext, targetId string) error {
-	log.Debug().Msgf("Checking update state. targetId: %s", targetId)
+	slog.Debug(fmt.Sprintf("Checking update state. targetId: %s", targetId))
 	// standalone check command has no state requirements
 	if updateContext.opts.DoCheck && !updateContext.opts.DoFetch {
-		log.Debug().Msg("Standalone check command, no state requirements")
+		slog.Debug("Standalone check command, no state requirements")
 		return nil
 	}
 
@@ -81,7 +81,7 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 
 	// standalone install and start commands require a pending update operation at the right state
 	if (updateContext.opts.DoInstall || updateContext.opts.DoStart) && !updateContext.opts.DoFetch {
-		log.Debug().Msg("Standalone install or start command, checking requirements")
+		slog.Debug("Standalone install or start command, checking requirements")
 		if updateContext.PendingRunner == nil {
 			return fmt.Errorf("no pending target to perform operation on")
 		}
@@ -104,17 +104,17 @@ func checkUpdateState(updateContext *UpdateContext, targetId string) error {
 	// - no targetId was specified by the user, so we proceed with whatever update was going on; or
 	// - the pending update matches the targetId selected by the user
 	if updateContext.opts.DoFetch && updateContext.PendingRunner != nil {
-		log.Debug().Msg("Update or standalone fetch command, checking requirements")
+		slog.Debug("Update or standalone fetch command, checking requirements")
 		if targetId != "" {
 			if _, err := strconv.Atoi(targetId); err == nil {
 				// targetId is a version, check if PendingTargetName ends with -<version>
-				log.Debug().Msg("targetId is a version, checking if PendingTargetName ends with -<version>")
+				slog.Debug("targetId is a version, checking if PendingTargetName ends with -<version>")
 				if !strings.HasSuffix(updateContext.PendingTargetName, "-"+targetId) {
 					return fmt.Errorf("pending target %s does not match requested version %s", updateContext.PendingTargetName, targetId)
 				}
 			} else {
 				// targetId is a target name, must match exactly
-				log.Debug().Msg("targetId is a name, checking if PendingTargetName matches")
+				slog.Debug("targetId is a name, checking if PendingTargetName matches")
 				if updateContext.PendingTargetName != targetId {
 					return fmt.Errorf("pending target %s does not match requested target %s", updateContext.PendingTargetName, targetId)
 				}
@@ -142,7 +142,7 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 
 	err := GetPendingUpdate(updateContext)
 	if err != nil {
-		log.Err(err).Msg("Error getting pending update")
+		slog.Error("Error getting pending update", "error", err)
 		return fmt.Errorf("error getting pending update: %w", err)
 	}
 
@@ -152,23 +152,23 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 	}
 
 	if updateContext.PendingTargetName != "" && (opts.DoInstall || opts.DoStart) {
-		log.Info().Msgf("Proceeding with update to target %s", updateContext.PendingTargetName)
+		slog.Info(fmt.Sprintf("Proceeding with update to target %s", updateContext.PendingTargetName))
 	}
 
 	err = InitializeDatabase(updateContext.DbFilePath)
 	if err != nil {
-		log.Err(err).Msg("Error initializing database")
+		slog.Error("Error initializing database", "error", err)
 		return err
 	}
 
 	updateContext.CurrentTarget, err = targets.GetCurrentTarget(updateContext.DbFilePath)
 	if err != nil {
-		log.Err(err).Msg("Error getting current target")
+		slog.Error("Error getting current target", "error", err)
 	}
 
 	updateContext.InstalledApps, updateContext.InstalledAppsNames, err = getInstalledApps(updateContext)
 	if err != nil {
-		log.Err(err).Msg("Error getting current apps")
+		slog.Error("Error getting current apps", "error", err)
 	}
 
 	var client *dg.GatewayClient
@@ -193,12 +193,12 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 	var targetId string
 	if opts.DoInstall || opts.DoStart {
 		if !opts.DoFetch && updateContext.PendingTargetName == "" {
-			log.Info().Msg("No pending target to update")
+			slog.Info("No pending target to update")
 			return fmt.Errorf("no pending target to update")
 		}
 		if updateContext.PendingTargetName != "" {
 			targetId = updateContext.PendingTargetName
-			log.Debug().Msgf("Using pending target %s", updateContext.PendingTargetName)
+			slog.Debug(fmt.Sprintf("Using pending target %s", updateContext.PendingTargetName))
 		}
 	}
 	if targetId == "" {
@@ -218,15 +218,15 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 	if opts.DoFetch || opts.DoInstall || opts.DoStart {
 		doRollback, err := PerformUpdate(updateContext)
 		if doRollback {
-			log.Err(err).Msgf("Error during update to target %s, rolling back", updateContext.Target.ID)
+			slog.Error(fmt.Sprintf("Error during update to target %s, rolling back", updateContext.Target.ID), "error", err)
 			rollbackErr := rollback(updateContext)
 			if rollbackErr != nil {
-				log.Err(rollbackErr).Msgf("Error rolling back")
+				slog.Error("Error rolling back", "error", rollbackErr)
 				return fmt.Errorf("error rolling back: %w", rollbackErr)
 			}
 		} else {
 			if err != nil {
-				log.Err(err).Msgf("Error updating to target %s", updateContext.Target.ID)
+				slog.Error(fmt.Sprintf("Error updating to target %s", updateContext.Target.ID), "error", err)
 			}
 		}
 	}
@@ -240,40 +240,40 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 
 	errFlush := events.FlushEvents(updateContext.DbFilePath, client)
 	if errFlush != nil {
-		log.Err(errFlush).Msg("Error flushing events")
+		slog.Error("Error flushing events", "error", errFlush)
 	}
 	return err
 }
 
 func dumpTargetsInfo(targets target.Targets, updateContext *UpdateContext) {
-	log.Info().Msgf("Available targets:")
+	slog.Info("Available targets:")
 
 	targetsList := targets.GetSortedList()
 
 	// Print sorted list of targets
 	for _, ti := range targetsList {
-		log.Info().Msgf("  %s (version: %d)", ti.ID, ti.Version)
+		slog.Info(fmt.Sprintf("  %s (version: %d)", ti.ID, ti.Version))
 		if len(ti.Apps) > 0 {
-			log.Info().Msgf("    apps:")
+			slog.Info("    apps:")
 			for _, app := range ti.Apps {
-				log.Info().Msgf("      %s -> %s", app.Name, app.URI)
+				slog.Info(fmt.Sprintf("      %s -> %s", app.Name, app.URI))
 			}
 		}
-		log.Info().Msg("")
+		slog.Info("")
 	}
 
 	if updateContext.Target.ID == updateContext.CurrentTarget.ID {
 		if updateContext.TargetIsRunning {
 			if len(updateContext.AppsToUninstall) == 0 {
-				log.Info().Msgf("Selected Target %s is already running", updateContext.Target.ID)
+				slog.Info(fmt.Sprintf("Selected Target %s is already running", updateContext.Target.ID))
 			} else {
-				log.Info().Msgf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.ID, updateContext.AppsToUninstall)
+				slog.Info(fmt.Sprintf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.ID, updateContext.AppsToUninstall))
 			}
 		} else {
-			log.Info().Msgf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.ID)
+			slog.Info(fmt.Sprintf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.ID))
 		}
 	} else {
-		log.Info().Msgf("Target %s needs to be installed", updateContext.Target.ID)
+		slog.Info(fmt.Sprintf("Target %s needs to be installed", updateContext.Target.ID))
 	}
 }
 
@@ -285,23 +285,23 @@ func FillAppsList(updateContext *UpdateContext) error {
 		for _, appUri := range targetApps {
 			appName := appUri.Name
 			if appName == "" {
-				log.Warn().Msgf("App URI %s does not contain a valid app name", appUri)
+				slog.Warn(fmt.Sprintf("App URI %s does not contain a valid app name", appUri))
 				continue
 			}
 			if updateContext.ConfiguredAppNames == nil || slices.Contains(updateContext.ConfiguredAppNames, appName) {
 				requiredApps = append(requiredApps, appUri.URI)
 			}
 		}
-		log.Debug().Msgf("targetApps: %v", targetApps)
-		log.Debug().Msgf("Using filtered target apps: %v", requiredApps)
+		slog.Debug(fmt.Sprintf("targetApps: %v", targetApps))
+		slog.Debug(fmt.Sprintf("Using filtered target apps: %v", requiredApps))
 	} else {
 		requiredApps = updateContext.PendingApps
-		log.Debug().Msgf("Using pending update apps: %v", requiredApps)
+		slog.Debug(fmt.Sprintf("Using pending update apps: %v", requiredApps))
 	}
 
 	updateContext.RequiredApps = requiredApps
-	log.Debug().Msgf("installedApps: %v", updateContext.InstalledApps)
-	log.Debug().Msgf("requiredApps: %v", requiredApps)
+	slog.Debug(fmt.Sprintf("installedApps: %v", updateContext.InstalledApps))
+	slog.Debug(fmt.Sprintf("requiredApps: %v", requiredApps))
 	appsToUninstall := []string{}
 	for _, app := range updateContext.InstalledApps {
 		if !slices.Contains(updateContext.RequiredApps, app) {
@@ -315,11 +315,11 @@ func FillAppsList(updateContext *UpdateContext) error {
 func FillAndCheckAppsList(updateContext *UpdateContext) error {
 	err := FillAppsList(updateContext)
 	if err != nil {
-		log.Err(err).Msg("Error filling apps list")
+		slog.Error("Error filling apps list", "error", err)
 		return fmt.Errorf("error filling apps list: %w", err)
 	}
 
-	log.Debug().Msgf("Checking if candidate target %s is running", updateContext.Target.ID)
+	slog.Debug(fmt.Sprintf("Checking if candidate target %s is running", updateContext.Target.ID))
 	isRunning, err := IsTargetRunning(updateContext)
 	if err != nil {
 		return fmt.Errorf("error checking target: %w", err)
@@ -327,11 +327,11 @@ func FillAndCheckAppsList(updateContext *UpdateContext) error {
 
 	updateContext.TargetIsRunning = isRunning
 	if isRunning {
-		log.Debug().Msg("Target is running")
+		slog.Debug("Target is running")
 		if len(updateContext.AppsToUninstall) == 0 {
-			log.Debug().Msg("No apps to uninstall")
+			slog.Debug("No apps to uninstall")
 		} else {
-			log.Debug().Msgf("Apps to uninstall: %v", updateContext.AppsToUninstall)
+			slog.Debug(fmt.Sprintf("Apps to uninstall: %v", updateContext.AppsToUninstall))
 		}
 	}
 	return nil
@@ -352,7 +352,7 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, target
 
 	candidateTarget, _ := selectTarget(targetList, specificVersion, specificName)
 	if candidateTarget.ID == target.UnknownTarget.ID {
-		log.Info().Msgf("No target found for version %d", specificVersion)
+		slog.Info(fmt.Sprintf("No target found for version %d", specificVersion))
 		return fmt.Errorf("no target found for version %d", specificVersion)
 	}
 
@@ -360,7 +360,7 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, target
 		// If no target is specified, check if automatically selected target is marked as failing
 		failing, _ := targets.IsFailingTarget(updateContext.DbFilePath, candidateTarget.ID)
 		if failing {
-			log.Info().Msg("Skipping failing target " + candidateTarget.ID + " using " + updateContext.CurrentTarget.ID + " instead")
+			slog.Info("Skipping failing target " + candidateTarget.ID + " using " + updateContext.CurrentTarget.ID + " instead")
 			candidateTarget = updateContext.CurrentTarget
 		}
 	}
@@ -371,12 +371,12 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, target
 	apps := cfg.GetEnabledApps()
 	if apps != nil {
 		updateContext.ConfiguredAppNames = apps
-		log.Debug().Msgf("pacman.compose_apps=%v", updateContext.ConfiguredAppNames)
+		slog.Debug(fmt.Sprintf("pacman.compose_apps=%v", updateContext.ConfiguredAppNames))
 	}
 
 	err = FillAndCheckAppsList(updateContext)
 	if err != nil {
-		log.Err(err).Msg("FillAndCheckAppsList error")
+		slog.Error("FillAndCheckAppsList error", "error", err)
 		return err
 	}
 
@@ -386,7 +386,7 @@ func GetTargetToInstall(updateContext *UpdateContext, cfg *config.Config, target
 		} else {
 			updateContext.Reason = "Syncing Active Target Apps"
 		}
-		log.Debug().Msg("Reason: " + updateContext.Reason)
+		slog.Debug("Reason: " + updateContext.Reason)
 	}
 	return nil
 }
@@ -396,20 +396,20 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 	// updateContext.AppsToInstall might be empty
 	if updateContext.Target.ID == updateContext.CurrentTarget.ID {
 		if updateContext.TargetIsRunning {
-			log.Info().Msgf("Target %s is already running", updateContext.Target.ID)
+			slog.Info(fmt.Sprintf("Target %s is already running", updateContext.Target.ID))
 			if len(updateContext.AppsToUninstall) == 0 {
-				log.Debug().Msgf("No apps to uninstall for target %s", updateContext.Target.ID)
+				slog.Debug(fmt.Sprintf("No apps to uninstall for target %s", updateContext.Target.ID))
 				if updateContext.opts.DoFetch && updateContext.opts.TargetId == "" {
 					return false, nil
 				}
 			} else {
-				log.Info().Msgf("Uninstalling apps for target %s: %v", updateContext.Target.ID, updateContext.AppsToUninstall)
+				slog.Info(fmt.Sprintf("Uninstalling apps for target %s: %v", updateContext.Target.ID, updateContext.AppsToUninstall))
 			}
 		} else {
-			log.Info().Msgf("Target %s is already running, but some apps need to be started", updateContext.Target.ID)
+			slog.Info(fmt.Sprintf("Target %s is already running, but some apps need to be started", updateContext.Target.ID))
 		}
 	} else {
-		log.Info().Msgf("%s", updateContext.Reason)
+		slog.Info(updateContext.Reason)
 	}
 
 	err := InitUpdate(updateContext)
@@ -417,7 +417,7 @@ func PerformUpdate(updateContext *UpdateContext) (bool, error) {
 		return false, fmt.Errorf("error initializing update for target: %w", err)
 	}
 
-	log.Debug().Msgf("updateContext.opts.DoPull: %v, updateContext.opts.DoInstall: %v, updateContext.opts.DoRun: %v", updateContext.opts.DoFetch, updateContext.opts.DoInstall, updateContext.opts.DoStart)
+	slog.Debug(fmt.Sprintf("updateContext.opts.DoPull: %v, updateContext.opts.DoInstall: %v, updateContext.opts.DoRun: %v", updateContext.opts.DoFetch, updateContext.opts.DoInstall, updateContext.opts.DoStart))
 	// Fetch
 	if updateContext.opts.DoFetch {
 		err = PullTarget(updateContext)
@@ -497,7 +497,7 @@ func GetVersion(target *metadata.TargetFiles) (int, error) {
 }
 
 func selectTarget(targets target.Targets, specificVersion int, specificName string) (target.Target, error) {
-	log.Debug().Msgf("selectTarget: specificVersion=%d, specificName=%s", specificVersion, specificName)
+	slog.Debug(fmt.Sprintf("selectTarget: specificVersion=%d, specificName=%s", specificVersion, specificName))
 
 	if len(specificName) > 0 {
 		return targets.GetTargetByID(specificName), nil
@@ -517,19 +517,19 @@ func CancelPendingUpdate(ctx context.Context, cfg *config.Config, opts *UpdateOp
 
 	err := GetPendingUpdate(updateContext)
 	if err != nil {
-		log.Err(err).Msg("Error getting pending update")
+		slog.Error("Error getting pending update", "error", err)
 		return fmt.Errorf("error getting pending update: %w", err)
 	}
 
 	if updateContext.PendingRunner != nil {
-		log.Info().Msgf("Canceling pending update to target %s", updateContext.PendingTargetName)
+		slog.Info(fmt.Sprintf("Canceling pending update to target %s", updateContext.PendingTargetName))
 		err := updateContext.PendingRunner.Cancel(updateContext.Context)
 		if err != nil {
-			log.Err(err).Msg("Error canceling pending update")
+			slog.Error("Error canceling pending update", "error", err)
 			return fmt.Errorf("error canceling pending update: %w", err)
 		}
 	} else {
-		log.Info().Msg("No pending update to cancel")
+		slog.Info("No pending update to cancel")
 	}
 	return nil
 }
@@ -538,7 +538,7 @@ func Daemon(ctx context.Context, cfg *config.Config, opts *UpdateOptions) {
 	intervalStr := cfg.TomlConfig().GetDefault("uptane.polling_seconds", "60")
 	interval, err := strconv.Atoi(intervalStr)
 	if err != nil {
-		log.Err(err).Msgf("Invalid interval %s, using default 60 seconds", intervalStr)
+		slog.Error(fmt.Sprintf("Invalid interval %s, using default 60 seconds", intervalStr), "error", err)
 		interval = 60
 	}
 	for {
@@ -548,9 +548,9 @@ func Daemon(ctx context.Context, cfg *config.Config, opts *UpdateOptions) {
 		opts.DoStart = true
 		err := Update(ctx, cfg, opts)
 		if err != nil {
-			log.Err(err).Msg("Error during update")
+			slog.Error("Error during update", "error", err)
 		}
-		log.Info().Msgf("Waiting %d seconds before next update check", interval)
+		slog.Info(fmt.Sprintf("Waiting %d seconds before next update check", interval))
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }

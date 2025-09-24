@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,5 +31,5 @@ func doFetch(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoFetch = true
 	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform fetch operation")
-	log.Info().Msgf("Fetch operation complete")
+	slog.Info("Fetch operation complete")
 }

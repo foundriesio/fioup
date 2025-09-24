@@ -5,12 +5,12 @@ package events
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/foundriesio/fioup/pkg/fioup/client"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 )
 
 type EventTypeValue string
@@ -65,9 +65,9 @@ func NewEvent(eventType EventTypeValue, details string, success *bool, correlati
 func SendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	res, err := client.Post("/events", event)
 	if err != nil {
-		log.Err(err).Msg("Unable to send event")
+		slog.Error("Unable to send event", "error", err)
 	} else if res.StatusCode < 200 || res.StatusCode > 204 {
-		log.Info().Msgf("Server could not process event(%s): HTTP_%d - %s", interface{}(event), res.StatusCode, res.String())
+		slog.Info(fmt.Sprintf("Server could not process event(%v): HTTP_%d - %s", interface{}(event), res.StatusCode, res.String()))
 	}
 	return err
 }
@@ -79,11 +79,11 @@ func FlushEvents(dbFilePath string, client *client.GatewayClient) error {
 	}
 
 	if len(evts) == 0 {
-		log.Debug().Msg("No events to send")
+		slog.Debug("No events to send")
 		return nil
 	}
 
-	log.Debug().Msgf("Flushing %d events", len(evts))
+	slog.Debug(fmt.Sprintf("Flushing %d events", len(evts)))
 	err = SendEvent(client, evts)
 	if err != nil {
 		return fmt.Errorf("error sending events: %w", err)

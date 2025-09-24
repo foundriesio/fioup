@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/foundriesio/fioconfig/transport"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,8 @@ func runDockerCredsHelper() int {
 
 	server := config.TomlConfig().Get("tls.server")
 	credsUrl := server + "/hub-creds/"
-	log.Debug().Str("url", credsUrl).Msg("Getting credentials")
+	slog.Debug("Getting credentials",
+		"url", credsUrl)
 
 	res, err := transport.HttpGet(client, credsUrl, nil)
 	cobra.CheckErr(err)

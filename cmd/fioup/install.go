@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -26,5 +27,5 @@ func doInstall(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoInstall = true
 	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform install operation")
-	log.Info().Msgf("Install operation complete")
+	slog.Info("Install operation complete")
 }

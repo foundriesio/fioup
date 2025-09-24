@@ -5,14 +5,12 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/foundriesio/fioconfig/sotatoml"
 	cfg "github.com/foundriesio/fioup/pkg/fioup/config"
-	"github.com/moby/term"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -25,16 +23,20 @@ var (
 		Use:   "fioup",
 		Short: "Utility to perform OTA Updates managed by FoundriesFactory (c)",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			var logLevel slog.Level
 			// Set global log level based on verbose flag
 			if verbose {
-				zerolog.SetGlobalLevel(zerolog.DebugLevel)
+				logLevel = slog.LevelDebug
 			} else {
-				zerolog.SetGlobalLevel(zerolog.InfoLevel)
+				logLevel = slog.LevelInfo
 			}
 
-			// Output pretty console if terminal (optional)
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: !term.IsTerminal(uintptr(os.Stderr.Fd()))})
+			handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+				Level: logLevel,
+			})
 
+			logger := slog.New(handler)
+			slog.SetDefault(logger)
 			if cmd.Name() != "register" {
 				// Load configuration unless the "register" command is invoked
 				var err error

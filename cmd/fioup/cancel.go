@@ -4,8 +4,9 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/foundriesio/fioup/internal/update"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -25,5 +26,5 @@ func init() {
 func doCancel(cmd *cobra.Command, opts *update.UpdateOptions) {
 	err := update.CancelPendingUpdate(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform cancel")
-	log.Info().Msgf("Cancel operation complete")
+	slog.Info("Cancel operation complete")
 }

@@ -6,11 +6,11 @@ package register
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/docker/distribution/uuid"
-	"github.com/rs/zerolog/log"
 	ini "gopkg.in/ini.v1"
 )
 
@@ -61,7 +61,7 @@ func getFactoryTagsInfo(osRelease string) (factory, fsrc, tag, tsrc string) {
 	}
 	cfg, err := ini.Load(osRelease)
 	if err != nil {
-		log.Warn().Msgf("Can't parse file %s", osRelease)
+		slog.Warn(fmt.Sprintf("Can't parse file %s", osRelease))
 		return
 	}
 	tag = cfg.Section("").Key(OS_FACTORY_TAG).String()
@@ -107,7 +107,8 @@ func getUUID(opt *RegisterOptions) error {
 	}
 	if opt.UUID == "" {
 		opt.UUID = uuid.Generate().String()
-		log.Debug().Str("uuid", opt.UUID).Msg("Generated UUID")
+		slog.Debug("Generated UUID",
+			"uuid", opt.UUID)
 	}
 	return validateUUID(opt)
 }
@@ -123,12 +124,14 @@ func updateOptions(opt *RegisterOptions) error {
 	if factory != opt.Factory {
 		fsrc = "cli"
 	}
-	log.Debug().Str("source", fsrc).Msg("Factory source")
+	slog.Debug("Factory source",
+		"source", fsrc)
 
 	if tag != opt.PacmanTag {
 		tsrc = "cli"
 	}
-	log.Debug().Str("source", tsrc).Msg("Tag source")
+	slog.Debug("Tag source",
+		"source", tsrc)
 	// if err := validateHSM(opt); err != nil {
 	// 	return err
 	// }
@@ -139,7 +142,7 @@ func updateOptions(opt *RegisterOptions) error {
 		return err
 	}
 	if opt.Name == "" {
-		log.Debug().Msg("Setting device name to UUID")
+		slog.Debug("Setting device name to UUID")
 		opt.Name = opt.UUID
 	}
 

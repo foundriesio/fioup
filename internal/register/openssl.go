@@ -10,8 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 // Create a new EC key and CSR
@@ -37,7 +36,7 @@ func openSSLCreateCSR(opt *RegisterOptions) (key string, csr string, err error) 
 		SignatureAlgorithm: x509.ECDSAWithSHA256,
 	}
 
-	log.Debug().Str("factory", opt.Factory).Msg("Generating CSR")
+	slog.Debug("Generating CSR", "factory", opt.Factory)
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
 		return "", "", err
