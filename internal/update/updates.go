@@ -19,7 +19,6 @@ import (
 
 type (
 	UpdateOptions struct {
-		SrcDir    string
 		EnableTuf bool
 		TargetId  string
 

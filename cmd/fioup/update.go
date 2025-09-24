@@ -10,7 +10,6 @@ import (
 )
 
 func addCommonOptions(cmd *cobra.Command, opts *update.UpdateOptions) {
-	cmd.Flags().StringVarP(&opts.SrcDir, "src-dir", "s", "", "Directory that contains an offline update bundle.")
 	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
 	_ = cmd.Flags().MarkHidden("tuf")
 }
