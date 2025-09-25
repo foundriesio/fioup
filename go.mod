@@ -6,7 +6,7 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/foundriesio/composeapp v0.0.0-20250918132054-f0fe7ca465a4
+	github.com/foundriesio/composeapp v0.0.0-20250926080633-dd07e7fe9abc
 	github.com/foundriesio/fioconfig v0.0.0-20250924134830-8024c88e5c68
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
@@ -27,7 +27,7 @@ require (
 	github.com/compose-spec/compose-go v1.20.2 // indirect
 	github.com/containerd/containerd v1.7.15 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v25.0.3+incompatible // indirect
 	github.com/docker/docker v25.0.3+incompatible // indirect

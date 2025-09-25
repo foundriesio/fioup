@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/foundriesio/fioconfig/transport"
-	"github.com/foundriesio/fioup/pkg/fioup/config"
+	"github.com/foundriesio/fioup/pkg/config"
 )
 
 type (

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/foundriesio/fioup/pkg/fioup/target"
+	"github.com/foundriesio/fioup/pkg/target"
 	_ "modernc.org/sqlite"
 )
 

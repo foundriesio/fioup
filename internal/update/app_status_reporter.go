@@ -10,7 +10,7 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fioconfig/sotatoml"
-	"github.com/foundriesio/fioup/pkg/fioup/client"
+	"github.com/foundriesio/fioup/pkg/client"
 )
 
 type (

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/foundriesio/fioconfig/sotatoml"
-	cfg "github.com/foundriesio/fioup/pkg/fioup/config"
+	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/spf13/cobra"
 )
 

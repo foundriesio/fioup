@@ -13,7 +13,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
-	"github.com/foundriesio/fioup/pkg/fioup/target"
+	"github.com/foundriesio/fioup/pkg/target"
 	_ "modernc.org/sqlite"
 )
 

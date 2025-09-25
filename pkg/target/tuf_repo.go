@@ -11,8 +11,8 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fiotuf/tuf"
-	"github.com/foundriesio/fioup/pkg/fioup/client"
-	"github.com/foundriesio/fioup/pkg/fioup/config"
+	"github.com/foundriesio/fioup/pkg/client"
+	"github.com/foundriesio/fioup/pkg/config"
 )
 
 type (
