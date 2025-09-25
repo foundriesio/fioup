@@ -33,8 +33,7 @@ func sotaCleanup(opt *RegisterOptions) error {
 		slog.Debug("Removing file",
 			"file", crt)
 		if err := os.Remove(crt); err != nil {
-			slog.Error(fmt.Sprintf("unable to remove %s", crt), "error", err)
-			return err
+			return fmt.Errorf("unable to remove %s: %w", crt, err)
 		}
 	}
 
@@ -69,7 +68,6 @@ func checkUpdateClientNotRunning() error {
 
 	lock, err := os.OpenFile(aklock, os.O_RDONLY, 0600)
 	if err != nil {
-		slog.Error(fmt.Sprintf("is %s running?", SOTA_CLIENT), "error", err)
 		return fmt.Errorf("unable to open update client lock file: %w", err)
 	}
 
@@ -84,12 +82,11 @@ func checkUpdateClientNotRunning() error {
 		// Lock acquired, so aklite is not running
 		errFlock := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 		if errFlock != nil {
-			slog.Error(fmt.Sprintf("failed to unlock %s", aklock), "error", errFlock)
+			slog.Error("failed to unlock lock file", "lock_file", aklock, "error", errFlock)
 		}
 		return nil
 	} else {
-		slog.Error(fmt.Sprintf("%s already running", SOTA_CLIENT), "error", err)
-		return fmt.Errorf("%s already running", SOTA_CLIENT)
+		return fmt.Errorf("%s already running: %w", SOTA_CLIENT, err)
 	}
 }
 
@@ -104,8 +101,7 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 	// Check directory is writable
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Unable to write to %s", opt.SotaDir), "error", err)
-		return err
+		return fmt.Errorf("unable to write to %s: %w", opt.SotaDir, err)
 	}
 
 	defer func() {
@@ -116,7 +112,7 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 
 	err = os.Remove(tmp)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Unable to remove %s", tmp), "error", err)
+		slog.Error("Unable to remove temp file", "path", tmp, "error", err)
 	}
 
 	// Update client must not be running
@@ -210,7 +206,7 @@ func cleanup(opt *RegisterOptions) {
 // signalHandler handles signals for cleanup.
 func signalHandler(opt *RegisterOptions) func(os.Signal) {
 	return func(sig os.Signal) {
-		slog.Info(fmt.Sprintf("Handling %s signal\n", sig))
+		slog.Info("Handling signal", "signal", sig)
 		cleanup(opt)
 		os.Exit(1)
 	}

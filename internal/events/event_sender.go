@@ -67,7 +67,7 @@ func SendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	if err != nil {
 		slog.Error("Unable to send event", "error", err)
 	} else if res.StatusCode < 200 || res.StatusCode > 204 {
-		slog.Info(fmt.Sprintf("Server could not process event(%v): HTTP_%d - %s", interface{}(event), res.StatusCode, res.String()))
+		slog.Info("Server could not process event", "http_status", res.StatusCode, "response", res.String(), "event", event)
 	}
 	return err
 }
