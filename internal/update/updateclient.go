@@ -17,9 +17,9 @@ import (
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
-	dg "github.com/foundriesio/fioup/pkg/fioup/client"
-	"github.com/foundriesio/fioup/pkg/fioup/config"
-	"github.com/foundriesio/fioup/pkg/fioup/target"
+	dg "github.com/foundriesio/fioup/pkg/client"
+	"github.com/foundriesio/fioup/pkg/config"
+	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	_ "modernc.org/sqlite"
 )

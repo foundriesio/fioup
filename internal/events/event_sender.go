@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/foundriesio/fioup/pkg/fioup/client"
+	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/google/uuid"
 )
 

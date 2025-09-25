@@ -10,7 +10,7 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
-	"github.com/foundriesio/fioup/pkg/fioup"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -18,9 +18,9 @@ type (
 	statusReport struct {
 		// Represents the current status of apps from the last successful update.
 		// If no successful update exists, falls back to the status of apps detected locally.
-		CurrentStatus *fioup.CurrentStatus `json:"current_status"`
+		CurrentStatus *api.CurrentStatus `json:"current_status"`
 		// Status of a pending or last update operation, if any
-		UpdateStatus *fioup.UpdateStatus `json:"update_status,omitempty"`
+		UpdateStatus *api.UpdateStatus `json:"update_status,omitempty"`
 	}
 	statusOptions struct {
 		Format string
@@ -50,9 +50,9 @@ func init() {
 }
 
 func doStatus(cmd *cobra.Command, opts *statusOptions) {
-	cs, err := fioup.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
+	cs, err := api.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
 	DieNotNil(err, "failed to get current status")
-	us, err := fioup.GetUpdateStatus(config.ComposeConfig())
+	us, err := api.GetUpdateStatus(config.ComposeConfig())
 	DieNotNil(err, "failed to get update status")
 
 	if opts.Format == "json" {
