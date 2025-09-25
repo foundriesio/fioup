@@ -1,0 +1,97 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        hosts:
+          - os: ubuntu-24.04
+            arch: amd64
+          #- os: ubuntu-24.04-arm
+          #  arch: arm64
+
+    name: Build 
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.hosts.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Hack around https://github.com/actions/checkout/issues/290
+        run: |
+          git fetch --tags --force
+
+      - name: Build binaries
+        run: |
+          make build
+          mv bin/fioup bin/fioup-linux-${{ matrix.hosts.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fioup-linux-${{ matrix.hosts.arch }}
+          path: bin/fioup-linux-${{ matrix.hosts.arch }}
+
+      - name: Build deb packages
+        run: |
+          # TODO build up dch changelog when we start using a tag
+          docker build --output /tmp/debs -f debian/Dockerfile .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fioup_${{ github.ref }}_${{ matrix.hosts.arch }}.deb
+          path: /tmp/debs/fioup_0.1_${{ matrix.hosts.arch }}.deb
+
+  create-relase:
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Download fioup-linux-amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: fioup-linux-amd64
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      
+      - name: Upload fioup-linux-amd64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: fioup-linux-amd64
+          asset_name: fioup-linux-amd64
+          asset_content_type: application/octet-stream
+      
+      - name: Upload fioup amd64 deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: fioup_${{ github.ref }}_amd64.deb
+          asset_name: fioup_${{ github.ref }}_amd64.deb
+          asset_content_type: application/octet-stream
