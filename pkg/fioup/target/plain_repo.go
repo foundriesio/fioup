@@ -6,6 +6,7 @@ package target
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -19,6 +20,7 @@ type (
 		dgClient        *client.GatewayClient
 		targetsFilepath string
 		targets         []Target
+		hardwareID      string
 	}
 )
 
@@ -26,10 +28,11 @@ const (
 	TargetsResourcePath = "/repo/targets.json"
 )
 
-func NewPlainRepo(dgClient *client.GatewayClient, targetsFilepath string) (Repo, error) {
+func NewPlainRepo(dgClient *client.GatewayClient, targetsFilepath string, hardwareID string) (Repo, error) {
 	return &plainRepo{
 		dgClient:        dgClient,
 		targetsFilepath: targetsFilepath,
+		hardwareID:      hardwareID,
 	}, nil
 }
 
@@ -79,34 +82,31 @@ func (r *plainRepo) loadTargets(targetsData []byte) error {
 		return fmt.Errorf("failed to unmarshal 'targets.json' read from file: %w", err)
 	}
 	r.targets = nil
-	//hardwareID := r.cfg.GetHardwareID()
 	for targetName, targetValue := range targetsFile.Signed.Targets {
 		version, err := strconv.Atoi(targetValue.Custom.Version)
 		if err != nil {
-			// TODO: add debug level log about failing to get target version
+			slog.Debug("invalid value of target version is found", "target custom", targetValue.Custom)
 			continue
 		}
 		if len(targetValue.Custom.HardwareID) == 0 {
-			// TODO: add debug level log about detecting target without hardware ID
+			slog.Debug("target with no hardware ID is found", "target custom", targetValue.Custom)
 			continue
 		}
-		// TODO: consider filtering out by arch
-		//var match bool
-		//for _, hwID := range targetValue.Custom.HardwareID {
-		//
-		//	if hwID == hardwareID {
-		//		match = true
-		//		break
-		//	}
-		//}
-		//if !match {
-		//	continue
-		//}
+		var match bool
+		for _, hwID := range targetValue.Custom.HardwareID {
+			if hwID == r.hardwareID {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
 		var apps []App
 		for _, appField := range targetValue.Custom.Apps {
 			appRef, err := compose.ParseAppRef(appField.URI)
 			if err != nil {
-				// TODO: add debug level log about invalid app URI
+				slog.Debug("target with invalid app URI is found", "target custom", targetValue.Custom)
 				continue
 			}
 			apps = append(apps, App{
