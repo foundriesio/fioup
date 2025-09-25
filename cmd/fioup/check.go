@@ -28,5 +28,5 @@ func doCheck(cmd *cobra.Command, opts *update.UpdateOptions) {
 	opts.DoCheck = true
 	err := update.Update(cmd.Context(), config, opts)
 	DieNotNil(err, "Failed to perform check operation")
-	slog.Info("Check operation complete")
+	slog.Debug("Check operation complete")
 }
