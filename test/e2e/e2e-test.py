@@ -97,6 +97,8 @@ primary_tag = os.getenv("TAG")
 if not primary_tag:
     pytest.fail("TAG variable needs to be set with the tag of the e2e test targets")
 
+hardware_id = os.getenv("HARDWARE_ID", "intel-corei7-64")
+
 base_version: Dict[str, int] = {}
 base_target_version = os.getenv("BASE_TARGET_VERSION")
 if not base_target_version:
@@ -124,6 +126,7 @@ def secondary_tag_is_set():
 logger.info(f"End-to-end test environment variables:")
 logger.info(f"  Factory: {factory_name}")
 logger.info(f"  Tag: {primary_tag}")
+logger.info(f"  Hardware ID: {hardware_id}")
 if secondary_tag:
     logger.info(f"  Secondary Tag: {secondary_tag}")
 logger.info(f"  Base target version: {base_version[primary_tag]}")
@@ -217,9 +220,9 @@ def register_if_required():
     if not os.path.exists("/var/sota/client.pem"):
         user_token = os.getenv("USER_TOKEN")
         if use_fioup:
-            cmd = f'{fioup_cmd} register --api-token "{user_token}" --tag {primary_tag} --factory {factory_name}'
+            cmd = f'{fioup_cmd} register --api-token "{user_token}" --tag {primary_tag} --factory {factory_name} --hw-id {hardware_id}'
         else:
-            cmd = f'DEVICE_FACTORY={factory_name} lmp-device-register --api-token "{user_token}" --start-daemon 0 --tags {primary_tag}'
+            cmd = f'DEVICE_FACTORY={factory_name} lmp-device-register --api-token "{user_token}" --start-daemon 0 --tags {primary_tag} --hwid {hardware_id}'
         logger.info(f"Registering device...")
         output = os.popen(cmd).read().strip()
         logger.info(output)
