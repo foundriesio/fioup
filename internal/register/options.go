@@ -61,7 +61,7 @@ func getFactoryTagsInfo(osRelease string) (factory, fsrc, tag, tsrc string) {
 	}
 	cfg, err := ini.Load(osRelease)
 	if err != nil {
-		slog.Warn(fmt.Sprintf("Can't parse file %s", osRelease))
+		slog.Warn("Can't parse OS release file", "path", osRelease)
 		return
 	}
 	tag = cfg.Section("").Key(OS_FACTORY_TAG).String()

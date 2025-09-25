@@ -129,7 +129,7 @@ func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 		return target.UnknownTarget, err
 	}
 
-	slog.Debug(fmt.Sprintf("Current target: %s", name))
+	slog.Debug("Current target", "target_id", name)
 
 	var t target.Target
 	if name != "" {
@@ -141,7 +141,7 @@ func GetCurrentTarget(dbFilePath string) (target.Target, error) {
 }
 
 func saveInstalledVersions(dbFilePath string, target *target.Target, correlationId string, updateMode int) error {
-	slog.Debug(fmt.Sprintf("Saving installed version: %s, correlation ID: %s, mode: %d", target.ID, correlationId, updateMode))
+	slog.Debug("Saving installed version", "correlation_id", correlationId, "target_id", target.ID, "mode", updateMode)
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return err

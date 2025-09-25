@@ -117,7 +117,6 @@ func httpPost(url string, headers map[string]string, data string) (map[string]in
 
 	err = json.Unmarshal(body, &jsonResp)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to unmarshal response body: %s", string(body)), "error", err)
 		return nil, resp.StatusCode, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
