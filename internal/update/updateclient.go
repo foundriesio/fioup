@@ -243,34 +243,33 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 }
 
 func dumpTargetsInfo(targets target.Targets, updateContext *UpdateContext) {
-	slog.Info("Available targets:")
+	fmt.Println("Available targets:")
 
 	targetsList := targets.GetSortedList()
 
 	// Print sorted list of targets
 	for _, ti := range targetsList {
-		slog.Info(fmt.Sprintf("  %s (version: %d)", ti.ID, ti.Version))
+		fmt.Printf("  %s (version: %d)\n", ti.ID, ti.Version)
 		if len(ti.Apps) > 0 {
-			slog.Info("    apps:")
 			for _, app := range ti.Apps {
-				slog.Info(fmt.Sprintf("      %s -> %s", app.Name, app.URI))
+				fmt.Printf("      %s -> %s\n", app.Name, app.URI)
 			}
 		}
-		slog.Info("")
+		fmt.Println("")
 	}
 
 	if updateContext.Target.ID == updateContext.CurrentTarget.ID {
 		if updateContext.TargetIsRunning {
 			if len(updateContext.AppsToUninstall) == 0 {
-				slog.Info(fmt.Sprintf("Selected Target %s is already running", updateContext.Target.ID))
+				fmt.Printf("Selected Target %s is already running\n", updateContext.Target.ID)
 			} else {
-				slog.Info(fmt.Sprintf("Selected Target %s is already running, but some apps need to be stopped: %v", updateContext.Target.ID, updateContext.AppsToUninstall))
+				fmt.Printf("Selected Target %s is already running, but some apps need to be stopped: %v\n", updateContext.Target.ID, updateContext.AppsToUninstall)
 			}
 		} else {
-			slog.Info(fmt.Sprintf("Selected Target %s is already running, but some apps need to be started", updateContext.Target.ID))
+			fmt.Printf("Selected Target %s is already running, but some apps need to be started\n", updateContext.Target.ID)
 		}
 	} else {
-		slog.Info(fmt.Sprintf("Target %s needs to be installed", updateContext.Target.ID))
+		fmt.Printf("Target %s needs to be installed\n", updateContext.Target.ID)
 	}
 }
 
