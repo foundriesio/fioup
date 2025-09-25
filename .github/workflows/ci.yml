@@ -45,3 +45,13 @@ jobs:
       - name: Build for Debian
         run: |
           docker build --output /tmp/debs -f debian/Dockerfile .
+          docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
+          set -ex
+
+          dpkg -i /host-tmp/debs/fioup_*.deb
+
+          test -x /usr/bin/fioup
+          test -x /usr/bin/docker-credential-fioup
+          test -f /usr/share/bash-completion/completions/fioup
+          test -f /lib/systemd/system/fioup.service
+          EOF
