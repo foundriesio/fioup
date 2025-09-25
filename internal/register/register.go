@@ -131,7 +131,7 @@ func checkDeviceStatus(opt *RegisterOptions) error {
 func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{}) {
 	dev["use-ostree-server"] = "true"
 	dev["sota-config-dir"] = opt.SotaDir
-	dev["hardware-id"] = HARDWARE_ID
+	dev["hardware-id"] = opt.HardwareID
 	dev["name"] = opt.Name
 	dev["uuid"] = opt.UUID
 	dev["csr"] = csr

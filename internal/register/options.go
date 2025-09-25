@@ -26,6 +26,7 @@ type RegisterOptions struct {
 	Name           string
 	ApiTokenHeader string
 	Force          bool
+	HardwareID     string
 
 	dockerCfgPath string
 }

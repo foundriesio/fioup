@@ -32,12 +32,14 @@ func init() {
 	cmd.Flags().StringVar(&opt.Name, "name", "", "The name of the device as it should appear in the dashboard. When not specified, the device's UUID will be used instead.")
 	cmd.Flags().StringVar(&opt.ApiTokenHeader, "api-token-header", "OSF-TOKEN", "The HTTP header to use for authentication.")
 	cmd.Flags().BoolVar(&opt.Force, "force", false, "Force registration, removing data from previous execution.")
+	cmd.Flags().StringVar(&opt.HardwareID, "hw-id", register.HARDWARE_ID, "Hardware ID to assign to this device.")
 
 	cobra.CheckErr(cmd.Flags().MarkHidden("api-token-header"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("api-token"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("device-group"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("production"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("uuid"))
+	cobra.CheckErr(cmd.Flags().MarkHidden("hw-id"))
 
 	rootCmd.AddCommand(cmd)
 }
