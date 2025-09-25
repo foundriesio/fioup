@@ -1,0 +1,24 @@
+Source: fioup
+Section: utils
+Priority: optional
+Maintainer: Foundries Team <support@foundries.io>
+Uploaders: Andy Doan <andy@foundries.io>, Andre Detsch <andre.detsch@foundries.io>, Mykhaylo Sul <mike.sul@foundries.io>
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               dh-sequence-bash-completion,
+               golang,
+Testsuite: autopkgtest-pkg-go
+Standards-Version: 4.7.0
+Vcs-Browser: https://github.com/foundriesio/fioup
+Vcs-Git: https://github.com/foundriesio/fioup
+Homepage: https://github.com/foundriesio/fioup
+XS-Go-Import-Path: github.com/foundriesio/fioup
+
+Package: fioup
+Section: utils
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Static-Built-Using: ${misc:Static-Built-Using}
+Description:
+ OTA Update Client for FoundriesFactory (c)

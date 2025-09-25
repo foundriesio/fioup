@@ -3,6 +3,7 @@ on:
   pull_request:
 
 jobs:
+
   lint:
     name: Run golint
     runs-on: ubuntu-latest
@@ -27,3 +28,30 @@ jobs:
           BASE_TARGET_VERSION: ${{ secrets.E2E_TEST_BASE_TARGET_VERSION }}
           USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
           TAG: ${{secrets.E2E_TEST_TAG}}
+
+  package:
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build for Debian
+        run: |
+          docker build --output /tmp/debs -f debian/Dockerfile .
+          docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
+          set -ex
+
+          dpkg -i /host-tmp/debs/fioup_*.deb
+
+          test -x /usr/bin/fioup
+          test -x /usr/bin/docker-credential-fioup
+          test -f /usr/share/bash-completion/completions/fioup
+          test -f /lib/systemd/system/fioup.service
+          EOF
