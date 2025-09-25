@@ -6,6 +6,7 @@ package target
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
@@ -16,20 +17,22 @@ import (
 
 type (
 	tufRepo struct {
-		dgClient  *client.GatewayClient
-		tufClient *tuf.FioTuf
-		targets   Targets
+		dgClient   *client.GatewayClient
+		tufClient  *tuf.FioTuf
+		targets    Targets
+		hardwareID string
 	}
 )
 
-func NewTufRepo(cfg *config.Config, dgClient *client.GatewayClient) (Repo, error) {
+func NewTufRepo(cfg *config.Config, dgClient *client.GatewayClient, hardwareID string) (Repo, error) {
 	tufClient, err := tuf.NewFioTuf(cfg.TomlConfig(), dgClient.HttpClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TUF HttpClient to talk to TUF repo: %w", err)
 	}
 	return &tufRepo{
-		dgClient:  dgClient,
-		tufClient: tufClient,
+		dgClient:   dgClient,
+		tufClient:  tufClient,
+		hardwareID: hardwareID,
 	}, nil
 }
 
@@ -63,13 +66,27 @@ func (r *tufRepo) loadTargets() error {
 		b, _ = targetValue.Custom.MarshalJSON()
 		err := json.Unmarshal(b, &targetDetails)
 		if err != nil {
-			// TODO: add debug log informing about finding target with invalid "custom" field
+			slog.Debug("invalid value of target custom field is found", "target custom", targetValue)
 			continue
 		}
 
+		if len(targetDetails.HardwareID) == 0 {
+			slog.Debug("target with no hardware ID is found", "target custom", targetValue)
+			continue
+		}
+		var match bool
+		for _, hwID := range targetDetails.HardwareID {
+			if hwID == r.hardwareID {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
 		version, err := strconv.Atoi(targetDetails.Version)
 		if err != nil {
-			// TODO: add debug level log about failing to get target version
+			slog.Debug("invalid value of target version is found", "target custom", targetValue)
 			continue
 		}
 
@@ -77,7 +94,7 @@ func (r *tufRepo) loadTargets() error {
 		for _, appField := range targetDetails.Apps {
 			appRef, err := compose.ParseAppRef(appField.URI)
 			if err != nil {
-				// TODO: add debug level log about invalid app URI
+				slog.Debug("target with invalid app URI is found", "target custom", targetDetails)
 				continue
 			}
 			apps = append(apps, App{

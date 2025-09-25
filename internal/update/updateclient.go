@@ -176,9 +176,9 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 		return err
 	}
 	if opts.EnableTuf {
-		targetsRepo, err = target.NewTufRepo(cfg, client)
+		targetsRepo, err = target.NewTufRepo(cfg, client, cfg.GetHardwareID())
 	} else {
-		targetsRepo, err = target.NewPlainRepo(client, cfg.GetTargetsFilepath())
+		targetsRepo, err = target.NewPlainRepo(client, cfg.GetTargetsFilepath(), cfg.GetHardwareID())
 	}
 	if err != nil {
 		return err
