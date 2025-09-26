@@ -21,6 +21,8 @@ type (
 		Headers    map[string]string
 
 		lastNetInfoFile string
+		lastSotaFile    string
+		sotaToReport    []byte
 	}
 )
 
@@ -49,13 +51,17 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 	}
 
 	sota := cfg.GetStorageDir()
-	return &GatewayClient{
+	gw := &GatewayClient{
 		BaseURL:    cfg.GetServerBaseURL(),
 		HttpClient: client,
 		Headers:    headers,
 
 		lastNetInfoFile: filepath.Join(sota, ".last-netinfo"),
-	}, nil
+		lastSotaFile:    filepath.Join(sota, ".last-sota"),
+	}
+
+	gw.initSota(cfg.TomlConfig())
+	return gw, nil
 }
 
 func (c *GatewayClient) Get(resourcePath string) (*transport.HttpRes, error) {
