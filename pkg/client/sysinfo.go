@@ -15,5 +15,9 @@ func (c *GatewayClient) PutSysInfo() error {
 		err = errors.Join(err, err2)
 	}
 
+	if err2 := c.uploadHwinfo(); err2 != nil {
+		err = errors.Join(err, err2)
+	}
+
 	return err
 }

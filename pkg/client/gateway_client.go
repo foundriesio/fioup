@@ -23,6 +23,8 @@ type (
 		lastNetInfoFile string
 		lastSotaFile    string
 		sotaToReport    []byte
+		lastHwinfoFile  string
+		hwinfoToReport  []byte
 	}
 )
 
@@ -58,9 +60,11 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 
 		lastNetInfoFile: filepath.Join(sota, ".last-netinfo"),
 		lastSotaFile:    filepath.Join(sota, ".last-sota"),
+		lastHwinfoFile:  filepath.Join(sota, ".last-hwinfo"),
 	}
 
 	gw.initSota(cfg.TomlConfig())
+	gw.initHwinfo()
 	return gw, nil
 }
 
