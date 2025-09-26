@@ -19,6 +19,7 @@ Section: utils
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+         lshw,
 Static-Built-Using: ${misc:Static-Built-Using}
 Description:
  OTA Update Client for FoundriesFactory™
