@@ -51,6 +51,11 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	eventSender.Start()
 	defer eventSender.Stop()
 
+	// TODO: add an option to turn on/off sysinfo upload
+	if err := client.PutSysInfo(); err != nil {
+		slog.Error("Unable to upload sysinfo", "error", err)
+	}
+
 	sm.ctx.EventSender = eventSender
 	sm.ctx.Client = client
 
