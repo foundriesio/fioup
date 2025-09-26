@@ -5,6 +5,7 @@ package client
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -40,6 +41,45 @@ func (c *GatewayClient) uploadHwinfo() error {
 	return nil
 }
 
+// scrubHwInfo looks at fields known to change for each call of `lshw` and cleans
+// them up so that we don't report every single change to the backend but only
+// major ones.
+func scrubHwinfo(lshwBytes []byte) []byte {
+	var hwInfo map[string]any
+	if err := json.Unmarshal(lshwBytes, &hwInfo); err != nil {
+		slog.Error("Unexpected error unmarshalling lshw output", "error", err)
+	}
+
+	// cpu frequency (cpu "size") is always changing. The actual capacity is
+	// the more interesting value, so just remove this attribute
+	children := hwInfo["children"].([]any)
+	for _, child := range children {
+		child := child.(map[string]any)
+		if child["id"].(string) == "core" {
+			children := child["children"].([]any)
+			for _, child := range children {
+				child := child.(map[string]any)
+				if child["id"].(string) == "cpu" {
+					if _, ok := child["size"]; ok {
+						slog.Debug("Deleting CPU frequency from lshw output", "freq", child["size"])
+						delete(child, "size")
+						break
+					}
+				}
+			}
+			break
+		}
+	}
+
+	output, err := json.Marshal(hwInfo)
+	if err != nil {
+		slog.Error("Unexpected error marshalling lshw data", "error", err)
+		output = lshwBytes // this is the best we can do - don't scrub, the output
+	}
+
+	return output
+}
+
 func (c *GatewayClient) initHwinfo() {
 	path, err := exec.LookPath("lshw")
 	if err != nil {
@@ -52,6 +92,7 @@ func (c *GatewayClient) initHwinfo() {
 		slog.Error("Unable to run lshw", "error", err)
 		return
 	}
+	output = scrubHwinfo(output)
 
 	reported, err := os.ReadFile(c.lastHwinfoFile)
 	if err == nil && bytes.Equal(reported, output) {
