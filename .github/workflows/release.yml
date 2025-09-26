@@ -65,3 +65,40 @@ jobs:
         with:
           name: fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
           path: /tmp/debs/fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
+
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Set DEB_VERSION
+        run: |
+          # strip the "v" from v1.2.3 to make 1.2.3
+          VERSION="${{ env.version }}"
+          echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
+
+      - name: Download fioup-linux-amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: fioup-linux-amd64
+      #- name: Download fioup-linux-arm64
+      #  uses: actions/download-artifact@v4
+      #  with:
+      #    name: fioup-linux-arm64
+      - name: Download fioup amd64 deb
+        uses: actions/download-artifact@v4
+        with:
+          name: fioup_${{ env.DEB_VERSION }}_amd64.deb
+      #- name: Download fioup amd64 deb
+      #  uses: actions/download-artifact@v4
+      #  with:
+      #    name: fioup_${{ env.DEB_VERSION }}_arm64.deb
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.version }}
+          files: |
+            fioup*
