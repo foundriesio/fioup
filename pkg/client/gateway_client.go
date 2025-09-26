@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/foundriesio/fioconfig/transport"
@@ -18,6 +19,8 @@ type (
 		BaseURL    *url.URL
 		HttpClient *http.Client
 		Headers    map[string]string
+
+		lastNetInfoFile string
 	}
 )
 
@@ -44,10 +47,14 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 	if targetID != "" {
 		headers[HeaderKeyTarget] = targetID
 	}
+
+	sota := cfg.GetStorageDir()
 	return &GatewayClient{
 		BaseURL:    cfg.GetServerBaseURL(),
 		HttpClient: client,
 		Headers:    headers,
+
+		lastNetInfoFile: filepath.Join(sota, ".last-netinfo"),
 	}, nil
 }
 
@@ -65,6 +72,10 @@ func (c *GatewayClient) getJson(resourcePath string, item any) error {
 
 func (c *GatewayClient) Post(resourcePath string, data any) (*transport.HttpRes, error) {
 	return transport.HttpDo(c.HttpClient, http.MethodPost, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
+}
+
+func (c *GatewayClient) Put(resourcePath string, data any) (*transport.HttpRes, error) {
+	return transport.HttpDo(c.HttpClient, http.MethodPut, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
 }
 
 func (c *GatewayClient) UpdateHeaders(apps []string, targetID string) {
