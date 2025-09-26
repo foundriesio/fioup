@@ -7,5 +7,7 @@ package client
 // each piece of data if it has changed since the last time this function
 // was invoked.
 func (c *GatewayClient) PutSysInfo() error {
-	return nil
+	err := c.uploadNetInfo()
+
+	return err
 }
