@@ -4,40 +4,48 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
+	"strconv"
 
 	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
-func addCommonOptions(cmd *cobra.Command, opts *update.UpdateOptions) {
-	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
-	_ = cmd.Flags().MarkHidden("tuf")
-}
+type (
+	updateOptions struct {
+		version int
+	}
+)
 
 func init() {
-	opts := update.UpdateOptions{}
+	opts := updateOptions{
+		version: -1,
+	}
+
 	cmd := &cobra.Command{
-		Use:   "update <target_name_or_version>",
-		Short: "Update TUF metadata, download and install the selected target",
+		Use:   "update [<version>]",
+		Short: "Update target metadata, download, install, and start the specified target or the latest one if not specified",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				opts.TargetId = args[0]
+				var err error
+				opts.version, err = strconv.Atoi(args[0])
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("invalid version number: %w", err))
+				}
 			}
 			doUpdate(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
-	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)
 }
 
-func doUpdate(cmd *cobra.Command, opts *update.UpdateOptions) {
-	opts.DoCheck = true
-	opts.DoFetch = true
-	opts.DoInstall = true
-	opts.DoStart = true
-	err := update.Update(cmd.Context(), config, opts)
-	DieNotNil(err, "Failed to perform update")
-	slog.Info("Update operation complete")
+func doUpdate(cmd *cobra.Command, opts *updateOptions) {
+	DieNotNil(api.Update(cmd.Context(), config, opts.version))
+}
+
+func addCommonOptions(cmd *cobra.Command, opts *update.UpdateOptions) {
+	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
+	_ = cmd.Flags().MarkHidden("tuf")
 }
