@@ -8,13 +8,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	_ "github.com/foundriesio/composeapp/pkg/compose"
 	_ "github.com/foundriesio/composeapp/pkg/update"
 	_ "modernc.org/sqlite"
 )
 
+var dbMutex sync.Mutex
+
 func CreateEventsTable(dbFilePath string) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -34,6 +40,9 @@ func CreateEventsTable(dbFilePath string) error {
 }
 
 func SaveEvent(dbFilePath string, event *DgUpdateEvent) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -58,6 +67,9 @@ func SaveEvent(dbFilePath string, event *DgUpdateEvent) error {
 }
 
 func DeleteEvents(dbFilePath string, maxId int) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -77,6 +89,9 @@ func DeleteEvents(dbFilePath string, maxId int) error {
 }
 
 func GetEvents(dbFilePath string) ([]DgUpdateEvent, int, error) {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
 		return nil, -1, fmt.Errorf("failed to open database: %w", err)

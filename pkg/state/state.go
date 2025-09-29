@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/foundriesio/composeapp/pkg/update"
-	"github.com/foundriesio/fioup/pkg/client"
+	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/target"
 )
@@ -24,17 +24,12 @@ type (
 	// UpdateContext holds the state machine context
 	UpdateContext struct {
 		Config      *config.Config
-		EventSender *EventSender
+		EventSender *events.EventSender
 
 		FromTarget   target.Target
 		ToTarget     target.Target
 		UpdateRunner update.Runner
 
 		CurrentState ActionName
-	}
-
-	EventSender struct {
-		dbPath   string
-		gwClient *client.GatewayClient
 	}
 )

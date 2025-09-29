@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/foundriesio/fioup/pkg/client"
+	"github.com/foundriesio/fioup/pkg/config"
+	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/google/uuid"
 )
 
@@ -22,6 +25,17 @@ const (
 	InstallationApplied   EventTypeValue = "EcuInstallationApplied"
 	InstallationCompleted EventTypeValue = "EcuInstallationCompleted"
 )
+
+type EventSender struct {
+	dbPath   string
+	gwClient *client.GatewayClient
+
+	ticker    *time.Ticker
+	stopChan  chan struct{}
+	flushChan chan struct{}
+
+	wg sync.WaitGroup
+}
 
 type DgEvent struct {
 	CorrelationId string `json:"correlationId"`
@@ -62,7 +76,7 @@ func NewEvent(eventType EventTypeValue, details string, success *bool, correlati
 	return evt
 }
 
-func SendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
+func sendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	res, err := client.Post("/events", event)
 	if err != nil {
 		slog.Error("Unable to send event", "error", err)
@@ -84,7 +98,7 @@ func FlushEvents(dbFilePath string, client *client.GatewayClient) error {
 	}
 
 	slog.Debug(fmt.Sprintf("Flushing %d events", len(evts)))
-	err = SendEvent(client, evts)
+	err = sendEvent(client, evts)
 	if err != nil {
 		return fmt.Errorf("error sending events: %w", err)
 	}
@@ -94,4 +108,85 @@ func FlushEvents(dbFilePath string, client *client.GatewayClient) error {
 		return fmt.Errorf("error deleting events: %w", err)
 	}
 	return nil
+}
+
+func NewEventSender(cfg *config.Config) (*EventSender, error) {
+	gwClient, err := client.NewGatewayClient(cfg, nil, "")
+	if err != nil {
+		return nil, err
+	}
+
+	eventSender := &EventSender{
+		dbPath:   cfg.GetDBPath(),
+		gwClient: gwClient,
+	}
+
+	return eventSender, nil
+}
+
+func (s *EventSender) Start() {
+	slog.Debug("Starting events sender")
+	if s.ticker != nil {
+		return
+	}
+	s.stopChan = make(chan struct{}, 1)
+	s.flushChan = make(chan struct{}, 1)
+	s.wg.Add(1)
+	go func(stopChan chan struct{}, flushChan chan struct{}) {
+		s.ticker = time.NewTicker(time.Duration(time.Second * 10))
+		defer s.ticker.Stop()
+		defer s.wg.Done()
+		for {
+			select {
+			case <-stopChan:
+				return
+			case <-flushChan:
+				err := FlushEvents(s.dbPath, s.gwClient)
+				if err != nil {
+					slog.Error("Error flushing events", "error", err)
+				}
+			case <-s.ticker.C:
+				err := FlushEvents(s.dbPath, s.gwClient)
+				if err != nil {
+					slog.Error("Error flushing events", "error", err)
+				}
+			}
+		}
+	}(s.stopChan, s.flushChan)
+}
+
+func (s *EventSender) Stop() {
+	slog.Debug("Stopping events sender")
+	if s.ticker == nil {
+		return
+	}
+	s.flushChan <- struct{}{}
+	s.stopChan <- struct{}{}
+	s.wg.Wait()
+	s.ticker = nil
+	s.stopChan = nil
+	s.flushChan = nil
+	slog.Debug("Events sender stopped")
+}
+
+func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, toTarget target.Target, success ...bool) error {
+	var completionStatus *bool
+	if len(success) > 0 {
+		completionStatus = &success[0]
+	}
+	if eventType == InstallationCompleted && completionStatus != nil && *completionStatus {
+		// Update list of apps and target ID if update is successful
+		s.gwClient.UpdateHeaders(toTarget.AppNames(), toTarget.ID)
+	}
+	evt := NewEvent(eventType, "", completionStatus, updateID, toTarget.ID, toTarget.Version)
+	err := SaveEvent(s.dbPath, &evt[0])
+	if err != nil {
+		return fmt.Errorf("error saving event: %w", err)
+	}
+	s.FlushEventsAsync()
+	return nil
+}
+
+func (s *EventSender) FlushEventsAsync() {
+	s.flushChan <- struct{}{}
 }
