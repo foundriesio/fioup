@@ -59,12 +59,19 @@ jobs:
           # The version will look like v1.2.3. Debian needs the "1.2.3"
           VERSION="${{ env.version }}"
           echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES=\"$(cat /tmp/debs/release-notes.txt)\"" >> $GITHUB_ENV
 
       - name: Save debs
         uses: actions/upload-artifact@v4
         with:
           name: fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
           path: /tmp/debs/fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
+
+      - name: Save release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes_${{ matrix.hosts.arch }}.txt
+          path: /tmp/debs/release-notes.txt
 
   create-release:
     permissions:
@@ -78,6 +85,11 @@ jobs:
           # strip the "v" from v1.2.3 to make 1.2.3
           VERSION="${{ env.version }}"
           echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
+
+      - name: Download release-notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes_amd64.txt
 
       - name: Download fioup-linux-amd64
         uses: actions/download-artifact@v4
@@ -100,5 +112,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.version }}
+          body_path: release-notes.txt
           files: |
             fioup*
