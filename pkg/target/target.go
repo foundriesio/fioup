@@ -47,6 +47,10 @@ var (
 	}
 )
 
+func (t *Target) NoApps() bool {
+	return len(t.Apps) == 0
+}
+
 func (t *Target) ShortlistApps(shortlist []string) {
 	if shortlist == nil {
 		return
@@ -56,6 +60,26 @@ func (t *Target) ShortlistApps(shortlist []string) {
 		var found bool
 		for _, a := range shortlist {
 			if app.Name == a {
+				found = true
+				break
+			}
+		}
+		if found {
+			shortlistedApps = append(shortlistedApps, app)
+		}
+	}
+	t.Apps = shortlistedApps
+}
+
+func (t *Target) ShortlistAppsByURI(shortlist []string) {
+	if shortlist == nil {
+		return
+	}
+	var shortlistedApps []App
+	for _, app := range t.Apps {
+		var found bool
+		for _, a := range shortlist {
+			if app.URI == a {
 				found = true
 				break
 			}
