@@ -4,32 +4,42 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
+	"strconv"
 
-	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
+type (
+	fetchOptions struct {
+		version int
+	}
+)
+
 func init() {
-	opts := update.UpdateOptions{}
+	opts := fetchOptions{
+		version: -1,
+	}
+
 	cmd := &cobra.Command{
-		Use:   "fetch <target_name_or_version>",
-		Short: "Fetch the update from the OTA server",
+		Use:   "fetch [<version>]",
+		Short: "Initialize and fetch update or resume interrupted one",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				opts.TargetId = args[0]
+				var err error
+				opts.version, err = strconv.Atoi(args[0])
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("invalid version number: %w", err))
+				}
 			}
 			doFetch(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
-	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)
 }
 
-func doFetch(cmd *cobra.Command, opts *update.UpdateOptions) {
-	opts.DoFetch = true
-	err := update.Update(cmd.Context(), config, opts)
-	DieNotNil(err, "Failed to perform fetch operation")
-	slog.Info("Fetch operation complete")
+func doFetch(cmd *cobra.Command, opts *fetchOptions) {
+	DieNotNil(api.Fetch(cmd.Context(), config, opts.version))
 }

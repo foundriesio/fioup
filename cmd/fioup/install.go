@@ -4,28 +4,22 @@
 package main
 
 import (
-	"log/slog"
-
-	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	opts := update.UpdateOptions{}
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install the update. A fetch operation must be performed first.",
+		Short: "Install previously fetched update or resume interrupted install",
 		Run: func(cmd *cobra.Command, args []string) {
-			doInstall(cmd, &opts)
+			doInstall(cmd)
 		},
 		Args: cobra.NoArgs,
 	}
 	rootCmd.AddCommand(cmd)
 }
 
-func doInstall(cmd *cobra.Command, opts *update.UpdateOptions) {
-	opts.DoInstall = true
-	err := update.Update(cmd.Context(), config, opts)
-	DieNotNil(err, "Failed to perform install operation")
-	slog.Info("Install operation complete")
+func doInstall(cmd *cobra.Command) {
+	DieNotNil(api.Install(cmd.Context(), config))
 }
