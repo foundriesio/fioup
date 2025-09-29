@@ -102,7 +102,8 @@ func GetEvents(dbFilePath string) ([]DgUpdateEvent, int, error) {
 		}
 	}()
 
-	rows, err := db.Query("SELECT id, json_string FROM report_events;")
+	max_events := 6
+	rows, err := db.Query("SELECT id, json_string FROM report_events LIMIT (?);", max_events)
 	if err != nil {
 		return nil, -1, fmt.Errorf("failed to select events: %w", err)
 	}
