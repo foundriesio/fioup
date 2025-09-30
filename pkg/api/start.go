@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/config"
@@ -34,6 +35,7 @@ func Start(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 	// if app failed to start, do rollback
+	fmt.Printf("Update failed, rolling back to previous version; err: %s\n", err.Error())
 	return state.NewUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "rollback",
