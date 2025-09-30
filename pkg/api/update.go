@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
@@ -29,6 +30,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int) error {
 		return err
 	}
 	// if app failed to start, do rollback
+	fmt.Printf("Update failed, rolling back to previous version; err: %s\n", err.Error())
 	return state.NewUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "rollback",
