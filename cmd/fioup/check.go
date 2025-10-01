@@ -4,9 +4,10 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
 
 	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +26,34 @@ func init() {
 }
 
 func doCheck(cmd *cobra.Command, opts *update.UpdateOptions) {
-	opts.DoCheck = true
-	err := update.Update(cmd.Context(), config, opts)
-	DieNotNil(err, "Failed to perform check operation")
-	slog.Debug("Check operation complete")
+	targets, err := api.Check(config, api.WithTUF(opts.EnableTuf))
+	DieNotNil(err, "failed to check for updates")
+	for _, t := range targets.GetSortedList() {
+		fmt.Printf("%d [%s]\n", t.Version, t.ID)
+		for _, app := range t.Apps {
+			fmt.Printf("    %-20s%s\n", app.Name, app.URI)
+		}
+		fmt.Println()
+	}
+	currentStatus, err := api.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
+	DieNotNil(err, "failed to get current status")
+	fmt.Printf("Current version: %s\n", currentStatus.TargetID)
+	var areAppsInSync = true
+	for _, app := range currentStatus.AppStatuses {
+		fmt.Printf("    %-20s%s\n", app.Name, app.URI)
+		fmt.Printf("    %-20sfetched:%v; installed:%v; running:%v\n", "", app.Fetched, app.Installed, app.Running)
+		fmt.Println()
+		if !app.Fetched || !app.Installed || !app.Running {
+			areAppsInSync = false
+		}
+	}
+	if currentStatus.TargetID != targets.GetLatestTarget().ID {
+		fmt.Printf("New version available: %s. Please run 'fioup update' to get it.\n",
+			targets.GetLatestTarget().ID)
+	} else if !areAppsInSync {
+		fmt.Println("You are running the latest version, but not all apps are in sync." +
+			" Please run 'fioup update' to fix this.")
+	} else {
+		fmt.Println("You are running the latest version.")
+	}
 }
