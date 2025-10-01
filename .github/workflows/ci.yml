@@ -44,7 +44,7 @@ jobs:
 
       - name: Build for Debian
         run: |
-          docker build --output /tmp/debs -f debian/Dockerfile .
+          make deb DEBS_DIR=/tmp/debs
           docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
           set -ex
 
