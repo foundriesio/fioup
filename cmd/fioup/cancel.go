@@ -4,27 +4,33 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
 
-	"github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/composeapp/pkg/update"
+	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	opts := update.UpdateOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "cancel",
 		Short: "Cancel the current update operation",
 		Run: func(cmd *cobra.Command, args []string) {
-			doCancel(cmd, &opts)
+			doCancel(cmd)
 		},
 		Args: cobra.NoArgs,
 	}
 	rootCmd.AddCommand(cmd)
 }
 
-func doCancel(cmd *cobra.Command, opts *update.UpdateOptions) {
-	err := update.CancelPendingUpdate(cmd.Context(), config, opts)
-	DieNotNil(err, "Failed to perform cancel")
-	slog.Info("Cancel operation complete")
+func doCancel(cmd *cobra.Command) {
+	targetID, err := api.Cancel(cmd.Context(), config)
+	if errors.Is(err, update.ErrUpdateNotFound) {
+		fmt.Println("No update in progress to cancel")
+	} else {
+		DieNotNil(err, "failed to cancel update")
+		fmt.Println("Cancelled update to target ", targetID)
+	}
 }
