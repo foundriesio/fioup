@@ -1,0 +1,117 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create release
+env:
+  version: ${{ github.ref_name }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        hosts:
+          - os: ubuntu-24.04
+            arch: amd64
+          #- os: ubuntu-24.04-arm
+          #  arch: arm64
+
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.hosts.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Hack around https://github.com/actions/checkout/issues/290
+        run: |
+          git fetch --tags --force
+
+      - name: Build binaries
+        run: |
+          make build
+          ./bin/fioup --help   # sanity test
+          mv bin/fioup bin/fioup-linux-${{ matrix.hosts.arch }}
+
+      - name: Save binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: fioup-linux-${{ matrix.hosts.arch }}
+          path: bin/fioup-linux-${{ matrix.hosts.arch }}
+
+      - name: Build debs
+        run: |
+          make deb DEBS_DIR=/tmp/debs
+
+          # sanity check
+          sudo dpkg -i /tmp/debs/fioup_*.deb
+          /usr/bin/fioup --help
+
+          # The version will look like v1.2.3. Debian needs the "1.2.3"
+          VERSION="${{ env.version }}"
+          echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES=\"$(cat /tmp/debs/release-notes.txt)\"" >> $GITHUB_ENV
+
+      - name: Save debs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
+          path: /tmp/debs/fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
+
+      - name: Save release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes_${{ matrix.hosts.arch }}.txt
+          path: /tmp/debs/release-notes.txt
+
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Set DEB_VERSION
+        run: |
+          # strip the "v" from v1.2.3 to make 1.2.3
+          VERSION="${{ env.version }}"
+          echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
+
+      - name: Download release-notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes_amd64.txt
+
+      - name: Download fioup-linux-amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: fioup-linux-amd64
+      #- name: Download fioup-linux-arm64
+      #  uses: actions/download-artifact@v4
+      #  with:
+      #    name: fioup-linux-arm64
+      - name: Download fioup amd64 deb
+        uses: actions/download-artifact@v4
+        with:
+          name: fioup_${{ env.DEB_VERSION }}_amd64.deb
+      #- name: Download fioup amd64 deb
+      #  uses: actions/download-artifact@v4
+      #  with:
+      #    name: fioup_${{ env.DEB_VERSION }}_arm64.deb
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.version }}
+          body_path: release-notes.txt
+          files: |
+            fioup*

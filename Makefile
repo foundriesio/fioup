@@ -3,6 +3,7 @@ BUILD_DIR := bin
 MAIN := ./cmd/fioup
 LINTER = golangci-lint
 TAGS = disable_pkcs11
+DEBS_DIR ?= $(BUILD_DIR)
 
 .PHONY: all build clean test format manpages bash-completion
 
@@ -16,6 +17,9 @@ manpages:
 
 bash-completion:
 	@go run -tags disable_pkcs11,disable_main $(MAIN) bash-completion $(BUILD_DIR)/bash-completion
+
+deb:
+	docker build --output $(DEBS_DIR) -f debian/Dockerfile .
 
 format:
 	@go fmt ./...
