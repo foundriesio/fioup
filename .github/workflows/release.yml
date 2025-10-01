@@ -59,7 +59,6 @@ jobs:
           # The version will look like v1.2.3. Debian needs the "1.2.3"
           VERSION="${{ env.version }}"
           echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
-          echo "RELEASE_NOTES=\"$(cat /tmp/debs/release-notes.txt)\"" >> $GITHUB_ENV
 
       - name: Save debs
         uses: actions/upload-artifact@v4
