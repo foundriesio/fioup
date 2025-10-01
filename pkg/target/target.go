@@ -47,6 +47,10 @@ var (
 	}
 )
 
+func (t *Target) IsUnknown() bool {
+	return t.ID == UnknownTarget.ID && t.Version == UnknownTarget.Version
+}
+
 func (t *Target) NoApps() bool {
 	return len(t.Apps) == 0
 }
