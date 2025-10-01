@@ -56,8 +56,6 @@ func (c *GatewayClient) Post(resourcePath string, data any) (*transport.HttpRes,
 }
 
 func (c *GatewayClient) UpdateHeaders(apps []string, targetID string) {
-	c.Headers = map[string]string{
-		HeaderKeyApps:   strings.Join(apps, ","),
-		HeaderKeyTarget: targetID,
-	}
+	c.Headers[HeaderKeyApps] = strings.Join(apps, ",")
+	c.Headers[HeaderKeyTarget] = targetID
 }
