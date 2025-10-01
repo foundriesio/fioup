@@ -6,8 +6,11 @@ package state
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/target"
@@ -18,6 +21,7 @@ type (
 	Check struct {
 		UpdateTargets  bool
 		AllowNewUpdate bool
+		SkipIfRunning  bool
 		Action         string
 		AllowedStates  []update.State
 		ToVersion      int
@@ -27,6 +31,10 @@ type (
 const (
 	updateModeStarting = "starting"
 	updateModeResuming = "resuming"
+)
+
+var (
+	ErrCheckNoUpdate = errors.New("selected target is already running")
 )
 
 func (s *Check) Name() ActionName { return "Checking" }
@@ -104,6 +112,17 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
 				return fmt.Errorf("could not find latest target: %w", err)
 			}
+			if s.SkipIfRunning && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
+				running, err := isTargetRunning(ctx, updateCtx)
+				if err != nil {
+					slog.Error("Failed to check if target is running", "error", err)
+				}
+				if running {
+					slog.Info("Skipping running target", "target_id", updateCtx.ToTarget.ID)
+					return ErrCheckNoUpdate
+				}
+			}
+
 		} else {
 			updateCtx.ToTarget = targets.GetTargetByVersion(s.ToVersion)
 			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
@@ -122,4 +141,43 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
 	}
 	return nil
+}
+
+func isTargetRunning(ctx context.Context, updateContext *UpdateContext) (bool, error) {
+	slog.Debug("Checking target", "target_id", updateContext.ToTarget.ID)
+	if len(updateContext.ToTarget.Apps) == 0 {
+		slog.Debug("No required apps to check")
+		return true, nil
+	}
+
+	if isSublist(updateContext.FromTarget.AppURIs(), updateContext.ToTarget.AppURIs()) {
+		slog.Debug("Installed applications match selected target apps")
+		status, err := compose.CheckAppsStatus(ctx, updateContext.Config.ComposeConfig(), updateContext.ToTarget.AppURIs())
+		if err != nil {
+			return false, fmt.Errorf("error checking apps status: %w", err)
+		}
+
+		if status.AreRunning() {
+			slog.Info("Required applications are running")
+			return true, nil
+		} else {
+			slog.Info("Required applications are not running", "apps_not_running", status.NotRunningApps)
+			return false, nil
+		}
+	} else {
+		slog.Debug("Installed applications list do not contain all target apps")
+		return false, nil
+	}
+}
+
+func isSublist[S ~[]E, E comparable](mainList, sublist S) bool {
+	if len(sublist) > len(mainList) {
+		return false
+	}
+	for _, subElem := range sublist {
+		if !slices.Contains(mainList, subElem) {
+			return false
+		}
+	}
+	return true
 }

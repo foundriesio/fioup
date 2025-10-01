@@ -12,12 +12,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Update(ctx context.Context, cfg *config.Config, toVersion int) error {
+func Update(ctx context.Context, cfg *config.Config, toVersion int, skipIfRunning bool) error {
 	updateRunner := state.NewUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "update",
 			UpdateTargets:  true,
 			AllowNewUpdate: true,
+			SkipIfRunning:  skipIfRunning,
 			ToVersion:      toVersion,
 		},
 		&state.Init{},

@@ -42,7 +42,7 @@ func init() {
 }
 
 func doUpdate(cmd *cobra.Command, opts *updateOptions) {
-	DieNotNil(api.Update(cmd.Context(), config, opts.version))
+	DieNotNil(api.Update(cmd.Context(), config, opts.version, false))
 }
 
 func addCommonOptions(cmd *cobra.Command, opts *update.UpdateOptions) {

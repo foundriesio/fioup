@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
@@ -519,25 +518,4 @@ func CancelPendingUpdate(ctx context.Context, cfg *config.Config, opts *UpdateOp
 		slog.Info("No pending update to cancel")
 	}
 	return nil
-}
-
-func Daemon(ctx context.Context, cfg *config.Config, opts *UpdateOptions) {
-	intervalStr := cfg.TomlConfig().GetDefault("uptane.polling_seconds", "60")
-	interval, err := strconv.Atoi(intervalStr)
-	if err != nil {
-		slog.Error("Invalid interval, using default 60 seconds", "interval", intervalStr, "error", err)
-		interval = 60
-	}
-	for {
-		opts.DoCheck = true
-		opts.DoFetch = true
-		opts.DoInstall = true
-		opts.DoStart = true
-		err := Update(ctx, cfg, opts)
-		if err != nil {
-			slog.Error("Error during update", "error", err)
-		}
-		slog.Info("Waiting before next update check", "interval", interval)
-		time.Sleep(time.Duration(interval) * time.Second)
-	}
 }
