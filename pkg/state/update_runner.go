@@ -10,6 +10,7 @@ import (
 
 	"github.com/foundriesio/fioup/internal/events"
 	internal "github.com/foundriesio/fioup/internal/update"
+	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/target"
 )
@@ -39,13 +40,19 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	}
 	sm.ctx.Config = cfg
 
-	eventSender, err := events.NewEventSender(cfg)
+	client, err := client.NewGatewayClient(cfg, nil, "")
+	if err != nil {
+		return err
+	}
+	eventSender, err := events.NewEventSender(cfg, client)
 	if err != nil {
 		return err
 	}
 	eventSender.Start()
 	defer eventSender.Stop()
+
 	sm.ctx.EventSender = eventSender
+	sm.ctx.Client = client
 
 	stateCounter := 1
 	for _, s := range sm.states {
