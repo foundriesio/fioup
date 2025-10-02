@@ -6,10 +6,11 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/foundriesio/composeapp v0.0.0-20250926080633-dd07e7fe9abc
+	github.com/foundriesio/composeapp v0.0.0-20251002132735-398032a94221
 	github.com/foundriesio/fioconfig v0.0.0-20250924134830-8024c88e5c68
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.9.1
 	github.com/theupdateframework/go-tuf/v2 v2.0.2
 	gopkg.in/ini.v1 v1.67.0
@@ -62,7 +63,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
