@@ -232,7 +232,7 @@ func Update(ctx context.Context, cfg *config.Config, opts *UpdateOptions) error 
 		// the current target name and apps
 		client.UpdateHeaders(updateContext.Target.AppNames(), updateContext.Target.ID)
 	}
-	_ = ReportAppsStates(cfg.TomlConfig(), client, updateContext)
+	_ = ReportAppsStates(updateContext.Context, client, updateContext.ComposeConfig)
 
 	errFlush := events.FlushEvents(updateContext.DbFilePath, client)
 	if errFlush != nil {
