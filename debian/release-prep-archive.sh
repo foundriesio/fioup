@@ -17,7 +17,7 @@ version=${version#v} # make sure its 0.1.0 not v0.1.0
 gsutil -m rsync -r gs://fioup.foundries.io/ ${releasedir}/
 
 url="https://github.com/foundriesio/fioup/releases/download/v${version}/fioup_${version}_amd64.deb"
-echo "TODO curl $url ${releasedir}/pkg/deb/pool/"
+wget -O ${releasedir}/pkg/deb/pool/fioup_${version}_amd64.deb $url
 
 url="https://github.com/foundriesio/fioup/releases/download/v${version}/fioup_${version}_arm64.deb"
-echo "TODO curl $url ${releasedir}/pkg/deb/pool/"
+wget -O ${releasedir}/pkg/deb/pool/fioup_${version}_arm64.deb $url

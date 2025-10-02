@@ -42,6 +42,7 @@ mkdir -p /layout/dists/stable/main/binary-arm64
 
 cd /layout
 dpkg-scanpackages --multiversion --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
+dpkg-scanpackages --multiversion --arch arm64 pool/ > dists/stable/main/binary-arm64/Packages
 
 chown -R $(id -u) /layout/*
 EOF
