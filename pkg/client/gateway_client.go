@@ -51,6 +51,14 @@ func (c *GatewayClient) Get(resourcePath string) (*transport.HttpRes, error) {
 	return transport.HttpGet(c.HttpClient, c.BaseURL.JoinPath(resourcePath).String(), c.Headers)
 }
 
+func (c *GatewayClient) getJson(resourcePath string, item any) error {
+	res, err := c.Get(resourcePath)
+	if err != nil {
+		return err
+	}
+	return res.Json(item)
+}
+
 func (c *GatewayClient) Post(resourcePath string, data any) (*transport.HttpRes, error) {
 	return transport.HttpDo(c.HttpClient, http.MethodPost, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
 }
