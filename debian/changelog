@@ -1,10 +1,13 @@
-fioup (0.1.1) UNRELEASED; urgency=medium
+fioup (0.2.0) UNRELEASED; urgency=medium
 
-  * docs: Introduce basic skeleton for documentation
-  * deb: Fix trademarking in control file
-  * Add scripts to help publish release
+  [ Andre Detsch ]
+  * events: Send events asynchronously
+  * events: Limit number of events sent at once
 
- -- Andy Doan <bot@foundries.io>  Wed, 01 Oct 2025 18:57:30 +0000
+  [ Andy Doan ]
+  * ci: Enable arm64 in releases
+
+ -- Andre Detsch <bot@foundries.io>  Thu, 02 Oct 2025 13:53:13 +0000
 
 fioup (0.1.0) released; urgency=medium
 
