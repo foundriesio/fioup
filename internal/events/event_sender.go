@@ -110,12 +110,7 @@ func FlushEvents(dbFilePath string, client *client.GatewayClient) error {
 	return nil
 }
 
-func NewEventSender(cfg *config.Config) (*EventSender, error) {
-	gwClient, err := client.NewGatewayClient(cfg, nil, "")
-	if err != nil {
-		return nil, err
-	}
-
+func NewEventSender(cfg *config.Config, gwClient *client.GatewayClient) (*EventSender, error) {
 	eventSender := &EventSender{
 		dbPath:   cfg.GetDBPath(),
 		gwClient: gwClient,
@@ -173,10 +168,6 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 	var completionStatus *bool
 	if len(success) > 0 {
 		completionStatus = &success[0]
-	}
-	if eventType == InstallationCompleted && completionStatus != nil && *completionStatus {
-		// Update list of apps and target ID if update is successful
-		s.gwClient.UpdateHeaders(toTarget.AppNames(), toTarget.ID)
 	}
 	evt := NewEvent(eventType, "", completionStatus, updateID, toTarget.ID, toTarget.Version)
 	err := SaveEvent(s.dbPath, &evt[0])

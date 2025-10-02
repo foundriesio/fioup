@@ -8,6 +8,7 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/target"
 )
@@ -25,6 +26,7 @@ type (
 	UpdateContext struct {
 		Config      *config.Config
 		EventSender *events.EventSender
+		Client      *client.GatewayClient
 
 		FromTarget   target.Target
 		ToTarget     target.Target

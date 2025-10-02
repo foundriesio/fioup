@@ -12,7 +12,6 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
-	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/pkg/errors"
 )
@@ -67,12 +66,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	}
 
 	var targetRepo target.Repo
-	var gwClient *client.GatewayClient
-	gwClient, err = client.NewGatewayClient(updateCtx.Config, updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
-	if err != nil {
-		return err
-	}
-	targetRepo, err = target.NewPlainRepo(gwClient, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
+	targetRepo, err = target.NewPlainRepo(updateCtx.Client, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
 	if err != nil {
 		return err
 	}
@@ -141,6 +135,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),
 			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
 	}
+	updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
 	return nil
 }
 

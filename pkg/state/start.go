@@ -33,6 +33,7 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		if err := updateCtx.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err != nil {
 			slog.Debug("failed to complete update with pruning", "error", err)
 		}
+		updateCtx.Client.UpdateHeaders(updateCtx.ToTarget.AppNames(), updateCtx.ToTarget.ID)
 	} else {
 		err = fmt.Errorf("%w: %s", ErrStartFailed, err.Error())
 	}
