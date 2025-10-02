@@ -4,12 +4,12 @@
 package update
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
-	"github.com/foundriesio/fioconfig/sotatoml"
 	"github.com/foundriesio/fioup/pkg/client"
 )
 
@@ -37,9 +37,9 @@ type (
 	}
 )
 
-func ReportAppsStates(config *sotatoml.AppConfig, client *client.GatewayClient, updateContext *UpdateContext) error {
+func ReportAppsStates(ctx context.Context, client *client.GatewayClient, cfg *compose.Config) error {
 	// Get status of all apps found in the local app storage
-	status, err := compose.CheckAppsStatus(updateContext.Context, updateContext.ComposeConfig, nil)
+	status, err := compose.CheckAppsStatus(ctx, cfg, nil)
 	if err != nil {
 		return err
 	}
