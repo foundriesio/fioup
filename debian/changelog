@@ -1,4 +1,12 @@
-fioup (0.1.0) UNRELEASED; urgency=medium
+fioup (0.1.1) UNRELEASED; urgency=medium
+
+  * docs: Introduce basic skeleton for documentation
+  * deb: Fix trademarking in control file
+  * Add scripts to help publish release
+
+ -- Andy Doan <bot@foundries.io>  Wed, 01 Oct 2025 18:57:30 +0000
+
+fioup (0.1.0) released; urgency=medium
 
   * Initial release
 
