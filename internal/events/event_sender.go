@@ -132,8 +132,8 @@ func (s *EventSender) Start() {
 	s.stopChan = make(chan struct{}, 1)
 	s.flushChan = make(chan struct{}, 1)
 	s.wg.Add(1)
+	s.ticker = time.NewTicker(time.Duration(time.Second * 10))
 	go func(stopChan chan struct{}, flushChan chan struct{}) {
-		s.ticker = time.NewTicker(time.Duration(time.Second * 10))
 		defer s.ticker.Stop()
 		defer s.wg.Done()
 		for {
