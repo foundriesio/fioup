@@ -113,6 +113,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 				return fmt.Errorf("could not find latest target: %w", err)
 			}
 			if s.SkipIfRunning && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
+				updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 				running, err := isTargetRunning(ctx, updateCtx)
 				if err != nil {
 					slog.Error("Failed to check if target is running", "error", err)
