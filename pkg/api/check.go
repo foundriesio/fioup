@@ -64,6 +64,8 @@ func Check(cfg *config.Config, options ...CheckOpt) (target.Targets, error) {
 		currentTarget = targets.GetTargetByID(lastUpdate.ClientRef)
 		if currentTarget.IsUnknown() {
 			slog.Debug("cannot find lastUpdate target in the target list", "target", lastUpdate.ClientRef)
+		} else {
+			currentTarget.ShortlistAppsByURI(lastUpdate.URIs)
 		}
 	}
 	if !currentTarget.IsUnknown() {
