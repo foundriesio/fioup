@@ -35,10 +35,14 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 		return nil, fmt.Errorf("failed to create HTTPS HttpClient to talk to Device Gateway: %w", err)
 	}
 	headers := map[string]string{
-		"user-agent":    UserAgentPrefix + "/1.0.0", // TODO: figure out version and append here
-		HeaderKeyTag:    cfg.GetTag(),
-		HeaderKeyApps:   strings.Join(apps, ","),
-		HeaderKeyTarget: targetID,
+		"user-agent": UserAgentPrefix + "/1.0.0", // TODO: figure out version and append here
+		HeaderKeyTag: cfg.GetTag(),
+	}
+	if apps != nil {
+		headers[HeaderKeyApps] = strings.Join(apps, ",")
+	}
+	if targetID != "" {
+		headers[HeaderKeyTarget] = targetID
 	}
 	return &GatewayClient{
 		BaseURL:    cfg.GetServerBaseURL(),
