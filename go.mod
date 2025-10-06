@@ -5,7 +5,7 @@ go 1.24.4
 replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio/go-tuf/v2 v2.0.2-fio
 
 require (
-	github.com/docker/distribution v2.8.2+incompatible
+	github.com/docker/distribution v2.8.3+incompatible
 	github.com/foundriesio/composeapp v0.0.0-20251002132735-398032a94221
 	github.com/foundriesio/fioconfig v0.0.0-20250924134830-8024c88e5c68
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
