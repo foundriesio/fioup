@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/theupdateframework/go-tuf/v2 v2.0.2
 	gopkg.in/ini.v1 v1.67.0
-	modernc.org/sqlite v1.38.2
+	modernc.org/sqlite v1.39.0
 )
 
 require (
