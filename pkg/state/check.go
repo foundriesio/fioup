@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
@@ -65,6 +66,15 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		}
 	}
 
+	// Get FromTarget: get last successful update to set FromTarget
+	if fromTarget, err := getCurrentTarget(updateCtx.Config.ComposeConfig()); err == nil {
+		updateCtx.FromTarget = *fromTarget
+		updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
+	} else {
+		slog.Debug("failed to determine the current target, consider it as unknown", "error", err)
+		updateCtx.FromTarget = target.UnknownTarget
+	}
+
 	var targetRepo target.Repo
 	targetRepo, err = target.NewPlainRepo(updateCtx.Client, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
 	if err != nil {
@@ -73,17 +83,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	targets, err := targetRepo.LoadTargets(s.UpdateTargets)
 	if err != nil {
 		return err
-	}
-
-	// Get FromTarget: get last successful update to set FromTarget
-	if lastUpdate, err := update.GetLastSuccessfulUpdate(updateCtx.Config.ComposeConfig()); err == nil {
-		updateCtx.FromTarget = targets.GetTargetByID(lastUpdate.ClientRef)
-		if updateCtx.FromTarget.ID == target.UnknownTarget.ID {
-			return fmt.Errorf("could not find target of the last successful update: %w", err)
-		}
-		updateCtx.FromTarget.ShortlistAppsByURI(lastUpdate.URIs)
-	} else {
-		updateCtx.FromTarget = target.UnknownTarget
 	}
 
 	if updateMode == updateModeResuming {
@@ -135,7 +134,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),
 			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
 	}
-	updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
 	return nil
 }
 
@@ -176,4 +174,52 @@ func isSublist[S ~[]E, E comparable](mainList, sublist S) bool {
 		}
 	}
 	return true
+}
+
+func getCurrentTarget(cfg *compose.Config) (*target.Target, error) {
+	lastUpdate, err := update.GetLastSuccessfulUpdate(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("no last successful update found: %w", err)
+	}
+	version, err := extractTargetVersion(lastUpdate.ClientRef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract target version from last successful update ClientRef: %w", err)
+	}
+	apps, err := parseAppURIs(lastUpdate.URIs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse app URIs from last successful update: %w", err)
+	}
+	return &target.Target{
+		ID:      lastUpdate.ClientRef,
+		Apps:    apps,
+		Version: version,
+	}, nil
+}
+
+func parseAppURIs(appURIs []string) ([]target.App, error) {
+	var apps []target.App
+	for _, uri := range appURIs {
+		appRef, err := compose.ParseAppRef(uri)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse app URI %q: %w", uri, err)
+		}
+		apps = append(apps, target.App{
+			Name: appRef.Name,
+			URI:  appRef.String(),
+		})
+	}
+	return apps, nil
+}
+
+func extractTargetVersion(targetID string) (int, error) {
+	parts := strings.Split(targetID, "-")
+	if len(parts) < 2 {
+		return -1, fmt.Errorf("invalid target ID format")
+	}
+	versionStr := parts[len(parts)-1]
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		return -1, fmt.Errorf("invalid version in target ID: %w", err)
+	}
+	return version, nil
 }
