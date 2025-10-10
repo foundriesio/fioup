@@ -52,3 +52,24 @@ Foundries.io backend:
 ```
  $ sudo fioup check
 ```
+
+## Changing apps that run
+The default behavior of fioup is to run all apps defined in a Target. This
+can be overridden by setting the `pacman.compose_apps` field in
+`/var/sota/sota.toml` to a comma separated list of applications. Examples
+include:
+```
+[pacman]
+# Run two apps, foo and bar
+compose_apps = "foo,bar"
+
+# Run no apps:
+compose_apps = " "
+```
+
+Fioup parses and merges configuration options using the follow logic:
+   * `/usr/lib/sota/conf.d/*.toml`
+   * `/var/sota/sota.toml`
+   * `/etc/sota/conf.d/*.toml`
+
+This provides the user a framework for overriding configuration options.
