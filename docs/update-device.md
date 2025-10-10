@@ -15,9 +15,11 @@ update is available, it may be applied by running:
 ## Advanced
 An update can be applied in more granular steps with:
 ```
+ sudo fioup check
  sudo fioup fetch
  sudo fioup install
  sudo fioup start
 ```
+***NOTE:*** Once you've started an update sequence, you must `fioup cancel` to start a new sequence.
 
 The update status can be checked at any time with `sudo fioup status`.
