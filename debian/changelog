@@ -1,4 +1,46 @@
-fioup (0.2.0) UNRELEASED; urgency=medium
+fioup (0.9.0) UNRELEASED; urgency=medium
+
+  [ Andy Doan ]
+  * debian: Update release scripts to support arm64
+  * client: Add a "self" API to support `whoami`
+  * client: Start PutSysInfo API
+  * client: Add private ipv4 logic to sysinfo
+  * client: Add logic to upload sota config
+  * client: Include hwinfo in sysinfo
+  * client: Ignore similar hwinfo changes
+  * deb: Add `lshw` as a dependency
+  * docs: Improve steps for advanced updating
+  * docs: Include notes on managing apps
+
+  [ Andre Detsch ]
+  * daemon: Move daemon implementation to API based code
+  * events: Initialize ticker in main thread
+  * update: Remove unused code
+  * update: Move db initialization function to a new db.go file
+  * update: Move UpdateOptions struct to cmd, renaming it to commonOptions
+
+  [ Mike Sul ]
+  * composeapp: Bump version 398032a
+  * client: Fix header updating
+  * target: Compare target with the unknown target
+  * check: Add API function to check targets
+  * check: Shortlist target apps before checking
+  * Use single instance of gateway client
+  * client: Don't set header if value is nil
+  * check: Shortlist apps of the current target
+  * check: Figure out current target without targets meta
+  * Report target apps status just after they are started
+  * update_runner: Send host system info to device gateway
+
+  [ dependabot[bot] ]
+  * build(deps): bump actions/download-artifact from 4 to 5
+  * build(deps): bump actions/setup-go from 5 to 6
+  * build(deps): bump github.com/spf13/cobra from 1.9.1 to 1.10.1
+  * build(deps): bump modernc.org/sqlite from 1.38.2 to 1.39.0
+
+ -- Andy Doan <bot@foundries.io>  Mon, 13 Oct 2025 19:48:46 +0000
+
+fioup (0.2.0) released; urgency=medium
 
   [ Andre Detsch ]
   * events: Send events asynchronously
