@@ -6,13 +6,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/foundriesio/fioup/internal/update"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	opts := update.UpdateOptions{}
+	opts := commonOptions{}
 	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Update TUF metadata",
@@ -25,8 +24,8 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func doCheck(cmd *cobra.Command, opts *update.UpdateOptions) {
-	targets, err := api.Check(config, api.WithTUF(opts.EnableTuf))
+func doCheck(cmd *cobra.Command, opts *commonOptions) {
+	targets, err := api.Check(config, api.WithTUF(opts.enableTuf))
 	DieNotNil(err, "failed to check for updates")
 	for _, t := range targets.GetSortedList() {
 		fmt.Printf("%d [%s]\n", t.Version, t.ID)
