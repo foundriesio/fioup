@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/foundriesio/fioup/internal/db"
 	"github.com/foundriesio/fioup/internal/events"
-	internal "github.com/foundriesio/fioup/internal/update"
 	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/target"
@@ -35,7 +35,7 @@ func (sm *UpdateRunner) GetFromTarget() target.Target {
 }
 
 func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
-	if err := internal.InitializeDatabase(cfg.GetDBPath()); err != nil {
+	if err := db.InitializeDatabase(cfg.GetDBPath()); err != nil {
 		return err
 	}
 	sm.ctx.Config = cfg

@@ -1,14 +1,13 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package update
+package db
 
 import (
 	"fmt"
 
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/internal/targets"
-	_ "modernc.org/sqlite"
 )
 
 func InitializeDatabase(dbFilePath string) error {
