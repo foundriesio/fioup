@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/foundriesio/fioup/internal/update"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
 
 type (
+	commonOptions struct {
+		enableTuf bool
+	}
 	updateOptions struct {
 		version int
 	}
@@ -45,7 +47,7 @@ func doUpdate(cmd *cobra.Command, opts *updateOptions) {
 	DieNotNil(api.Update(cmd.Context(), config, opts.version, false))
 }
 
-func addCommonOptions(cmd *cobra.Command, opts *update.UpdateOptions) {
-	cmd.Flags().BoolVar(&opts.EnableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
+func addCommonOptions(cmd *cobra.Command, opts *commonOptions) {
+	cmd.Flags().BoolVar(&opts.enableTuf, "tuf", false, "Enable TUF metadata checking, instead of reading targets.json directly.")
 	_ = cmd.Flags().MarkHidden("tuf")
 }
