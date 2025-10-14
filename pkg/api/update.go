@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Update(ctx context.Context, cfg *config.Config, toVersion int, skipIfRunning bool) error {
+func Update(ctx context.Context, cfg *config.Config, toVersion int, skipIfRunning bool, enableRollback bool) error {
 	updateRunner := state.NewUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "update",
@@ -27,6 +27,10 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, skipIfRunnin
 		&state.Start{},
 	})
 	err := updateRunner.Run(ctx, cfg)
+	if !enableRollback {
+		return err
+	}
+
 	if !errors.Is(err, state.ErrStartFailed) {
 		return err
 	}
