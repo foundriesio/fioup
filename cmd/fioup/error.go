@@ -6,8 +6,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"log/slog"
 )
 
 // DieNotNil logs the error and exits with code 1.
@@ -23,7 +21,7 @@ func DieNotNilWithCode(err error, exitCode int, message ...string) {
 			parts = append(parts, p)
 		}
 		parts = append(parts, err)
-		slog.Error(fmt.Sprintln(parts))
+		fmt.Println(parts...)
 		os.Exit(exitCode)
 	}
 }
