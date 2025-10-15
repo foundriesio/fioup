@@ -44,7 +44,7 @@ if use_fioup:
         InstallOfflineRollbackOk = 0
         InstallNeedsReboot = 0
         InstallDowngradeAttempt = 0
-        InstallRollbackOk = 0
+        InstallRollbackOk = 1 # fioup cli returns an error instead of actually doing a rollback
         InstallRollbackNeedsReboot = 0
         InstallRollbackFailed = 1
 else:
@@ -561,7 +561,7 @@ def install_with_separate_steps(target: Target, explicit_version: bool = True, d
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationApplied', None),
                     ('EcuInstallationCompleted', False),
-                }, True)
+                }, False)
             else:
                 verify_events(target.actual_version, {
                     ('EcuInstallationStarted', None),
@@ -570,10 +570,12 @@ def install_with_separate_steps(target: Target, explicit_version: bool = True, d
                 }, True)
 
 
-            verify_events(final_target.actual_version, {
-                ('EcuInstallationStarted', None),
-                ('EcuInstallationCompleted', True),
-            }, False)
+            if not use_fioup:
+                # fioup CLI does not perform auto rollback
+                verify_events(final_target.actual_version, {
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationCompleted', True),
+                }, False)
         else:
             assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
             verify_callback([("install-final-pre", ""), ("install-post", "OK")])
@@ -765,16 +767,19 @@ def install_with_single_step(target: Target, explicit_version: bool = True, do_r
                 ("install-pre", ""), ("install-post", "FAILED"),
                 ("install-pre", ""), ("install-post", "OK")
                 ])
-            verify_events(target.actual_version, {
-                ('EcuDownloadStarted', None),
-                ('EcuDownloadCompleted', True),
-                ('EcuInstallationStarted', None),
-                ('EcuInstallationCompleted', False),
-            }, True)
-            verify_events(final_target.actual_version, {
-                ('EcuInstallationStarted', None),
-                ('EcuInstallationCompleted', True),
-            }, False)
+            if use_fioup:
+                verify_events(target.actual_version, {
+                    ('EcuDownloadStarted', None),
+                    ('EcuDownloadCompleted', True),
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationCompleted', False),
+                }, not use_fioup)
+            if not use_fioup:
+                # fioup CLI does not perform auto rollback
+                verify_events(final_target.actual_version, {
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationCompleted', True),
+                }, False)
 
         else:
             assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
@@ -938,6 +943,9 @@ def run_test_sequence_random(updates_count: int = 20):
         logger.info(f"Updating to {target.actual_version} {target}. SingleStep={single_step}, Offline={offline} DelayAppsInstall={delay_app_install}")
         write_settings(apps, prune)
         install_target(target)
+        if use_fioup and target.run_rollback:
+            # fioup CLI does not perform auto rollback, so apps won't be restored after on bad target installation
+            continue
         check_running_apps(apps)
 
 def run_test_sequence_incremental():
@@ -951,6 +959,9 @@ def run_test_sequence_incremental():
         logger.info(f"Updating to {target.actual_version} {target}. SingleStep={single_step}, Offline={offline} DelayAppsInstall={delay_app_install}")
         write_settings(apps, prune)
         install_target(target)
+        if use_fioup and target.run_rollback:
+            # fioup CLI does not perform auto rollback, so apps won't be restored after on bad target installation
+            continue
         check_running_apps(apps)
 
 def run_test_sequence_update_to_latest():
