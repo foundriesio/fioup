@@ -5,7 +5,10 @@ package target
 
 import (
 	"encoding/json"
+	"log/slog"
+	"os"
 	"slices"
+	"strconv"
 )
 
 type (
@@ -122,9 +125,20 @@ func (t *Target) AppURIs() (res []string) {
 }
 
 func (t Targets) GetLatestTarget() Target {
+	versionLimitStr := os.Getenv("FIOUP_VERSION_UPPER_LIMIT")
+	versionLimit := 0
+	if versionLimitStr != "" {
+		var err error
+		versionLimit, err = strconv.Atoi(versionLimitStr)
+		if err != nil {
+			slog.Debug("Invalid value for FIOUP_VERSION_UPPER_LIMIT. Ignoring it", "value", versionLimitStr)
+		}
+		slog.Info("Enforcing upper version limit", "version_limit", versionLimit)
+	}
+
 	latest := UnknownTarget
 	for _, target := range t {
-		if target.Version > latest.Version {
+		if target.Version > latest.Version && (versionLimit <= 0 || target.Version <= versionLimit) {
 			latest = target
 		}
 	}
