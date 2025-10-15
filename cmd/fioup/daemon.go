@@ -36,7 +36,7 @@ func doDaemon(cmd *cobra.Command) {
 	interval := time.Duration(time.Duration(pollingSec) * time.Second)
 	ctx := cmd.Context()
 	for {
-		err := api.Update(cmd.Context(), config, -1)
+		err := api.Update(cmd.Context(), config, -1, api.WithMaxAttempts(3))
 		if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
 			slog.Error("Error during update", "error", err)
 		}

@@ -14,6 +14,7 @@ type (
 	UpdateOpts struct {
 		Force       bool
 		SyncCurrent bool
+		MaxAttempts int
 	}
 	UpdateOpt func(*UpdateOpts)
 )
@@ -27,6 +28,12 @@ func WithForceUpdate(enabled bool) UpdateOpt {
 func WithSyncCurrent(enabled bool) UpdateOpt {
 	return func(o *UpdateOpts) {
 		o.SyncCurrent = enabled
+	}
+}
+
+func WithMaxAttempts(count int) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.MaxAttempts = count
 	}
 }
 
@@ -45,6 +52,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			Force:          opts.Force,
 			ToVersion:      toVersion,
 			SyncCurrent:    opts.SyncCurrent,
+			MaxAttempts:    opts.MaxAttempts,
 		},
 		&state.Init{},
 		&state.Fetch{},

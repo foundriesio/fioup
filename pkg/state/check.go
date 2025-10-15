@@ -26,6 +26,7 @@ type (
 		AllowedStates  []update.State
 		ToVersion      int
 		SyncCurrent    bool
+		MaxAttempts    int
 	}
 )
 
@@ -114,6 +115,19 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 					return fmt.Errorf("could not find latest target: %w", err)
 				}
 			}
+
+			if s.MaxAttempts > 0 {
+				count, err := update.CountFailedUpdates(updateCtx.Config.ComposeConfig(), updateCtx.ToTarget.ID)
+				if err != nil {
+					slog.Warn("Could not count failed updates for target", "target_id", updateCtx.ToTarget.ID, "error", err)
+				} else {
+					slog.Debug("Checking failed updates count for target", "target_id", updateCtx.ToTarget.ID, "count", count)
+					if count >= s.MaxAttempts {
+						return fmt.Errorf("latest target installation attempts has reached the limit (%d)", s.MaxAttempts)
+					}
+				}
+			}
+
 			// If an update is not forced, and the target is the same as the current one,
 			// then check if the system is in sync with the target. If it is, then skip the update.
 			if !s.Force && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
