@@ -25,12 +25,14 @@ type (
 		Action         string
 		AllowedStates  []update.State
 		ToVersion      int
+		SyncCurrent    bool
 	}
 )
 
 const (
 	updateModeStarting = "starting"
 	updateModeResuming = "resuming"
+	updateModeSyncing  = "syncing"
 )
 
 var (
@@ -101,9 +103,16 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		}
 	} else {
 		if s.ToVersion == -1 {
-			updateCtx.ToTarget = targets.GetLatestTarget()
-			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
-				return fmt.Errorf("could not find latest target: %w", err)
+			if s.SyncCurrent {
+				updateCtx.ToTarget = updateCtx.FromTarget
+				if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
+					return fmt.Errorf("could not find current target to be synced")
+				}
+			} else {
+				updateCtx.ToTarget = targets.GetLatestTarget()
+				if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
+					return fmt.Errorf("could not find latest target: %w", err)
+				}
 			}
 			// If an update is not forced, and the target is the same as the current one,
 			// then check if the system is in sync with the target. If it is, then skip the update.
@@ -118,7 +127,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 					return ErrCheckNoUpdate
 				}
 			}
-
 		} else {
 			updateCtx.ToTarget = targets.GetTargetByVersion(s.ToVersion)
 			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
@@ -128,9 +136,15 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	}
 	updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 
+	if updateCtx.ToTarget.Equals(&updateCtx.FromTarget) {
+		updateMode = updateModeSyncing
+	}
+
 	if s.Action == "rollback" {
 		fmt.Printf("\t\trolling back to %d [%s]\n",
 			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
+	} else if updateMode == updateModeSyncing {
+		fmt.Printf("\t\tsyncing the current target %d [%s]\n", updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
 	} else {
 		fmt.Printf("\t\t%s update from %d [%s] to %d [%s]\n",
 			updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),

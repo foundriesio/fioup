@@ -12,7 +12,8 @@ import (
 
 type (
 	UpdateOpts struct {
-		Force bool
+		Force       bool
+		SyncCurrent bool
 	}
 	UpdateOpt func(*UpdateOpts)
 )
@@ -20,6 +21,12 @@ type (
 func WithForceUpdate(enabled bool) UpdateOpt {
 	return func(o *UpdateOpts) {
 		o.Force = enabled
+	}
+}
+
+func WithSyncCurrent(enabled bool) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.SyncCurrent = enabled
 	}
 }
 
@@ -37,6 +44,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			AllowNewUpdate: true,
 			Force:          opts.Force,
 			ToVersion:      toVersion,
+			SyncCurrent:    opts.SyncCurrent,
 		},
 		&state.Init{},
 		&state.Fetch{},

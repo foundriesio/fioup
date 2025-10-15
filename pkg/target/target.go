@@ -47,6 +47,18 @@ var (
 	}
 )
 
+func (t *Target) Equals(other *Target) bool {
+	if t.ID != other.ID || t.Version != other.Version || len(t.Apps) != len(other.Apps) {
+		return false
+	}
+	for _, app := range t.Apps {
+		if !slices.ContainsFunc(other.Apps, func(a App) bool { return a.Name == app.Name && a.URI == app.URI }) {
+			return false
+		}
+	}
+	return true
+}
+
 func (t *Target) IsUnknown() bool {
 	return t.ID == UnknownTarget.ID && t.Version == UnknownTarget.Version
 }
