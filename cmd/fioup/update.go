@@ -16,13 +16,15 @@ type (
 		enableTuf bool
 	}
 	updateOptions struct {
-		version int
+		version     int
+		syncCurrent bool
 	}
 )
 
 func init() {
 	opts := updateOptions{
-		version: -1,
+		version:     -1,
+		syncCurrent: false,
 	}
 
 	cmd := &cobra.Command{
@@ -32,19 +34,22 @@ func init() {
 			if len(args) > 0 {
 				var err error
 				opts.version, err = strconv.Atoi(args[0])
-				if err != nil {
-					cobra.CheckErr(fmt.Errorf("invalid version number: %w", err))
+				DieNotNil(err, "invalid version number specified")
+				if opts.syncCurrent {
+					DieNotNil(fmt.Errorf("--sync-current cannot be used when a version is specified"))
 				}
 			}
 			doUpdate(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
 	}
+
+	cmd.Flags().BoolVar(&opts.syncCurrent, "sync-current", false, "Sync the currently installed target if no version is specified.")
 	rootCmd.AddCommand(cmd)
 }
 
 func doUpdate(cmd *cobra.Command, opts *updateOptions) {
-	DieNotNil(api.Update(cmd.Context(), config, opts.version, api.WithForceUpdate(true)))
+	DieNotNil(api.Update(cmd.Context(), config, opts.version, api.WithForceUpdate(true), api.WithSyncCurrent(opts.syncCurrent)))
 }
 
 func addCommonOptions(cmd *cobra.Command, opts *commonOptions) {
