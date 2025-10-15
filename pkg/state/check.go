@@ -21,7 +21,7 @@ type (
 	Check struct {
 		UpdateTargets  bool
 		AllowNewUpdate bool
-		SkipIfRunning  bool
+		Force          bool
 		Action         string
 		AllowedStates  []update.State
 		ToVersion      int
@@ -105,7 +105,9 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
 				return fmt.Errorf("could not find latest target: %w", err)
 			}
-			if s.SkipIfRunning && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
+			// If an update is not forced, and the target is the same as the current one,
+			// then check if the system is in sync with the target. If it is, then skip the update.
+			if !s.Force && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
 				updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 				running, err := isTargetRunning(ctx, updateCtx)
 				if err != nil {
