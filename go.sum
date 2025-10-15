@@ -57,8 +57,8 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/foundriesio/composeapp v0.0.0-20251002132735-398032a94221 h1:WPgNQL+KCJtJspxdg8GFM+KQxwT+Bm9fxQ3YXbVssWo=
-github.com/foundriesio/composeapp v0.0.0-20251002132735-398032a94221/go.mod h1:OXLmC14URm3le0/3KGcllEPYLJm3lkengpGMwEvQBSk=
+github.com/foundriesio/composeapp v0.0.0-20251015144639-f165a6f5c452 h1:CyS9J8/VAd0qVOBHSYU9J9fEEJbeYp+A0VBNj3hblb8=
+github.com/foundriesio/composeapp v0.0.0-20251015144639-f165a6f5c452/go.mod h1:nA95y4iS0RnUV9iAyau91/mv7doDs6eXazEE+Pd53c4=
 github.com/foundriesio/fioconfig v0.0.0-20250924185146-c3257662fd13 h1:cjASbFUrNYvsf3zYACPZkpLGTic0674+bRi4USFdZc8=
 github.com/foundriesio/fioconfig v0.0.0-20250924185146-c3257662fd13/go.mod h1:J3pslinCE6G5lqeAU5EY7/KBGKWRTq53P16eUH9zgG4=
 github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
@@ -154,10 +154,13 @@ github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7P
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
+github.com/oklog/ulid/v2 v2.1.1 h1:suPZ4ARWLOJLegGFiZZ1dFAkqzhMjL3J1TzI+5wHz8s=
+github.com/oklog/ulid/v2 v2.1.1/go.mod h1:rcEKHmBBKfef9DhnvX7y1HZBYxjXb0cP5ExxNsTT1QQ=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
+github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
 github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
