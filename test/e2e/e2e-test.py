@@ -562,16 +562,22 @@ def install_with_separate_steps(target: Target, explicit_version: bool = True, d
                     ('EcuInstallationApplied', None),
                     ('EcuInstallationCompleted', False),
                 }, False)
+                # fioup CLI does not perform auto rollback. Run update --sync-current manually instead
+                cp = invoke_aklite(['update', '--sync-current'])
+                assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
+                verify_events(final_target.actual_version, {
+                    ('EcuDownloadStarted', None),
+                    ('EcuDownloadCompleted', True),
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationApplied', None),
+                    ('EcuInstallationCompleted', True),
+                }, False)
             else:
                 verify_events(target.actual_version, {
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationApplied', None),
                     ('EcuInstallationCompleted', False),
                 }, True)
-
-
-            if not use_fioup:
-                # fioup CLI does not perform auto rollback
                 verify_events(final_target.actual_version, {
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationCompleted', True),
@@ -773,9 +779,18 @@ def install_with_single_step(target: Target, explicit_version: bool = True, do_r
                     ('EcuDownloadCompleted', True),
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationCompleted', False),
-                }, not use_fioup)
-            if not use_fioup:
-                # fioup CLI does not perform auto rollback
+                }, False)
+                # fioup CLI does not perform auto rollback. Run update --sync-current manually instead
+                cp = invoke_aklite(['update', '--sync-current'])
+                assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
+                verify_events(final_target.actual_version, {
+                    ('EcuDownloadStarted', None),
+                    ('EcuDownloadCompleted', True),
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationApplied', None),
+                    ('EcuInstallationCompleted', True),
+                }, False)
+            else:
                 verify_events(final_target.actual_version, {
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationCompleted', True),
@@ -943,9 +958,6 @@ def run_test_sequence_random(updates_count: int = 20):
         logger.info(f"Updating to {target.actual_version} {target}. SingleStep={single_step}, Offline={offline} DelayAppsInstall={delay_app_install}")
         write_settings(apps, prune)
         install_target(target)
-        if use_fioup and target.run_rollback:
-            # fioup CLI does not perform auto rollback, so apps won't be restored after on bad target installation
-            continue
         check_running_apps(apps)
 
 def run_test_sequence_incremental():
@@ -959,9 +971,6 @@ def run_test_sequence_incremental():
         logger.info(f"Updating to {target.actual_version} {target}. SingleStep={single_step}, Offline={offline} DelayAppsInstall={delay_app_install}")
         write_settings(apps, prune)
         install_target(target)
-        if use_fioup and target.run_rollback:
-            # fioup CLI does not perform auto rollback, so apps won't be restored after on bad target installation
-            continue
         check_running_apps(apps)
 
 def run_test_sequence_update_to_latest():
