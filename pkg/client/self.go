@@ -23,7 +23,7 @@ type Device struct {
 	Tag       string      `json:"tag"`
 }
 
-func (c GatewayClient) Self() (*Device, error) {
+func (c *GatewayClient) Self() (*Device, error) {
 	var d Device
 	return &d, c.getJson("/device", &d)
 }
