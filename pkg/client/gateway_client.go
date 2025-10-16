@@ -20,11 +20,13 @@ type (
 		HttpClient *http.Client
 		Headers    map[string]string
 
-		lastNetInfoFile string
-		lastSotaFile    string
-		sotaToReport    []byte
-		lastHwinfoFile  string
-		hwinfoToReport  []byte
+		lastNetInfoFile   string
+		lastSotaFile      string
+		sotaToReport      []byte
+		lastHwinfoFile    string
+		hwinfoToReport    []byte
+		lastAppStatesFile string
+		lastAppStates     map[string]AppState
 	}
 )
 
@@ -58,13 +60,15 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 		HttpClient: client,
 		Headers:    headers,
 
-		lastNetInfoFile: filepath.Join(sota, ".last-netinfo"),
-		lastSotaFile:    filepath.Join(sota, ".last-sota"),
-		lastHwinfoFile:  filepath.Join(sota, ".last-hwinfo"),
+		lastNetInfoFile:   filepath.Join(sota, ".last-netinfo"),
+		lastSotaFile:      filepath.Join(sota, ".last-sota"),
+		lastHwinfoFile:    filepath.Join(sota, ".last-hwinfo"),
+		lastAppStatesFile: filepath.Join(sota, ".last-app-states"),
 	}
 
 	gw.initSota(cfg.TomlConfig())
 	gw.initHwinfo()
+	gw.initAppStateReporter()
 	return gw, nil
 }
 

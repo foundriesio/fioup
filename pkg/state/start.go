@@ -10,7 +10,6 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
-	internal "github.com/foundriesio/fioup/internal/update"
 	"github.com/pkg/errors"
 )
 
@@ -39,8 +38,5 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		err = fmt.Errorf("%w: %s", ErrStartFailed, err.Error())
 	}
 	updateCtx.SendEvent(events.InstallationCompleted, err == nil)
-	if err := internal.ReportAppsStates(ctx, updateCtx.Client, updateCtx.Config.ComposeConfig()); err != nil {
-		slog.Debug("failed to report apps states", "error", err)
-	}
 	return err
 }

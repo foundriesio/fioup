@@ -55,6 +55,9 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	if err := client.PutSysInfo(); err != nil {
 		slog.Error("Unable to upload sysinfo", "error", err)
 	}
+	if err := client.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
+		slog.Debug("failed to report apps states", "error", err)
+	}
 
 	sm.ctx.EventSender = eventSender
 	sm.ctx.Client = client
@@ -68,6 +71,9 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 			return fmt.Errorf("failed at state %s: %w", s.Name(), err)
 		}
 		stateCounter++
+	}
+	if err := client.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
+		slog.Debug("failed to report apps states", "error", err)
 	}
 	return nil
 }
