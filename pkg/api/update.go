@@ -6,6 +6,8 @@ package api
 import (
 	"context"
 
+	"github.com/foundriesio/fioup/internal/events"
+	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
 )
@@ -15,6 +17,7 @@ type (
 		Force       bool
 		SyncCurrent bool
 		MaxAttempts int
+		state.UpdateRunnerOpts
 	}
 	UpdateOpt func(*UpdateOpts)
 )
@@ -34,6 +37,18 @@ func WithSyncCurrent(enabled bool) UpdateOpt {
 func WithMaxAttempts(count int) UpdateOpt {
 	return func(o *UpdateOpts) {
 		o.MaxAttempts = count
+	}
+}
+
+func WithEventSender(sender *events.EventSender) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.EventSender = sender
+	}
+}
+
+func WithGatewayClient(client *client.GatewayClient) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.GatewayClient = client
 	}
 }
 
@@ -58,5 +73,8 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 		&state.Fetch{},
 		&state.Install{},
 		&state.Start{},
+	}, func(r *state.UpdateRunnerOpts) {
+		r.EventSender = opts.EventSender
+		r.GatewayClient = opts.GatewayClient
 	}).Run(ctx, cfg)
 }

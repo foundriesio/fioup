@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/state"
 	"github.com/spf13/cobra"
 )
@@ -46,8 +48,24 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	}
 	interval := time.Duration(time.Duration(pollingSec) * time.Second)
 	ctx := cmd.Context()
+	var gwClient *client.GatewayClient
+	var eventSender *events.EventSender
+	if gwClient, err = client.NewGatewayClient(config, nil, ""); err != nil {
+		slog.Error("Failed to create gateway client", "error", err)
+		return
+	}
+	if eventSender, err = events.NewEventSender(config, gwClient); err != nil {
+		slog.Error("Failed to create event sender", "error", err)
+		return
+	}
+	eventSender.Start()
+	defer eventSender.Stop()
+
 	for {
-		err := api.Update(cmd.Context(), config, -1, api.WithMaxAttempts(3))
+		err := api.Update(cmd.Context(), config, -1,
+			api.WithGatewayClient(gwClient),
+			api.WithEventSender(eventSender),
+			api.WithMaxAttempts(3))
 		if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
 			slog.Error("Error during update", "error", err)
 		}

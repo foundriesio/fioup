@@ -21,11 +21,23 @@ type (
 		ctx    *UpdateContext
 		states []ActionState
 	}
+	UpdateRunnerOpts struct {
+		EventSender   *events.EventSender
+		GatewayClient *client.GatewayClient
+	}
+	UpdateRunnerOpt func(*UpdateRunnerOpts)
 )
 
-func NewUpdateRunner(states []ActionState) *UpdateRunner {
+func NewUpdateRunner(states []ActionState, options ...UpdateRunnerOpt) *UpdateRunner {
+	opts := &UpdateRunnerOpts{}
+	for _, o := range options {
+		o(opts)
+	}
 	return &UpdateRunner{
-		ctx:    &UpdateContext{},
+		ctx: &UpdateContext{
+			EventSender: opts.EventSender,
+			Client:      opts.GatewayClient,
+		},
 		states: states,
 	}
 }
@@ -40,27 +52,33 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	}
 	sm.ctx.Config = cfg
 
-	client, err := client.NewGatewayClient(cfg, nil, "")
-	if err != nil {
-		return err
+	var err error
+	gwClient := sm.ctx.Client
+	if gwClient == nil {
+		gwClient, err = client.NewGatewayClient(cfg, nil, "")
+		if err != nil {
+			return fmt.Errorf("failed to create gateway client: %w", err)
+		}
+		sm.ctx.Client = gwClient
 	}
-	eventSender, err := events.NewEventSender(cfg, client)
-	if err != nil {
-		return err
+	eventSender := sm.ctx.EventSender
+	if eventSender == nil {
+		eventSender, err = events.NewEventSender(cfg, gwClient)
+		if err != nil {
+			return err
+		}
+		sm.ctx.EventSender = eventSender
+		eventSender.Start()
+		defer eventSender.Stop()
 	}
-	eventSender.Start()
-	defer eventSender.Stop()
 
 	// TODO: add an option to turn on/off sysinfo upload
-	if err := client.PutSysInfo(); err != nil {
+	if err := gwClient.PutSysInfo(); err != nil {
 		slog.Error("Unable to upload sysinfo", "error", err)
 	}
-	if err := client.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
+	if err := gwClient.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
 		slog.Debug("failed to report apps states", "error", err)
 	}
-
-	sm.ctx.EventSender = eventSender
-	sm.ctx.Client = client
 
 	stateCounter := 1
 	for _, s := range sm.states {
@@ -72,7 +90,7 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		}
 		stateCounter++
 	}
-	if err := client.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
+	if err := gwClient.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
 		slog.Debug("failed to report apps states", "error", err)
 	}
 	return nil
