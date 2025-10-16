@@ -21,7 +21,7 @@ type netInfo struct {
 }
 
 // UploadNetInfo uploads local ipv4 info to the gateway IFF its changed.
-func (c GatewayClient) uploadNetInfo() error {
+func (c *GatewayClient) uploadNetInfo() error {
 	var err error
 	info := netInfo{}
 	info.Host, err = os.Hostname()
