@@ -27,6 +27,7 @@ type (
 		ToVersion      int
 		SyncCurrent    bool
 		MaxAttempts    int
+		RequireLatest  bool
 	}
 )
 
@@ -37,7 +38,8 @@ const (
 )
 
 var (
-	ErrCheckNoUpdate = errors.New("selected target is already running")
+	ErrCheckNoUpdate           = errors.New("selected target is already running")
+	ErrNewerVersionIsAvailable = errors.New("can't resume current update, there is a newer version available")
 )
 
 func (s *Check) Name() ActionName { return "Checking" }
@@ -56,6 +58,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		err = nil
 	} else {
 		updateMode = updateModeResuming
+		slog.Debug("Found ongoing update", "target_id", updateCtx.UpdateRunner.Status().ClientRef, "state", updateCtx.UpdateRunner.Status().State)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get info about current update: %w", err)
@@ -100,6 +103,16 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			if updateCtx.ToTarget.Version != s.ToVersion {
 				return fmt.Errorf("cannot start or resume update to version %d since there is an ongoing update to version %d",
 					s.ToVersion, updateCtx.ToTarget.Version)
+			}
+		} else {
+			if s.RequireLatest {
+				// When running in daemon mode, do not resume the ongoing update if the latest target has changed
+				// Calling code is expected to cancel the ongoing update in this case
+				latestTarget := targets.GetLatestTarget()
+				if latestTarget.ID != updateCtx.ToTarget.ID {
+					slog.Debug("Latest target is not the same as the ongoing update target, and should be cancelled", "ongoing_update_target_id", updateCtx.ToTarget.ID, "latest_target_id", latestTarget.ID)
+					return ErrNewerVersionIsAvailable
+				}
 			}
 		}
 	} else {
