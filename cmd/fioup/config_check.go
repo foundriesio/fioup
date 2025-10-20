@@ -1,0 +1,75 @@
+// Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+
+package main
+
+import (
+	"log/slog"
+	"os"
+
+	fioconfig "github.com/foundriesio/fioconfig/app"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+)
+
+type fioconfigOpts struct {
+	secretsDir      string
+	unsafeHandlers  bool
+	configExtracted bool
+}
+
+func (opts *fioconfigOpts) ApplyToCmd(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&opts.secretsDir, "secrets-dir", "/run/secrets", "Directory to hold fioconfig secrets when enabled.")
+	cmd.Flags().BoolVar(&opts.unsafeHandlers, "unsafe-handlers", false, "Enable unsafe fioconfig handlers.")
+	_ = cmd.Flags().MarkHidden("unsafe-handlers")
+}
+
+func init() {
+	opts := fioconfigOpts{}
+	cmd := &cobra.Command{
+		Use:   "config-check",
+		Short: "Check for config updates",
+		Run: func(cmd *cobra.Command, args []string) {
+			doCheckConfig(cmd, &opts)
+		},
+		Args: cobra.NoArgs,
+	}
+	opts.ApplyToCmd(cmd)
+	rootCmd.AddCommand(cmd)
+}
+
+func doCheckConfig(_ *cobra.Command, opts *fioconfigOpts) {
+	configApp, err := fioconfig.NewAppWithConfig(config.TomlConfig(), opts.secretsDir, opts.unsafeHandlers)
+	cobra.CheckErr(err)
+	_, err = configCheck(opts, configApp)
+	if !errors.Is(err, fioconfig.NotModifiedError) {
+		cobra.CheckErr(err)
+	}
+}
+
+func configCheck(config *fioconfigOpts, app *fioconfig.App) (changed bool, err error) {
+	if _, err = os.Stat(config.secretsDir); os.IsNotExist(err) {
+		slog.Debug("Creating fioconfig secrets directory", "dir", config.secretsDir)
+		if err = os.MkdirAll(config.secretsDir, 0o700); err != nil {
+			slog.Error("Failed to create secrets directory", "dir", config.secretsDir, "error", err)
+			return
+		}
+	}
+	if !config.configExtracted {
+		slog.Debug("Running fioconfig secret extraction")
+		if changed, err = app.Extract(); err != nil {
+			slog.Error("fioconfig secret extraction failed", "error", err)
+			return
+		} else {
+			slog.Debug("fioconfig extraction completed successfully")
+			config.configExtracted = true
+		}
+	}
+	if changed, err = app.CheckIn(); err != nil {
+		if err != fioconfig.NotModifiedError {
+			slog.Error("Fioconfig check-in failed", "error", err)
+			return
+		}
+	}
+	return
+}
