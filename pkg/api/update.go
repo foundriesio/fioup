@@ -14,9 +14,10 @@ import (
 
 type (
 	UpdateOpts struct {
-		Force       bool
-		SyncCurrent bool
-		MaxAttempts int
+		Force         bool
+		SyncCurrent   bool
+		RequireLatest bool
+		MaxAttempts   int
 		state.UpdateRunnerOpts
 	}
 	UpdateOpt func(*UpdateOpts)
@@ -31,6 +32,12 @@ func WithForceUpdate(enabled bool) UpdateOpt {
 func WithSyncCurrent(enabled bool) UpdateOpt {
 	return func(o *UpdateOpts) {
 		o.SyncCurrent = enabled
+	}
+}
+
+func WithRequireLatest(enabled bool) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.RequireLatest = enabled
 	}
 }
 
@@ -67,6 +74,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			Force:          opts.Force,
 			ToVersion:      toVersion,
 			SyncCurrent:    opts.SyncCurrent,
+			RequireLatest:  opts.RequireLatest,
 			MaxAttempts:    opts.MaxAttempts,
 		},
 		&state.Init{},

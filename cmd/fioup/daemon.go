@@ -65,8 +65,18 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		err := api.Update(cmd.Context(), config, -1,
 			api.WithGatewayClient(gwClient),
 			api.WithEventSender(eventSender),
+			api.WithRequireLatest(true),
 			api.WithMaxAttempts(3))
-		if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
+		if err != nil && errors.Is(err, state.ErrNewerVersionIsAvailable) {
+			slog.Info("Cancelling current update, going to start a new one for the newer version")
+			_, err := api.Cancel(cmd.Context(), config)
+			if err != nil {
+				slog.Error("Error canceling old update", "error", err)
+			} else {
+				// If cancelation was successful, proceed without waiting
+				continue
+			}
+		} else if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
 			slog.Error("Error during update", "error", err)
 		}
 		if opts.runOnce {
