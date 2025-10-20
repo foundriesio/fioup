@@ -40,6 +40,7 @@ const (
 var (
 	ErrCheckNoUpdate           = errors.New("selected target is already running")
 	ErrNewerVersionIsAvailable = errors.New("can't resume current update, there is a newer version available")
+	ErrInvalidOngoingUpdate    = errors.New("invalid ongoing update")
 )
 
 func (s *Check) Name() ActionName { return "Checking" }
@@ -93,11 +94,12 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 
 	if updateMode == updateModeResuming {
 		// Get ToTarget if resuming update
-		updateCtx.ToTarget = targets.GetTargetByID(updateCtx.UpdateRunner.Status().ClientRef)
-		if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
-			// TODO: allow resuming update even if target is not found?
-			return fmt.Errorf("could not find target of the ongoing update: %w", err)
+		ongoingUpdate := updateCtx.UpdateRunner.Status()
+		target, err := getTargetOutOfUpdate(&ongoingUpdate)
+		if err != nil {
+			return ErrInvalidOngoingUpdate
 		}
+		updateCtx.ToTarget = *target
 		if s.ToVersion != -1 {
 			// make sure ToVersion matches the ongoing update, otherwise fail
 			if updateCtx.ToTarget.Version != s.ToVersion {
@@ -224,16 +226,20 @@ func getCurrentTarget(cfg *compose.Config) (*target.Target, error) {
 	if err != nil {
 		return nil, fmt.Errorf("no last successful update found: %w", err)
 	}
-	version, err := extractTargetVersion(lastUpdate.ClientRef)
+	return getTargetOutOfUpdate(lastUpdate)
+}
+
+func getTargetOutOfUpdate(update *update.Update) (*target.Target, error) {
+	version, err := extractTargetVersion(update.ClientRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract target version from last successful update ClientRef: %w", err)
 	}
-	apps, err := parseAppURIs(lastUpdate.URIs)
+	apps, err := parseAppURIs(update.URIs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse app URIs from last successful update: %w", err)
 	}
 	return &target.Target{
-		ID:      lastUpdate.ClientRef,
+		ID:      update.ClientRef,
 		Apps:    apps,
 		Version: version,
 	}, nil
