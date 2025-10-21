@@ -14,10 +14,10 @@ import (
 
 type (
 	UpdateOpts struct {
+		state.UpdateRunnerOpts
 		Force       bool
 		SyncCurrent bool
 		MaxAttempts int
-		state.UpdateRunnerOpts
 	}
 	UpdateOpt func(*UpdateOpts)
 )
@@ -52,6 +52,18 @@ func WithGatewayClient(client *client.GatewayClient) UpdateOpt {
 	}
 }
 
+func WithPreStateActionHandler(handler state.PreStateActionHandler) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.PreStateActionHandler = handler
+	}
+}
+
+func WithPostStateActionHandler(handler state.PostStateActionHandler) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.PostStateActionHandler = handler
+	}
+}
+
 func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...UpdateOpt) error {
 	opts := &UpdateOpts{
 		Force: false,
@@ -76,5 +88,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 	}, func(r *state.UpdateRunnerOpts) {
 		r.EventSender = opts.EventSender
 		r.GatewayClient = opts.GatewayClient
+		r.PreStateActionHandler = opts.PreStateActionHandler
+		r.PostStateActionHandler = opts.PostStateActionHandler
 	}).Run(ctx, cfg)
 }

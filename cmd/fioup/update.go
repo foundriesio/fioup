@@ -5,7 +5,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/foundriesio/composeapp/pkg/compose"
+	"github.com/foundriesio/fioup/pkg/state"
 	"strconv"
+	"strings"
 
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
@@ -49,7 +52,37 @@ func init() {
 }
 
 func doUpdate(cmd *cobra.Command, opts *updateOptions) {
-	DieNotNil(api.Update(cmd.Context(), config, opts.version, api.WithForceUpdate(true), api.WithSyncCurrent(opts.syncCurrent)))
+	DieNotNil(api.Update(cmd.Context(), config, opts.version,
+		api.WithForceUpdate(true),
+		api.WithSyncCurrent(opts.syncCurrent),
+		api.WithPreStateActionHandler(func(action state.ActionName, ctx *state.UpdateInfo) {
+			fmt.Printf("[%d/%d] %s ... ", ctx.CurrentStateNum, ctx.TotalStates, action)
+		}),
+		api.WithPostStateActionHandler(func(action state.ActionName, ctx *state.UpdateInfo) {
+			switch action {
+			case "Checking":
+				{
+					switch ctx.Mode {
+					case state.UpdateModeSync:
+						fmt.Printf("sync the current target; version: %d, apps: %s\n", ctx.ToTarget.Version, strings.Join(ctx.ToTarget.AppNames(), ","))
+					}
+				}
+			case "Initializing":
+				{
+					fmt.Printf("fetch: n apps, %s, %d blobs; remove: [tbd]; add: [tbd]\n",
+						compose.FormatBytesInt64(ctx.Diff.ToFetch.Bytes),
+						ctx.Diff.ToFetch.Blobs)
+				}
+			case "Fetching":
+				{
+					if ctx.Diff.ToFetch.Bytes == 0 {
+						fmt.Printf("nothing to fetch\n")
+					} else {
+						fmt.Printf("fetched %s in total\n", compose.FormatBytesInt64(ctx.Diff.ToFetch.Bytes))
+					}
+				}
+			}
+		})))
 }
 
 func addCommonOptions(cmd *cobra.Command, opts *commonOptions) {

@@ -25,8 +25,6 @@ func (s *Start) Name() ActionName { return "Starting" }
 func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if updateCtx.ToTarget.NoApps() {
 		fmt.Printf("\t\tno apps to start, prunning current apps\n")
-	} else {
-		fmt.Printf("\n")
 	}
 	err := updateCtx.UpdateRunner.Start(ctx)
 	if err == nil {

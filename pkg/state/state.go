@@ -22,16 +22,44 @@ type (
 		Execute(ctx context.Context, updateCtx *UpdateContext) error
 	}
 
+	UpdateMode string
+
+	Diff struct {
+		ToFetch struct {
+			Bytes int64
+			Blobs int
+		}
+	}
+
+	UpdateInfo struct {
+		Mode          UpdateMode
+		FromTarget    target.Target
+		ToTarget      target.Target
+		CurrentAction ActionName
+		// current state number in the state machine
+		CurrentStateNum int
+		// total number of states in the state machine
+		TotalStates int
+
+		Diff Diff
+	}
+
 	// UpdateContext holds the state machine context
 	UpdateContext struct {
-		Config      *config.Config
+		UpdateInfo
+		Config *config.Config
+
 		EventSender *events.EventSender
 		Client      *client.GatewayClient
+		PreHandler  PreStateActionHandler
+		PostHandler PostStateActionHandler
 
-		FromTarget   target.Target
-		ToTarget     target.Target
 		UpdateRunner update.Runner
-
-		CurrentState ActionName
 	}
+)
+
+const (
+	UpdateModeNew    = "new"
+	UpdateModeResume = "resume"
+	UpdateModeSync   = "sync"
 )

@@ -22,11 +22,39 @@ type (
 		states []ActionState
 	}
 	UpdateRunnerOpts struct {
-		EventSender   *events.EventSender
-		GatewayClient *client.GatewayClient
+		EventSender            *events.EventSender
+		GatewayClient          *client.GatewayClient
+		PreStateActionHandler  PreStateActionHandler
+		PostStateActionHandler PostStateActionHandler
 	}
-	UpdateRunnerOpt func(*UpdateRunnerOpts)
+	UpdateRunnerOpt        func(*UpdateRunnerOpts)
+	PreStateActionHandler  func(action ActionName, ctx *UpdateInfo)
+	PostStateActionHandler func(action ActionName, ctx *UpdateInfo)
 )
+
+func WithEventSender(sender *events.EventSender) UpdateRunnerOpt {
+	return func(o *UpdateRunnerOpts) {
+		o.EventSender = sender
+	}
+}
+
+func WithGatewayClient(client *client.GatewayClient) UpdateRunnerOpt {
+	return func(o *UpdateRunnerOpts) {
+		o.GatewayClient = client
+	}
+}
+
+func WithPreStateActionHandler(handler PreStateActionHandler) UpdateRunnerOpt {
+	return func(o *UpdateRunnerOpts) {
+		o.PreStateActionHandler = handler
+	}
+}
+
+func WithPostStateActionHandler(handler PostStateActionHandler) UpdateRunnerOpt {
+	return func(o *UpdateRunnerOpts) {
+		o.PostStateActionHandler = handler
+	}
+}
 
 func NewUpdateRunner(states []ActionState, options ...UpdateRunnerOpt) *UpdateRunner {
 	opts := &UpdateRunnerOpts{}
@@ -37,6 +65,8 @@ func NewUpdateRunner(states []ActionState, options ...UpdateRunnerOpt) *UpdateRu
 		ctx: &UpdateContext{
 			EventSender: opts.EventSender,
 			Client:      opts.GatewayClient,
+			PreHandler:  opts.PreStateActionHandler,
+			PostHandler: opts.PostStateActionHandler,
 		},
 		states: states,
 	}
@@ -80,15 +110,22 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		slog.Debug("failed to report apps states", "error", err)
 	}
 
-	stateCounter := 1
+	sm.ctx.TotalStates = len(sm.states)
+	sm.ctx.CurrentStateNum = 1
 	for _, s := range sm.states {
-		sm.ctx.CurrentState = s.Name()
-		fmt.Printf("[%d/5] %s:", stateCounter, s.Name())
+		sm.ctx.CurrentAction = s.Name()
+		//fmt.Printf("[%d/5] %s:", stateCounter, s.Name())
+		if sm.ctx.PreHandler != nil {
+			sm.ctx.PreHandler(s.Name(), &sm.ctx.UpdateInfo)
+		}
 		err := s.Execute(ctx, sm.ctx)
 		if err != nil {
 			return fmt.Errorf("failed at state %s: %w", s.Name(), err)
 		}
-		stateCounter++
+		if sm.ctx.PostHandler != nil {
+			sm.ctx.PostHandler(s.Name(), &sm.ctx.UpdateInfo)
+		}
+		sm.ctx.CurrentStateNum++
 	}
 	if err := gwClient.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
 		slog.Debug("failed to report apps states", "error", err)

@@ -30,11 +30,11 @@ type (
 	}
 )
 
-const (
-	updateModeStarting = "starting"
-	updateModeResuming = "resuming"
-	updateModeSyncing  = "syncing"
-)
+//const (
+//	updateModeStarting = "starting"
+//	updateModeResuming = "resuming"
+//	updateModeSyncing  = "syncing"
+//)
 
 var (
 	ErrCheckNoUpdate = errors.New("selected target is already running")
@@ -43,7 +43,7 @@ var (
 func (s *Check) Name() ActionName { return "Checking" }
 func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	var err error
-	var updateMode string
+	var updateMode UpdateMode
 
 	// Check if there is an ongoing update and set action type accordingly and fail if given action is not allowed
 	updateCtx.UpdateRunner, err = update.GetCurrentUpdate(updateCtx.Config.ComposeConfig())
@@ -52,10 +52,10 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			return fmt.Errorf("no ongoing update to %s found;"+
 				" please run %q or %q first", s.Action, "fioup update", "fioup fetch")
 		}
-		updateMode = updateModeStarting
+		updateMode = UpdateModeNew
 		err = nil
 	} else {
-		updateMode = updateModeResuming
+		updateMode = UpdateModeResume
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get info about current update: %w", err)
@@ -88,7 +88,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		return err
 	}
 
-	if updateMode == updateModeResuming {
+	if updateMode == UpdateModeResume {
 		// Get ToTarget if resuming update
 		updateCtx.ToTarget = targets.GetTargetByID(updateCtx.UpdateRunner.Status().ClientRef)
 		if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
@@ -151,19 +151,20 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 
 	if updateCtx.ToTarget.Equals(&updateCtx.FromTarget) {
-		updateMode = updateModeSyncing
+		updateMode = UpdateModeSync
 	}
 
-	if s.Action == "rollback" {
-		fmt.Printf("\t\trolling back to %d [%s]\n",
-			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	} else if updateMode == updateModeSyncing {
-		fmt.Printf("\t\tsyncing the current target %d [%s]\n", updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	} else {
-		fmt.Printf("\t\t%s update from %d [%s] to %d [%s]\n",
-			updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),
-			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	}
+	updateCtx.Mode = updateMode
+	//if s.Action == "rollback" {
+	//	fmt.Printf("\t\trolling back to %d [%s]\n",
+	//		updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
+	//} else if updateMode == UpdateModeSync {
+	//	fmt.Printf("\t\tsyncing the current target %d [%s]\n", updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
+	//} else {
+	//	fmt.Printf("\t\t%s update from %d [%s] to %d [%s]\n",
+	//		updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),
+	//		updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
+	//}
 	return nil
 }
 
