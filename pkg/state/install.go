@@ -22,6 +22,11 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	} else {
 		fmt.Printf("\n")
 	}
+	currentState := updateCtx.UpdateRunner.Status().State
+	if currentState == update.StateStarted || currentState == update.StateStarting {
+		fmt.Println("\tskipping installation since update has been already installed")
+		return nil
+	}
 	// Stop apps being updated before installing their updates
 	if err := compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), updateCtx.FromTarget.AppURIs()); err != nil {
 		return err
