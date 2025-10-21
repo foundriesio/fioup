@@ -16,6 +16,7 @@ func Fetch(ctx context.Context, cfg *config.Config, toVersion int) error {
 			Action:         "fetch",
 			UpdateTargets:  false,
 			AllowNewUpdate: true,
+			Force:          true,
 			ToVersion:      toVersion,
 		},
 		&state.Init{},
