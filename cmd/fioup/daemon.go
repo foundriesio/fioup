@@ -66,7 +66,9 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 			api.WithGatewayClient(gwClient),
 			api.WithEventSender(eventSender),
 			api.WithRequireLatest(true),
-			api.WithMaxAttempts(3))
+			api.WithMaxAttempts(3),
+			api.WithPreStateHandler(beforeStateHandler),
+			api.WithPostStateHandler(afterStateHandler))
 		if err != nil && errors.Is(err, state.ErrNewerVersionIsAvailable) {
 			slog.Info("Cancelling current update, going to start a new one for the newer version")
 			_, err := api.Cancel(cmd.Context(), config)
@@ -90,4 +92,12 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		case <-time.After(interval):
 		}
 	}
+}
+
+func beforeStateHandler(state api.StateName, ctx interface{}) {
+	slog.Info("Entering", "state", state)
+}
+
+func afterStateHandler(state api.StateName, ctx interface{}) {
+	slog.Info("Exiting", "state", state)
 }
