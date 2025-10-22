@@ -26,6 +26,7 @@ func Install(ctx context.Context, cfg *config.Config, options ...UpdateOpt) erro
 		},
 		&state.Init{},
 		&state.Fetch{},
+		&state.Stop{},
 		&state.Install{},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }
