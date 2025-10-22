@@ -41,5 +41,5 @@ func init() {
 }
 
 func doFetch(cmd *cobra.Command, opts *fetchOptions) {
-	DieNotNil(api.Fetch(cmd.Context(), config, opts.version))
+	DieNotNil(api.Fetch(cmd.Context(), config, opts.version, updateHandlers...))
 }

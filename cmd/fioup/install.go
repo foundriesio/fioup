@@ -21,5 +21,5 @@ func init() {
 }
 
 func doInstall(cmd *cobra.Command) {
-	DieNotNil(api.Install(cmd.Context(), config))
+	DieNotNil(api.Install(cmd.Context(), config, updateHandlers...))
 }

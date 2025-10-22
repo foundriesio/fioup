@@ -11,8 +11,9 @@ import (
 	"github.com/foundriesio/fioup/pkg/state"
 )
 
-func Start(ctx context.Context, cfg *config.Config) error {
-	return state.NewUpdateRunner([]state.ActionState{
+func Start(ctx context.Context, cfg *config.Config, options ...UpdateOpt) error {
+	opts := getUpdateOpts(options...)
+	return newUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "start",
 			UpdateTargets:  false,
@@ -27,5 +28,5 @@ func Start(ctx context.Context, cfg *config.Config) error {
 		&state.Fetch{},
 		&state.Install{},
 		&state.Start{},
-	}).Run(ctx, cfg)
+	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }

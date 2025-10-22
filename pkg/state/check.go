@@ -165,10 +165,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	}
 	updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 
-	if updateCtx.ToTarget.Equals(&updateCtx.FromTarget) {
-		updateMode = updateModeSyncing
-	}
-
 	return nil
 }
 

@@ -1,7 +1,7 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package state
+package api
 
 import (
 	"context"
@@ -12,29 +12,38 @@ import (
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
+	"github.com/foundriesio/fioup/pkg/state"
 	"github.com/foundriesio/fioup/pkg/target"
 )
 
 type (
 	// UpdateRunner runs the OTA update states
 	UpdateRunner struct {
-		ctx    *UpdateContext
-		states []ActionState
+		opts   *UpdateRunnerOpts
+		ctx    *state.UpdateContext
+		states []state.ActionState
 	}
 	UpdateRunnerOpts struct {
-		EventSender   *events.EventSender
-		GatewayClient *client.GatewayClient
+		EventSender      *events.EventSender
+		GatewayClient    *client.GatewayClient
+		PreStateHandler  PreStateHandler
+		PostStateHandler PostStateHandler
 	}
 	UpdateRunnerOpt func(*UpdateRunnerOpts)
+
+	StateName        = state.ActionName
+	PreStateHandler  func(state StateName, ctx interface{})
+	PostStateHandler func(state StateName, ctx interface{})
 )
 
-func NewUpdateRunner(states []ActionState, options ...UpdateRunnerOpt) *UpdateRunner {
+func newUpdateRunner(states []state.ActionState, options ...UpdateRunnerOpt) *UpdateRunner {
 	opts := &UpdateRunnerOpts{}
 	for _, o := range options {
 		o(opts)
 	}
 	return &UpdateRunner{
-		ctx: &UpdateContext{
+		opts: opts,
+		ctx: &state.UpdateContext{
 			EventSender: opts.EventSender,
 			Client:      opts.GatewayClient,
 		},
@@ -83,9 +92,15 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	stateCounter := 1
 	for _, s := range sm.states {
 		sm.ctx.CurrentState = s.Name()
+		if sm.opts.PreStateHandler != nil {
+			sm.opts.PreStateHandler(s.Name(), sm.ctx)
+		}
 		err := s.Execute(ctx, sm.ctx)
 		if err != nil {
 			return fmt.Errorf("failed at state %s: %w", s.Name(), err)
+		}
+		if sm.opts.PostStateHandler != nil {
+			sm.opts.PostStateHandler(s.Name(), sm.ctx)
 		}
 		stateCounter++
 	}
@@ -93,10 +108,4 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		slog.Debug("failed to report apps states", "error", err)
 	}
 	return nil
-}
-
-func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) {
-	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, success...); err != nil {
-		slog.Error("failed to send event", "event", event, "err", err)
-	}
 }
