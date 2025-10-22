@@ -83,7 +83,6 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 	stateCounter := 1
 	for _, s := range sm.states {
 		sm.ctx.CurrentState = s.Name()
-		fmt.Printf("[%d/5] %s:", stateCounter, s.Name())
 		err := s.Execute(ctx, sm.ctx)
 		if err != nil {
 			return fmt.Errorf("failed at state %s: %w", s.Name(), err)

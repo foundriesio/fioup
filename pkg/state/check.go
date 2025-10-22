@@ -169,16 +169,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		updateMode = updateModeSyncing
 	}
 
-	if s.Action == "rollback" {
-		fmt.Printf("\t\trolling back to %d [%s]\n",
-			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	} else if updateMode == updateModeSyncing {
-		fmt.Printf("\t\tsyncing the current target %d [%s]\n", updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	} else {
-		fmt.Printf("\t\t%s update from %d [%s] to %d [%s]\n",
-			updateMode, updateCtx.FromTarget.Version, strings.Join(updateCtx.FromTarget.AppNames(), ","),
-			updateCtx.ToTarget.Version, strings.Join(updateCtx.ToTarget.AppNames(), ","))
-	}
 	return nil
 }
 
