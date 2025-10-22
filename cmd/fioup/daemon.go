@@ -94,10 +94,10 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	}
 }
 
-func beforeStateHandler(state api.StateName, ctx interface{}) {
+func beforeStateHandler(state api.StateName, update *api.UpdateInfo) {
 	slog.Info("Entering", "state", state)
 }
 
-func afterStateHandler(state api.StateName, ctx interface{}) {
+func afterStateHandler(state api.StateName, update *api.UpdateInfo) {
 	slog.Info("Exiting", "state", state)
 }
