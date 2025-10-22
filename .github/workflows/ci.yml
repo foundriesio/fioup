@@ -16,18 +16,32 @@ jobs:
         with:
           version: v2.4.0
 
-  e2e-test:
-    name: End-to-end tests
+  e2e-test-granular:
+    name: End-to-end tests using granular commands
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory /__w/fioup/fioup
-      - run: ./dev-shell.sh make test-e2e
+      - run: ./dev-shell.sh make build test-e2e-granular
         env:
           FACTORY: ${{ secrets.E2E_TEST_FACTORY }}
           BASE_TARGET_VERSION: ${{ secrets.E2E_TEST_BASE_TARGET_VERSION }}
           USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
           TAG: ${{secrets.E2E_TEST_TAG}}
+
+  e2e-test-single-command:
+    name: End-to-end tests using single update command
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory /__w/fioup/fioup
+      - run: ./dev-shell.sh make build test-e2e-single-command
+        env:
+          FACTORY: ${{ secrets.E2E_TEST_FACTORY }}
+          BASE_TARGET_VERSION: ${{ secrets.E2E_TEST_BASE_TARGET_VERSION }}
+          USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
+          TAG: ${{secrets.E2E_TEST_TAG}}
+
 
   package:
     strategy:
