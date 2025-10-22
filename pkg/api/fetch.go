@@ -10,8 +10,9 @@ import (
 	"github.com/foundriesio/fioup/pkg/state"
 )
 
-func Fetch(ctx context.Context, cfg *config.Config, toVersion int) error {
-	return state.NewUpdateRunner([]state.ActionState{
+func Fetch(ctx context.Context, cfg *config.Config, toVersion int, options ...UpdateOpt) error {
+	opts := getUpdateOpts(options...)
+	return newUpdateRunner([]state.ActionState{
 		&state.Check{
 			Action:         "fetch",
 			UpdateTargets:  false,
@@ -21,5 +22,5 @@ func Fetch(ctx context.Context, cfg *config.Config, toVersion int) error {
 		},
 		&state.Init{},
 		&state.Fetch{},
-	}).Run(ctx, cfg)
+	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }

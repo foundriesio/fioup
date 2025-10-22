@@ -21,5 +21,5 @@ func init() {
 }
 
 func doStart(cmd *cobra.Command) {
-	DieNotNil(api.Start(cmd.Context(), config))
+	DieNotNil(api.Start(cmd.Context(), config, updateHandlers...))
 }

@@ -49,7 +49,9 @@ func init() {
 }
 
 func doUpdate(cmd *cobra.Command, opts *updateOptions) {
-	DieNotNil(api.Update(cmd.Context(), config, opts.version, api.WithForceUpdate(true), api.WithSyncCurrent(opts.syncCurrent)))
+	DieNotNil(api.Update(cmd.Context(), config, opts.version,
+		append(updateHandlers, api.WithForceUpdate(true), api.WithSyncCurrent(opts.syncCurrent))...))
+
 }
 
 func addCommonOptions(cmd *cobra.Command, opts *commonOptions) {

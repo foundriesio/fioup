@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
@@ -35,3 +36,9 @@ type (
 		CurrentState ActionName
 	}
 )
+
+func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) {
+	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, success...); err != nil {
+		slog.Error("failed to send event", "event", event, "err", err)
+	}
+}
