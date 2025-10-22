@@ -32,5 +32,7 @@ func (s *Init) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			update.WithInitAllowEmptyAppList(true),
 			update.WithInitCheckStatus(s.CheckState))
 	}
+	status := updateCtx.UpdateRunner.Status()
+	updateCtx.Size.Bytes, updateCtx.Size.Blobs = status.TotalBlobsBytes, len(status.Blobs)
 	return err
 }

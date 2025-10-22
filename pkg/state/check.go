@@ -161,6 +161,10 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	} else {
 		updateCtx.Type = UpdateTypeUpdate
 	}
+	updateCtx.AppDiff.Add, updateCtx.AppDiff.Remove, updateCtx.AppDiff.Sync, updateCtx.AppDiff.Update = updateCtx.FromTarget.Diff(&updateCtx.ToTarget)
+	if updateCtx.UpdateRunner != nil {
+		updateCtx.InitializedAt = updateCtx.UpdateRunner.Status().InitTime
+	}
 	return nil
 }
 
