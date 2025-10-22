@@ -26,6 +26,7 @@ func Start(ctx context.Context, cfg *config.Config, options ...UpdateOpt) error 
 		},
 		&state.Init{},
 		&state.Fetch{},
+		&state.Stop{},
 		&state.Install{},
 		&state.Start{},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)

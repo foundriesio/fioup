@@ -86,6 +86,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 		},
 		&state.Init{},
 		&state.Fetch{},
+		&state.Stop{},
 		&state.Install{},
 		&state.Start{},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
