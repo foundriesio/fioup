@@ -16,6 +16,7 @@ type (
 		Name string `json:"name"`
 		URI  string `json:"uri"`
 	}
+	Apps   []App
 	Target struct {
 		ID      string `json:"id"`
 		Version int    `json:"version"`
@@ -117,9 +118,39 @@ func (t *Target) AppNames() (res []string) {
 	return
 }
 
+func (a Apps) Names() (res []string) {
+	for _, app := range a {
+		res = append(res, app.Name)
+	}
+	return
+}
+
 func (t *Target) AppURIs() (res []string) {
 	for _, app := range t.Apps {
 		res = append(res, app.URI)
+	}
+	return
+}
+
+func (t *Target) Diff(other *Target) (added, removed, same, diff Apps) {
+	appMap := make(map[string]App)
+	for _, app := range t.Apps {
+		appMap[app.Name] = app
+	}
+	for _, app := range other.Apps {
+		if _, exists := appMap[app.Name]; !exists {
+			added = append(added, app)
+		} else {
+			if app.URI != appMap[app.Name].URI {
+				diff = append(diff, app)
+			} else {
+				same = append(same, app)
+			}
+			delete(appMap, app.Name)
+		}
+	}
+	for _, app := range appMap {
+		removed = append(removed, app)
 	}
 	return
 }

@@ -6,6 +6,7 @@ package state
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
@@ -35,6 +36,18 @@ type (
 		ToTarget        target.Target
 		Mode            UpdateMode
 		Type            UpdateType
+		Size            struct {
+			Bytes int64
+			Blobs int
+		}
+		AppDiff struct {
+			Remove target.Apps
+			Add    target.Apps
+			Sync   target.Apps
+			Update target.Apps
+		}
+		InitializedAt time.Time
+		FetchedAt     time.Time
 	}
 
 	// UpdateContext holds the state machine context
