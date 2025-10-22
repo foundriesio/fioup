@@ -31,12 +31,6 @@ type (
 	}
 )
 
-const (
-	updateModeStarting = "starting"
-	updateModeResuming = "resuming"
-	updateModeSyncing  = "syncing"
-)
-
 var (
 	ErrCheckNoUpdate           = errors.New("selected target is already running")
 	ErrNewerVersionIsAvailable = errors.New("can't resume current update, there is a newer version available")
@@ -46,7 +40,6 @@ var (
 func (s *Check) Name() ActionName { return "Checking" }
 func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	var err error
-	var updateMode string
 
 	// Check if there is an ongoing update and set action type accordingly and fail if given action is not allowed
 	updateCtx.UpdateRunner, err = update.GetCurrentUpdate(updateCtx.Config.ComposeConfig())
@@ -55,11 +48,10 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			return fmt.Errorf("no ongoing update to %s found;"+
 				" please run %q or %q first", s.Action, "fioup update", "fioup fetch")
 		}
-		updateMode = updateModeStarting
+		updateCtx.Mode = UpdateModeNewUpdate
 		err = nil
 	} else {
-		updateMode = updateModeResuming
-		slog.Debug("Found ongoing update", "target_id", updateCtx.UpdateRunner.Status().ClientRef, "state", updateCtx.UpdateRunner.Status().State)
+		updateCtx.Mode = UpdateModeResume
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get info about current update: %w", err)
@@ -92,7 +84,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		return err
 	}
 
-	if updateMode == updateModeResuming {
+	if updateCtx.Mode == UpdateModeResume {
 		// Get ToTarget if resuming update
 		ongoingUpdate := updateCtx.UpdateRunner.Status()
 		target, err := getTargetOutOfUpdate(&ongoingUpdate)
@@ -164,7 +156,11 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		}
 	}
 	updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
-
+	if updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
+		updateCtx.Type = UpdateTypeSync
+	} else {
+		updateCtx.Type = UpdateTypeUpdate
+	}
 	return nil
 }
 

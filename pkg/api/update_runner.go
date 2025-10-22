@@ -17,6 +17,7 @@ import (
 )
 
 type (
+	UpdateInfo = state.UpdateInfo
 	// UpdateRunner runs the OTA update states
 	UpdateRunner struct {
 		opts   *UpdateRunnerOpts
@@ -31,9 +32,10 @@ type (
 	}
 	UpdateRunnerOpt func(*UpdateRunnerOpts)
 
+	UpdateMode       = state.UpdateMode
 	StateName        = state.ActionName
-	PreStateHandler  func(state StateName, ctx interface{})
-	PostStateHandler func(state StateName, ctx interface{})
+	PreStateHandler  func(StateName, *UpdateInfo)
+	PostStateHandler func(StateName, *UpdateInfo)
 )
 
 func newUpdateRunner(states []state.ActionState, options ...UpdateRunnerOpt) *UpdateRunner {
@@ -89,20 +91,21 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		slog.Debug("failed to report apps states", "error", err)
 	}
 
-	stateCounter := 1
+	sm.ctx.TotalStates = len(sm.states)
+	sm.ctx.CurrentStateNum = 1
 	for _, s := range sm.states {
 		sm.ctx.CurrentState = s.Name()
 		if sm.opts.PreStateHandler != nil {
-			sm.opts.PreStateHandler(s.Name(), sm.ctx)
+			sm.opts.PreStateHandler(s.Name(), &sm.ctx.UpdateInfo)
 		}
 		err := s.Execute(ctx, sm.ctx)
 		if err != nil {
 			return fmt.Errorf("failed at state %s: %w", s.Name(), err)
 		}
 		if sm.opts.PostStateHandler != nil {
-			sm.opts.PostStateHandler(s.Name(), sm.ctx)
+			sm.opts.PostStateHandler(s.Name(), &sm.ctx.UpdateInfo)
 		}
-		stateCounter++
+		sm.ctx.CurrentStateNum++
 	}
 	if err := gwClient.ReportAppStates(ctx, cfg.ComposeConfig()); err != nil {
 		slog.Debug("failed to report apps states", "error", err)

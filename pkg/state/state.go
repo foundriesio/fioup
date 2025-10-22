@@ -15,6 +15,10 @@ import (
 )
 
 type (
+	// UpdateType defines the update type, update to another version or sync the current version
+	UpdateType string
+	// UpdateMode defines the update mode, new or resume
+	UpdateMode string
 	// ActionName Name of the state action
 	ActionName string
 	// ActionState interface for all states
@@ -23,18 +27,33 @@ type (
 		Execute(ctx context.Context, updateCtx *UpdateContext) error
 	}
 
+	UpdateInfo struct {
+		TotalStates     int
+		CurrentStateNum int
+		CurrentState    ActionName
+		FromTarget      target.Target
+		ToTarget        target.Target
+		Mode            UpdateMode
+		Type            UpdateType
+	}
+
 	// UpdateContext holds the state machine context
 	UpdateContext struct {
+		UpdateInfo
+
 		Config      *config.Config
 		EventSender *events.EventSender
 		Client      *client.GatewayClient
 
-		FromTarget   target.Target
-		ToTarget     target.Target
 		UpdateRunner update.Runner
-
-		CurrentState ActionName
 	}
+)
+
+var (
+	UpdateModeNewUpdate UpdateMode = "new"
+	UpdateModeResume    UpdateMode = "resume"
+	UpdateTypeUpdate    UpdateType = "update"
+	UpdateTypeSync      UpdateType = "sync"
 )
 
 func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) {
