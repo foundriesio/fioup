@@ -6,7 +6,7 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/foundriesio/composeapp v0.0.0-20251015144639-f165a6f5c452
+	github.com/foundriesio/composeapp v0.0.0-20251022082123-45d0288fb396
 	github.com/foundriesio/fioconfig v0.0.0-20250924185146-c3257662fd13
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
