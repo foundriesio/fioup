@@ -58,6 +58,22 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
+func (opts daemonOptions) initAPIs() (*client.GatewayClient, *events.EventSender, *fioconfig.App) {
+	gw, err := client.NewGatewayClient(config, nil, "")
+	DieNotNil(err, "Failed to create gateway client")
+
+	sender, err := events.NewEventSender(config, gw)
+	DieNotNil(err, "Failed to create event sender")
+
+	if opts.configEnabled {
+		config, err := fioconfig.NewAppWithConfig(config.TomlConfig(), opts.fioconfig.secretsDir, opts.fioconfig.unsafeHandlers)
+		DieNotNil(err, "Failed to create FioConfig handle")
+		return gw, sender, config
+	}
+
+	return gw, sender, nil
+}
+
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	pollingSecStr := config.TomlConfig().GetDefault("uptane.polling_seconds", "300")
 	pollingSec, err := strconv.Atoi(pollingSecStr)
@@ -67,27 +83,9 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	}
 	interval := time.Duration(time.Duration(pollingSec) * time.Second)
 	ctx := cmd.Context()
-	var gwClient *client.GatewayClient
-	var eventSender *events.EventSender
-	if gwClient, err = client.NewGatewayClient(config, nil, ""); err != nil {
-		slog.Error("Failed to create gateway client", "error", err)
-		return
-	}
 
-	var configApp *fioconfig.App
+	gwClient, eventSender, configApp := opts.initAPIs()
 
-	if opts.configEnabled {
-		configApp, err = fioconfig.NewAppWithConfig(config.TomlConfig(), opts.fioconfig.secretsDir, opts.fioconfig.unsafeHandlers)
-		if err != nil {
-			slog.Error("Failed to create FioConfig handle", "error", err)
-			return
-		}
-	}
-
-	if eventSender, err = events.NewEventSender(config, gwClient); err != nil {
-		slog.Error("Failed to create event sender", "error", err)
-		return
-	}
 	eventSender.Start()
 	defer eventSender.Stop()
 
