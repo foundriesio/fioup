@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
@@ -67,8 +68,11 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 			api.WithEventSender(eventSender),
 			api.WithRequireLatest(true),
 			api.WithMaxAttempts(3),
-			api.WithPreStateHandler(beforeStateHandler),
-			api.WithPostStateHandler(afterStateHandler))
+			api.WithPreStateHandler(preStateHandler),
+			api.WithPostStateHandler(postStateHandler),
+			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
+			api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
+			api.WithStartProgressHandler(appStartHandler))
 		if err != nil && errors.Is(err, state.ErrNewerVersionIsAvailable) {
 			slog.Info("Cancelling current update, going to start a new one for the newer version")
 			_, err := api.Cancel(cmd.Context(), config)
@@ -92,12 +96,4 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		case <-time.After(interval):
 		}
 	}
-}
-
-func beforeStateHandler(state api.StateName, update *api.UpdateInfo) {
-	slog.Info("Entering", "state", state)
-}
-
-func afterStateHandler(state api.StateName, update *api.UpdateInfo) {
-	slog.Info("Exiting", "state", state)
 }
