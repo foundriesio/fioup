@@ -19,7 +19,7 @@ bash-completion:
 	@go run -tags disable_pkcs11,disable_main $(MAIN) bash-completion $(BUILD_DIR)/bash-completion
 
 deb:
-	docker build --output $(DEBS_DIR) -f debian/Dockerfile .
+	docker build --progress=plain --output $(DEBS_DIR) -f debian/Dockerfile .
 
 format:
 	@go fmt ./...
