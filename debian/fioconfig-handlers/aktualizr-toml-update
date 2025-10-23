@@ -1,0 +1,50 @@
+#!/bin/bash -e
+
+# This is an OnChanged handler that can handle aktualizr-lite and fioup .toml files.
+# It copies the toml file to /etc/sota/conf.d/ and will signal Fioup to reload its config
+
+[ -z "$CONFIG_FILE" ] && (echo "No CONFIG_FILE specified"; exit 1)
+[ -z "$SOTA_DIR" ] && (echo "No SOTA_DIR specified"; exit 1)
+
+ORIGIFS="$IFS"
+IFS=","
+for s in $SOTA_DIR ; do
+	if [[ "$s" == */sota.toml ]] ; then
+		SOTA_CONF=$s
+		break
+	fi
+done
+IFS=$ORIGIFS
+[ -n "$SOTA_CONF" ] && echo "Primary sota.toml is $SOTA_CONF"
+
+
+if [ -f $CONFIG_FILE ] ; then
+	mkdir -p -m 0700 /etc/sota/conf.d/
+	cp $CONFIG_FILE /etc/sota/conf.d/
+
+	if [ -n "$SOTA_CONF" ] ; then
+		# If we take control of tags/apps, then we should try and remove from sota.toml.
+		# Note: there is no way to surrender that control other than remove config altogether.
+		if grep -q "^\s*tags\s*=" $CONFIG_FILE 2>/dev/null ; then
+			sed -e '/^\s*tags\s*=/ s/^/# MANAGED BY FIOCONFIG: /' -i "${SOTA_CONF}"
+		else
+			sed -r 's/^# MANAGED BY FIOCONFIG:\s*(tags\s*=)/\1/g' -i "${SOTA_CONF}"
+		fi
+
+		if grep -q "^\s*compose_apps\s*=" $CONFIG_FILE 2>/dev/null ; then
+			sed -e '/^\s*compose_apps\s*=/ s/^/# MANAGED BY FIOCONFIG: /' -i "${SOTA_CONF}"
+		else
+			sed -r 's/^# MANAGED BY FIOCONFIG:\s*(compose_apps\s*=)/\1/g' -i "${SOTA_CONF}"
+		fi
+	fi
+else
+	rm -f /etc/sota/conf.d/$(basename $CONFIG_FILE)
+
+	if [ -n "$SOTA_CONF" ] ; then
+		# Restore an original control of tags/apps in sota.toml.
+		sed -e 's/^# MANAGED BY FIOCONFIG: //g' -i "${SOTA_CONF}"
+	fi
+fi
+
+echo "Signaling fioup to reload config. Fioup PID=$PPID"
+kill -SIGHUP $PPID
