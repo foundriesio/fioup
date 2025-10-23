@@ -6,11 +6,14 @@ package state
 import (
 	"context"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 )
 
-type Install struct{}
+type Install struct {
+	ProgressHandler compose.InstallProgressFunc
+}
 
 func (s *Install) Name() ActionName { return "Installing" }
 func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
@@ -19,7 +22,11 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		// No need to install updates if the ongoing update is already in starting or started state
 		return nil
 	}
-	err := updateCtx.UpdateRunner.Install(ctx)
+	var opts []compose.InstallOption
+	if s.ProgressHandler != nil {
+		opts = append(opts, compose.WithInstallProgress(s.ProgressHandler))
+	}
+	err := updateCtx.UpdateRunner.Install(ctx, opts...)
 	updateCtx.SendEvent(events.InstallationApplied)
 	return err
 }

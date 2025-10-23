@@ -34,6 +34,8 @@ func preStateHandler(state api.StateName, u *api.UpdateInfo) {
 			// Print fetch progress in the next line
 			fmt.Println()
 		}
+	case "Installing":
+		fmt.Println()
 	}
 }
 
@@ -57,6 +59,8 @@ func postStateHandler(state api.StateName, update *api.UpdateInfo) {
 		} else {
 			fmt.Println()
 		}
+	case "Installing":
+		fmt.Print("      Done\n")
 	default:
 		fmt.Printf("done\n")
 	}
