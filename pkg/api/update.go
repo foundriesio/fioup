@@ -22,11 +22,19 @@ type (
 		RequireLatest          bool
 		FetchProgressHandler   FetchProgressFunc
 		InstallProgressHandler InstallProgressFunc
+		StartProgressHandler   StartProgressFunc
 	}
 	UpdateOpt           func(*UpdateOpts)
 	FetchProgressFunc   = compose.FetchProgressFunc
 	InstallProgressFunc = compose.InstallProgressFunc
+	StartProgressFunc   = compose.AppStartProgress
 )
+
+func WithStartProgressHandler(handler StartProgressFunc) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.StartProgressHandler = handler
+	}
+}
 
 func WithInstallProgressHandler(handler InstallProgressFunc) UpdateOpt {
 	return func(o *UpdateOpts) {
@@ -105,7 +113,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
 		&state.Stop{},
 		&state.Install{ProgressHandler: opts.InstallProgressHandler},
-		&state.Start{},
+		&state.Start{ProgressHandler: opts.StartProgressHandler},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }
 

@@ -34,7 +34,7 @@ func preStateHandler(state api.StateName, u *api.UpdateInfo) {
 			// Print fetch progress in the next line
 			fmt.Println()
 		}
-	case "Installing":
+	case "Installing", "Starting":
 		fmt.Println()
 	}
 }
@@ -59,9 +59,20 @@ func postStateHandler(state api.StateName, update *api.UpdateInfo) {
 		} else {
 			fmt.Println()
 		}
-	case "Installing":
+	case "Installing", "Starting":
 		fmt.Print("      Done\n")
 	default:
 		fmt.Printf("done\n")
+	}
+}
+
+func appStartHandler(app compose.App, status compose.AppStartStatus, any interface{}) {
+	switch status {
+	case compose.AppStartStatusStarting:
+		fmt.Printf("\tstarting %s --> %s ... ", app.Name(), app.Ref().String())
+	case compose.AppStartStatusStarted:
+		fmt.Println("done")
+	case compose.AppStartStatusFailed:
+		fmt.Println("failed")
 	}
 }

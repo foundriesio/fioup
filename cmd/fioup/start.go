@@ -25,6 +25,7 @@ func doStart(cmd *cobra.Command) {
 	DieNotNil(api.Start(cmd.Context(), config,
 		append(updateHandlers,
 			api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
+			api.WithStartProgressHandler(appStartHandler),
 		)...,
 	))
 }
