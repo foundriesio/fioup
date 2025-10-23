@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
@@ -21,5 +22,9 @@ func init() {
 }
 
 func doInstall(cmd *cobra.Command) {
-	DieNotNil(api.Install(cmd.Context(), config, updateHandlers...))
+	DieNotNil(api.Install(cmd.Context(), config,
+		append(updateHandlers,
+			api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
+		)...,
+	))
 }

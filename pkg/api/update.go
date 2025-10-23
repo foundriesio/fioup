@@ -16,15 +16,23 @@ import (
 type (
 	UpdateOpts struct {
 		UpdateRunnerOpts
-		Force                bool
-		SyncCurrent          bool
-		MaxAttempts          int
-		RequireLatest        bool
-		FetchProgressHandler FetchProgressFunc
+		Force                  bool
+		SyncCurrent            bool
+		MaxAttempts            int
+		RequireLatest          bool
+		FetchProgressHandler   FetchProgressFunc
+		InstallProgressHandler InstallProgressFunc
 	}
-	UpdateOpt         func(*UpdateOpts)
-	FetchProgressFunc = compose.FetchProgressFunc
+	UpdateOpt           func(*UpdateOpts)
+	FetchProgressFunc   = compose.FetchProgressFunc
+	InstallProgressFunc = compose.InstallProgressFunc
 )
+
+func WithInstallProgressHandler(handler InstallProgressFunc) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.InstallProgressHandler = handler
+	}
+}
 
 func WithFetchProgressHandler(handler FetchProgressFunc) UpdateOpt {
 	return func(o *UpdateOpts) {
@@ -96,7 +104,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 		&state.Init{},
 		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
 		&state.Stop{},
-		&state.Install{},
+		&state.Install{ProgressHandler: opts.InstallProgressHandler},
 		&state.Start{},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }
