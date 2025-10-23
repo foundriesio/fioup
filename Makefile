@@ -28,7 +28,7 @@ check: format
 	$(LINTER) run
 
 test:
-	@go test ./...
+	@go test -tags $(TAGS) ./...
 
 test-e2e-single-command:
 	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-False-True'
