@@ -21,6 +21,6 @@ func Fetch(ctx context.Context, cfg *config.Config, toVersion int, options ...Up
 			ToVersion:      toVersion,
 		},
 		&state.Init{},
-		&state.Fetch{},
+		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }

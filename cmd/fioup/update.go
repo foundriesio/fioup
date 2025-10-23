@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
@@ -50,8 +51,11 @@ func init() {
 
 func doUpdate(cmd *cobra.Command, opts *updateOptions) {
 	DieNotNil(api.Update(cmd.Context(), config, opts.version,
-		append(updateHandlers, api.WithForceUpdate(true), api.WithSyncCurrent(opts.syncCurrent))...))
-
+		append(updateHandlers,
+			api.WithForceUpdate(true),
+			api.WithSyncCurrent(opts.syncCurrent),
+			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
+		)...))
 }
 
 func addCommonOptions(cmd *cobra.Command, opts *commonOptions) {
