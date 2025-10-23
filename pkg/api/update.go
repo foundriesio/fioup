@@ -6,6 +6,7 @@ package api
 import (
 	"context"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
@@ -15,13 +16,21 @@ import (
 type (
 	UpdateOpts struct {
 		UpdateRunnerOpts
-		Force         bool
-		SyncCurrent   bool
-		MaxAttempts   int
-		RequireLatest bool
+		Force                bool
+		SyncCurrent          bool
+		MaxAttempts          int
+		RequireLatest        bool
+		FetchProgressHandler FetchProgressFunc
 	}
-	UpdateOpt func(*UpdateOpts)
+	UpdateOpt         func(*UpdateOpts)
+	FetchProgressFunc = compose.FetchProgressFunc
 )
+
+func WithFetchProgressHandler(handler FetchProgressFunc) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.FetchProgressHandler = handler
+	}
+}
 
 func WithPreStateHandler(handler PreStateHandler) UpdateOpt {
 	return func(o *UpdateOpts) {
@@ -85,7 +94,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			MaxAttempts:    opts.MaxAttempts,
 		},
 		&state.Init{},
-		&state.Fetch{},
+		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
 		&state.Stop{},
 		&state.Install{},
 		&state.Start{},

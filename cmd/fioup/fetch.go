@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/spf13/cobra"
 )
@@ -41,5 +42,9 @@ func init() {
 }
 
 func doFetch(cmd *cobra.Command, opts *fetchOptions) {
-	DieNotNil(api.Fetch(cmd.Context(), config, opts.version, updateHandlers...))
+	DieNotNil(api.Fetch(cmd.Context(), config, opts.version,
+		append(updateHandlers,
+			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
+		)...,
+	))
 }

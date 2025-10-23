@@ -46,8 +46,9 @@ type (
 			Sync   target.Apps
 			Update target.Apps
 		}
-		InitializedAt time.Time
-		FetchedAt     time.Time
+		InitializedAt  time.Time
+		FetchedAt      time.Time
+		AlreadyFetched bool
 	}
 
 	// UpdateContext holds the state machine context
