@@ -7,13 +7,16 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
+	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
 	"github.com/spf13/cobra"
 )
@@ -58,6 +61,12 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
+func (opts daemonOptions) reloadConfig() {
+	var err error
+	config, err = cfg.NewConfig(configPaths)
+	DieNotNil(err)
+}
+
 func (opts daemonOptions) initAPIs() (*client.GatewayClient, *events.EventSender, *fioconfig.App) {
 	gw, err := client.NewGatewayClient(config, nil, "")
 	DieNotNil(err, "Failed to create gateway client")
@@ -85,10 +94,14 @@ func (opts daemonOptions) pollingInterval() time.Duration {
 }
 
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
+	slog.Info("Daemon starting", "pid", os.Getpid())
 	interval := opts.pollingInterval()
 	ctx := cmd.Context()
 
 	gwClient, eventSender, configApp := opts.initAPIs()
+
+	sigHUP := make(chan os.Signal, 1)
+	signal.Notify(sigHUP, syscall.SIGHUP)
 
 	eventSender.Start()
 	defer eventSender.Stop()
@@ -113,6 +126,11 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-sigHUP:
+			slog.Warn("SIGHUP received, reloading configuration...")
+			opts.reloadConfig()
+			gwClient, eventSender, configApp = opts.initAPIs()
+			interval = opts.pollingInterval()
 		case <-time.After(interval):
 		}
 	}
