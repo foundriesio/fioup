@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 
+	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/foundriesio/fioconfig/sotatoml"
 	cfg "github.com/foundriesio/fioup/pkg/config"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +33,12 @@ var (
 				logLevel = slog.LevelInfo
 			}
 
-			handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			var handler slog.Handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 				Level: logLevel,
 			})
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				handler = fioconfig.NewConsoleHandler(handler, os.Stdout, os.Stderr)
+			}
 
 			logger := slog.New(handler)
 			slog.SetDefault(logger)
