@@ -39,22 +39,22 @@ func preStateHandler(state api.StateName, u *api.UpdateInfo) {
 	}
 }
 
-func postStateHandler(state api.StateName, update *api.UpdateInfo) {
+func postStateHandler(state api.StateName, u *api.UpdateInfo) {
 	switch state {
 	case "Checking":
 		fmt.Printf("%s %s from %d [%s] to %d [%s]\n",
-			update.Mode, update.Type,
-			update.FromTarget.Version, strings.Join(update.FromTarget.AppNames(), ","),
-			update.ToTarget.Version, strings.Join(update.ToTarget.AppNames(), ","))
+			u.Mode, u.Type,
+			u.FromTarget.Version, strings.Join(u.FromTarget.AppNames(), ","),
+			u.ToTarget.Version, strings.Join(u.ToTarget.AppNames(), ","))
 	case "Initializing":
-		fmt.Printf("update size: %s, %d blobs; add: [%s], remove: [%s], sync: [%s], update: [%s]\n",
-			compose.FormatBytesInt64(update.Size.Bytes), update.Size.Blobs,
-			strings.Join(update.AppDiff.Add.Names(), ","),
-			strings.Join(update.AppDiff.Remove.Names(), ","),
-			strings.Join(update.AppDiff.Sync.Names(), ","),
-			strings.Join(update.AppDiff.Update.Names(), ","))
+		fmt.Printf("u size: %s, %d blobs; add: [%s], remove: [%s], sync: [%s], u: [%s]\n",
+			compose.FormatBytesInt64(u.Size.Bytes), u.Size.Blobs,
+			strings.Join(u.AppDiff.Add.Names(), ","),
+			strings.Join(u.AppDiff.Remove.Names(), ","),
+			strings.Join(u.AppDiff.Sync.Names(), ","),
+			strings.Join(u.AppDiff.Update.Names(), ","))
 	case "Fetching":
-		if update.Size.Bytes == 0 {
+		if u.Size.Bytes == 0 {
 			fmt.Print("done\n")
 		} else {
 			fmt.Println()
