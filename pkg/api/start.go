@@ -28,6 +28,6 @@ func Start(ctx context.Context, cfg *config.Config, options ...UpdateOpt) error 
 		&state.Fetch{},
 		&state.Stop{},
 		&state.Install{ProgressHandler: opts.InstallProgressHandler},
-		&state.Start{},
+		&state.Start{ProgressHandler: opts.StartProgressHandler},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }

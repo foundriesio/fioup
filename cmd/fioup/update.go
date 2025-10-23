@@ -56,6 +56,7 @@ func doUpdate(cmd *cobra.Command, opts *updateOptions) {
 			api.WithSyncCurrent(opts.syncCurrent),
 			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
 			api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
+			api.WithStartProgressHandler(appStartHandler),
 		)...))
 }
 

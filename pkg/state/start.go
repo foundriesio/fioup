@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/pkg/errors"
 )
 
 type (
-	Start struct{}
+	Start struct {
+		ProgressHandler compose.AppStartProgress
+	}
 )
 
 var (
@@ -23,7 +26,7 @@ var (
 
 func (s *Start) Name() ActionName { return "Starting" }
 func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
-	err := updateCtx.UpdateRunner.Start(ctx)
+	err := updateCtx.UpdateRunner.Start(ctx, compose.WithStartProgressHandler(s.ProgressHandler))
 	if err == nil {
 		if err := updateCtx.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err != nil {
 			slog.Debug("failed to complete update with pruning", "error", err)
