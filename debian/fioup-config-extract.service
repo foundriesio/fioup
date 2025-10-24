@@ -1,0 +1,14 @@
+[Unit]
+Description=Foundries.io configuration management script to extract secrets at boot
+After=var.mount NetworkManager.service
+Before=fioup.service
+ConditionPathExists=/var/sota/config.encrypted
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/bin/fioup config-extract
+
+[Install]
+WantedBy=multi-user.target
+

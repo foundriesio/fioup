@@ -1,4 +1,7 @@
 version: "2"
+run:
+  build-tags:
+    - disable_pkcs11
 linters:
   enable:
     - gocyclo
