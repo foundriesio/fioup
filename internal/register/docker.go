@@ -11,31 +11,20 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"strings"
 )
 
 func getDockerConfigPath() (string, error) {
-	sudoer := os.Getenv("SUDO_USER")
-	path := ""
-	if len(sudoer) > 0 {
-		u, err := user.Lookup(sudoer)
-		if err != nil {
-			return "", fmt.Errorf("unable to configure docker-credential-helper: %w", err)
-		}
-		path = u.HomeDir
-	} else {
-		var err error
-		path, err = os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("unable to configure docker-credential-helper: %w", err)
-		}
+	errFmt := "unable to configure docker-credential-helper: %w. Please consult documentation for manually configuration steps"
+	path, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf(errFmt, err)
 	}
 	path = filepath.Join(path, ".docker")
 
 	if err := os.Mkdir(path, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
-		return "", fmt.Errorf("unable to configure docker-credential-helper: %w", err)
+		return "", fmt.Errorf(errFmt, err)
 	}
 
 	return path, nil
