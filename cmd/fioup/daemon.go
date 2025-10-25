@@ -82,6 +82,13 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 				// If cancelation was successful, proceed without waiting
 				continue
 			}
+		} else if err != nil && !errors.Is(err, state.ErrStartFailed) {
+			slog.Info("Error starting updated target", "error", err)
+			if !opts.runOnce {
+				// Retry installation, or do a sync update, without waiting
+				// If runOnce is set, exit execution in the return statement bellow
+				continue
+			}
 		} else if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
 			slog.Error("Error during update", "error", err)
 		}
