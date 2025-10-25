@@ -130,7 +130,8 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 				} else {
 					slog.Debug("Checking failed updates count for target", "target_id", updateCtx.ToTarget.ID, "count", count)
 					if count >= s.MaxAttempts {
-						return fmt.Errorf("latest target installation attempts has reached the limit (%d)", s.MaxAttempts)
+						slog.Info("Latest target installation attempts has reached the limit. Syncing current target", "latest_target_id", updateCtx.ToTarget.ID, "count", count)
+						updateCtx.ToTarget = updateCtx.FromTarget
 					}
 				}
 			}
