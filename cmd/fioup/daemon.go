@@ -55,12 +55,14 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		slog.Error("Failed to create gateway client", "error", err)
 		return
 	}
-	if eventSender, err = events.NewEventSender(config, gwClient); err != nil {
-		slog.Error("Failed to create event sender", "error", err)
-		return
+	if !opts.runOnce {
+		if eventSender, err = events.NewEventSender(config, gwClient); err != nil {
+			slog.Error("Failed to create event sender", "error", err)
+			return
+		}
+		eventSender.Start()
+		defer eventSender.Stop()
 	}
-	eventSender.Start()
-	defer eventSender.Stop()
 
 	for {
 		err := api.Update(cmd.Context(), config, -1,
@@ -94,6 +96,7 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		}
 		if opts.runOnce {
 			slog.Debug("Run once mode, exiting")
+			DieNotNil(err)
 			return
 		}
 		slog.Info("Waiting before next check...", "interval", interval)
