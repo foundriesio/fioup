@@ -349,7 +349,8 @@ def invoke_aklite(options: List[str]):
         elif len(options) >= 2 and options[0] == "install":
             # fioup does not accept versioned install: it always proceeds with previous one
             options = ["install"]
-        options = [ x.replace('pull', 'fetch').replace('run', 'start') for x in options if x not in ['--install-mode=delay-app-install'] ]
+        if not "daemon" in options:
+            options = [ x.replace('pull', 'fetch').replace('run', 'start') for x in options if x not in ['--install-mode=delay-app-install'] ]
         cmd = fioup_cmd
 
     logger.info("  Running `" + " ".join([cmd] + options) + "`")
@@ -449,6 +450,8 @@ def cleanup_tuf_metadata():
         os.system("""sqlite3 /var/sota/sql.db  "delete from meta where meta_type <> 0 or version >= 3;" ".exit" """)
 
 def cleanup_installed_data():
+    if use_fioup:
+        os.system("""rm -f /var/sota/updates.db""")
     os.system("""sqlite3 /var/sota/sql.db  "delete from installed_versions;" ".exit" """)
 
 def install_with_separate_steps(target: Target, explicit_version: bool = True, do_reboot: bool = True, do_finalize: bool = True):
@@ -940,7 +943,9 @@ def restore_system_state():
     clear_callbacks_log()
     cleanup_tuf_metadata()
 
-    if not use_fioup:
+    if use_fioup:
+        os.environ.pop("FIOUP_VERSION_UPPER_LIMIT", None)
+    else:
         logger.info("Making sure there are no targets in current DB...")
         cp = invoke_aklite(['list', '--json', '1'])
         assert cp.returncode == ReturnCodes.CheckinSecurityError, cp.stdout.decode("utf-8")
@@ -1203,3 +1208,79 @@ def test_rollback(do_reboot: bool, do_finalize: bool, offline_: bool, single_ste
     single_step = single_step_
     logger.info(f"Testing rollback {do_reboot=} {do_finalize=}")
     run_test_rollback(do_reboot, do_finalize)
+
+def test_fioup_daemon():
+    if not use_fioup:
+        return
+    restore_system_state()
+    apps = None # All apps, for now
+    write_settings(apps, prune)
+
+    last_installed_version = 0
+    for target_version in install_sequence_incremental:
+        target = all_primary_tag_targets[target_version]
+        if target.build_error: # skip this one for now
+            continue
+        os.environ["FIOUP_VERSION_UPPER_LIMIT"] = str(target.actual_version)
+        logger.info(f"Updating to {target.actual_version} {target}")
+        min_events_time = datetime.now(timezone.utc)
+        cp = invoke_aklite(["daemon", "--run-once"])
+        if target.run_rollback:
+            logger.info(f"Target {target.actual_version} is a bad target. Verifying retry and recovery behavior")
+            # If bad target, check retry and "rollback" logic.
+            # No explicit rollback is actually performed, just an apps sync update of the current target after
+            #  giving up on trying the new target.
+            assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+            assert aklite_current_version() == last_installed_version
+            # Try to update to latest (bad) target 2 more times. Total attempts before giving up is 3
+            for i in range(2):
+                logger.info(f"Trying update to target {target.actual_version} again, attempt {i+2}/3")
+                min_events_time = datetime.now(timezone.utc)
+                cp = invoke_aklite(["daemon", "--run-once"])
+                assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+                verify_events(target.actual_version, {
+                        ('EcuDownloadStarted', None),
+                        ('EcuDownloadCompleted', True),
+                        ('EcuInstallationStarted', None),
+                        ('EcuInstallationApplied', None),
+                        ('EcuInstallationCompleted', False),
+                    }, False, min_events_time)
+                assert aklite_current_version() == last_installed_version
+
+            # No more attempts for new target, a sync update to current target should be performed now
+            min_events_time = datetime.now(timezone.utc)
+            logger.info(f"No more attempts to target {target.actual_version} should be performed. Trying to sync current target {last_installed_version}")
+            cp = invoke_aklite(["daemon", "--run-once"])
+            assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
+            verify_events(last_installed_version, {
+                    ('EcuDownloadStarted', None),
+                    ('EcuDownloadCompleted', True),
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationApplied', None),
+                    ('EcuInstallationCompleted', True),
+                }, False, min_events_time)
+            assert aklite_current_version() == last_installed_version
+            check_running_apps(apps)
+
+            # make sure there is no update, as synched target should be already running
+            min_events_time = datetime.now(timezone.utc)
+            logger.info(f"Sync to current target {last_installed_version} done. Making sure no new update is performed by daemon")
+            cp = invoke_aklite(["daemon", "--run-once"])
+            # If no update is required, daemon --run-once currently returns an error, "selected target is already running"
+            assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+            verify_events(0, set(), False, min_events_time)
+            assert aklite_current_version() == last_installed_version
+            check_running_apps(apps)
+
+        else:
+            assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
+            assert aklite_current_version() == target.actual_version
+            verify_events(target.actual_version, {
+                    ('EcuDownloadStarted', None),
+                    ('EcuDownloadCompleted', True),
+                    ('EcuInstallationStarted', None),
+                    ('EcuInstallationApplied', None),
+                    ('EcuInstallationCompleted', True),
+                }, False, min_events_time)
+            check_running_apps(apps)
+            last_installed_version = target.actual_version
