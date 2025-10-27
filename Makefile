@@ -36,6 +36,9 @@ test-e2e-single-command:
 test-e2e-granular:
 	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-True-False'
 
+test-e2e-daemon:
+	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_fioup_daemon'
+
 test-e2e: test-e2e-granular test-e2e-single-command
 
 clean:

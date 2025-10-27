@@ -42,6 +42,18 @@ jobs:
           USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
           TAG: ${{secrets.E2E_TEST_TAG}}
 
+  e2e-test-daemon:
+    name: End-to-end tests using daemon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory /__w/fioup/fioup
+      - run: ./dev-shell.sh make build test-e2e-daemon
+        env:
+          FACTORY: ${{ secrets.E2E_TEST_FACTORY }}
+          BASE_TARGET_VERSION: ${{ secrets.E2E_TEST_BASE_TARGET_VERSION }}
+          USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
+          TAG: ${{secrets.E2E_TEST_TAG}}
 
   package:
     strategy:
