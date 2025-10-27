@@ -20,8 +20,17 @@ The registration command does several things:
 ```
 
 ## As non-root user (advanced)
+Provide the user, `$USER`, with read and write access to the directory used by `fioup` to store configuration files, metadata, and Compose App blobs.
 ```
  sudo chown -R $USER /var/sota
+```
+Add the user to the docker group so that `fioup`, when invoked by this user, can load app container images into the Docker Engine storage (requires access to the Docker Unix socket at `/var/run/docker.sock`).
+You need to logout and log back in to apply this change.
+```
+ sudo usermod -aG docker $USER
+```
+The host/device is now ready for registration with the FoundriesFactory.
+```
  fioup register --factory <FACTORY_NAME> --name <NAME_FOR_DEVICE>
 ```
 
