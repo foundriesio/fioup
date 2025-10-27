@@ -88,6 +88,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if err != nil {
 		return err
 	}
+	updateCtx.Targets = targets
 
 	if updateCtx.Mode == UpdateModeResume {
 		// Get ToTarget if resuming update

@@ -58,6 +58,7 @@ type (
 		Config      *config.Config
 		EventSender *events.EventSender
 		Client      *client.GatewayClient
+		Targets     target.Targets
 
 		UpdateRunner update.Runner
 	}
