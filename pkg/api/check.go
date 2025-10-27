@@ -5,14 +5,16 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
+	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/pkg/errors"
 )
 
-func Check(ctx context.Context, cfg *config.Config, options ...UpdateOpt) (target.Targets, error) {
+func Check(ctx context.Context, cfg *config.Config, options ...UpdateOpt) (target.Targets, *status.CurrentStatus, error) {
 	opts := getUpdateOpts(options...)
 	updateRunner := newUpdateRunner([]state.ActionState{
 		&state.Check{
@@ -28,7 +30,15 @@ func Check(ctx context.Context, cfg *config.Config, options ...UpdateOpt) (targe
 		},
 	}, updateOptsToRunnerOpt(opts))
 	if err := updateRunner.Run(ctx, cfg); err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
-		return nil, err
+		return nil, nil, err
 	}
-	return updateRunner.ctx.Targets, nil
+	currentStatus := updateRunner.ctx.CurrentStatus
+	if currentStatus == nil {
+		if s, err := status.GetCurrentStatus(ctx, cfg.ComposeConfig()); err == nil {
+			currentStatus = s
+		} else {
+			return nil, nil, fmt.Errorf("failed to get current status: %w", err)
+		}
+	}
+	return updateRunner.ctx.Targets, currentStatus, nil
 }
