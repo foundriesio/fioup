@@ -28,6 +28,7 @@ type (
 		SyncCurrent    bool
 		MaxAttempts    int
 		RequireLatest  bool
+		EnableTUF      bool
 	}
 )
 
@@ -75,7 +76,11 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	}
 
 	var targetRepo target.Repo
-	targetRepo, err = target.NewPlainRepo(updateCtx.Client, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
+	if s.EnableTUF {
+		targetRepo, err = target.NewTufRepo(updateCtx.Config, updateCtx.Client, updateCtx.Config.GetHardwareID())
+	} else {
+		targetRepo, err = target.NewPlainRepo(updateCtx.Client, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
+	}
 	if err != nil {
 		return err
 	}
