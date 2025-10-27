@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,7 @@ func doCheck(cmd *cobra.Command, opts *commonOptions) {
 		}
 		fmt.Println()
 	}
-	currentStatus, err := api.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
+	currentStatus, err := status.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
 	DieNotNil(err, "failed to get current status")
 	fmt.Printf("Current version: %s\n", currentStatus.TargetID)
 	var areAppsInSync = true
