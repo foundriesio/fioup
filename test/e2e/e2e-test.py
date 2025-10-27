@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -241,8 +242,12 @@ def get_device_name():
 register_if_required()
 device_name = get_device_name()
 
-def verify_events(target_version: int, expected_events: Optional[Set[Tuple[str, Optional[bool]]]] = None, second_to_last_corr_id: bool = False):
-    logger.info(f"  Verifying events for version {target_version}")
+def verify_events(target_version: int, expected_events: Optional[Set[Tuple[str, Optional[bool]]]] = None, second_to_last_corr_id: bool = False, min_date: Optional[datetime] = None):
+    if target_version:
+        logger.info(f"  Verifying events for version {target_version}")
+    else:
+        assert min_date is not None
+        logger.info(f"  Checking that no new event was generated since {min_date}")
     headers = {'OSF-TOKEN': user_token}
     r = requests.get(f'https://api.foundries.io/ota/devices/{device_name}/updates/', headers=headers)
     d = json.loads(r.text)
@@ -251,6 +256,17 @@ def verify_events(target_version: int, expected_events: Optional[Set[Tuple[str, 
         latest_update = d["updates"][1]
     else:
         latest_update = d["updates"][0]
+    # Example event: {'correlation-id': '01K8K2DKYVS14C45SW4NNWP89Q', 'target': 'intel-corei7-64-lmp-414', 'version': '414', 'time': '2025-10-27T14:51:10Z'}
+    if min_date is not None:
+        # Remove microsecods as event timestamps have second resolution
+        min_date = min_date.replace(tzinfo=None).replace(microsecond=0)
+        update_time = datetime.strptime(latest_update["time"], "%Y-%m-%dT%H:%M:%SZ")
+        if target_version:
+            assert update_time >= min_date, f"Latest update time {update_time} is before expected minimum date {min_date}"
+        else:
+            assert update_time <= min_date, f"Latest update happened at {update_time}, but there should be no events after date {min_date}"
+            return
+
     corr_id = latest_update["correlation-id"]
     assert int(latest_update["version"]) == target_version
     r = requests.get(f'https://api.foundries.io/ota/devices/{device_name}/updates/{corr_id}/', headers=headers)
