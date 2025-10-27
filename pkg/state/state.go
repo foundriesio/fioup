@@ -12,6 +12,7 @@ import (
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/client"
 	"github.com/foundriesio/fioup/pkg/config"
+	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/foundriesio/fioup/pkg/target"
 )
 
@@ -46,6 +47,7 @@ type (
 			Sync   target.Apps
 			Update target.Apps
 		}
+		CurrentStatus  *status.CurrentStatus
 		InitializedAt  time.Time
 		FetchedAt      time.Time
 		AlreadyFetched bool

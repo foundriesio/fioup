@@ -13,6 +13,7 @@ import (
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
+	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/pkg/errors"
 )
@@ -172,7 +173,7 @@ func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
 		return true
 	}
 	// If all current target apps are fetched, installed, and running, then no update is needed
-	running, err := u.isTargetRunning(ctx)
+	running, err := u.isTargetInSync(ctx)
 	if err != nil {
 		slog.Error("Failed to check if target is running; assume it is not", "error", err)
 		return true
@@ -180,7 +181,7 @@ func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
 	return !running
 }
 
-func (u *UpdateContext) isTargetRunning(ctx context.Context) (bool, error) {
+func (u *UpdateContext) isTargetInSync(ctx context.Context) (bool, error) {
 	slog.Debug("Checking target", "target_id", u.ToTarget.ID)
 	if len(u.ToTarget.Apps) == 0 {
 		slog.Debug("No required apps to check")
@@ -189,18 +190,33 @@ func (u *UpdateContext) isTargetRunning(ctx context.Context) (bool, error) {
 
 	if isSublist(u.FromTarget.AppURIs(), u.ToTarget.AppURIs()) {
 		slog.Debug("Installed applications match selected target apps")
-		status, err := compose.CheckAppsStatus(ctx, u.Config.ComposeConfig(), u.ToTarget.AppURIs())
+		var err error
+		u.CurrentStatus, err = status.GetCurrentStatus(ctx, u.Config.ComposeConfig())
 		if err != nil {
 			return false, fmt.Errorf("error checking apps status: %w", err)
 		}
 
-		if status.AreRunning() {
-			slog.Info("Required applications are running")
-			return true, nil
-		} else {
-			slog.Info("Required applications are not running", "apps_not_running", status.NotRunningApps)
-			return false, nil
+		for _, appURI := range u.ToTarget.AppURIs() {
+			appStatus, ok := u.CurrentStatus.AppStatuses[appURI]
+			if !ok {
+				slog.Debug("Required app is not present on the host", "app", appURI)
+				return false, nil
+			}
+			if !appStatus.Fetched {
+				slog.Debug("Required app is not fetched", "app", appURI)
+				return false, nil
+			}
+			if !appStatus.Installed {
+				slog.Debug("Required app is not installed", "app", appURI)
+				return false, nil
+			}
+			if !appStatus.Running {
+				slog.Debug("Required app is not running", "app", appURI)
+				return false, nil
+			}
 		}
+		slog.Info("Required applications are fetched, installed, and running")
+		return true, nil
 	} else {
 		slog.Debug("Installed applications list do not contain all target apps")
 		return false, nil

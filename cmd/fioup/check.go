@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/foundriesio/fioup/pkg/api"
-	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +25,7 @@ func init() {
 }
 
 func doCheck(cmd *cobra.Command, opts *commonOptions) {
-	targets, err := api.Check(cmd.Context(), config, api.WithTUF(opts.enableTuf))
+	targets, currentStatus, err := api.Check(cmd.Context(), config, api.WithTUF(opts.enableTuf))
 	DieNotNil(err, "failed to check for updates")
 	for _, t := range targets.GetSortedList() {
 		fmt.Printf("%d [%s]\n", t.Version, t.ID)
@@ -35,8 +34,6 @@ func doCheck(cmd *cobra.Command, opts *commonOptions) {
 		}
 		fmt.Println()
 	}
-	currentStatus, err := status.GetCurrentStatus(cmd.Context(), config.ComposeConfig())
-	DieNotNil(err, "failed to get current status")
 	fmt.Printf("Current version: %s\n", currentStatus.TargetID)
 	var areAppsInSync = true
 	for _, app := range currentStatus.AppStatuses {
