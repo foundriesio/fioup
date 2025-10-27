@@ -47,7 +47,7 @@ func postStateHandler(state api.StateName, u *api.UpdateInfo) {
 			u.FromTarget.Version, strings.Join(u.FromTarget.AppNames(), ","),
 			u.ToTarget.Version, strings.Join(u.ToTarget.AppNames(), ","))
 	case "Initializing":
-		fmt.Printf("u size: %s, %d blobs; add: [%s], remove: [%s], sync: [%s], u: [%s]\n",
+		fmt.Printf("fetch size: %s, %d blobs; add: [%s], remove: [%s], sync: [%s], update: [%s]\n",
 			compose.FormatBytesInt64(u.Size.Bytes), u.Size.Blobs,
 			strings.Join(u.AppDiff.Add.Names(), ","),
 			strings.Join(u.AppDiff.Remove.Names(), ","),
