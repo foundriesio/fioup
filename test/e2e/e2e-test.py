@@ -406,7 +406,7 @@ def get_running_apps_from_status():
     if use_fioup:
         sp = invoke_aklite(["status", "--format", "json"])
         out_json = json.loads(sp.stdout)
-        running_app_names = [ app["name"] for app in out_json["current_status"]["apps"] if app["running"] ]
+        running_app_names = [ app["name"] for app in out_json["current_status"]["apps"].values() if app["running"] ]
     else:
         sp = invoke_aklite(['status', '--json', '1'])
         out_json = json.loads(sp.stdout)
