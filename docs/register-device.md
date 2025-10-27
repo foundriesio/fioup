@@ -21,7 +21,7 @@ The registration command does several things:
 
 ## As non-root user (advanced)
 ```
- sudo chown -r $USER /var/sota
+ sudo chown -R $USER /var/sota
  fioup register --factory <FACTORY_NAME> --name <NAME_FOR_DEVICE>
 ```
 
