@@ -30,10 +30,10 @@ check: format
 test:
 	@go test ./...
 
-test-e2e-single-command:
+test-e2e-single-command: build
 	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-False-True'
 
-test-e2e-granular:
+test-e2e-granular: build
 	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-True-False'
 
 test-e2e: test-e2e-granular test-e2e-single-command
