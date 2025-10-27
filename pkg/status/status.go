@@ -22,10 +22,10 @@ type (
 	}
 
 	CurrentStatus struct {
-		UpdateID    string      `json:"update_id"`
-		TargetID    string      `json:"target_id"`
-		AppStatuses []AppStatus `json:"apps"`
-		CompletedAt time.Time   `json:"completed_at"`
+		UpdateID    string               `json:"update_id"`
+		TargetID    string               `json:"target_id"`
+		AppStatuses map[string]AppStatus `json:"apps"`
+		CompletedAt time.Time            `json:"completed_at"`
 	}
 
 	BlobStats struct {
@@ -48,7 +48,7 @@ type (
 
 func GetCurrentStatus(ctx context.Context, cfg *compose.Config) (*CurrentStatus, error) {
 	currentStatus := CurrentStatus{
-		AppStatuses: []AppStatus{},
+		AppStatuses: map[string]AppStatus{},
 	}
 	var appURIs []string
 
@@ -72,14 +72,14 @@ func GetCurrentStatus(ctx context.Context, cfg *compose.Config) (*CurrentStatus,
 	areRunning := s.AreRunning()
 
 	for _, app := range s.Apps {
-		currentStatus.AppStatuses = append(currentStatus.AppStatuses, AppStatus{
+		currentStatus.AppStatuses[app.Ref().String()] = AppStatus{
 			URI:  app.Ref().String(),
 			Name: app.Name(),
 			// TODO: per-app status check instead of global, add wrapper functions over `compose.AppsStatus` for that
 			Fetched:   areFetched,
 			Installed: areInstalled,
 			Running:   areRunning,
-		})
+		}
 	}
 	return &currentStatus, nil
 }
