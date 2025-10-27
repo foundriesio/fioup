@@ -128,7 +128,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 					return fmt.Errorf("could not find latest target: %w", err)
 				}
 			}
-
 			if s.MaxAttempts > 0 {
 				count, err := update.CountFailedUpdates(updateCtx.Config.ComposeConfig(), updateCtx.ToTarget.ID)
 				if err != nil {
@@ -139,20 +138,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 						slog.Info("Latest target installation attempts has reached the limit. Syncing current target", "latest_target_id", updateCtx.ToTarget.ID, "count", count)
 						updateCtx.ToTarget = updateCtx.FromTarget
 					}
-				}
-			}
-
-			// If an update is not forced, and the target is the same as the current one,
-			// then check if the system is in sync with the target. If it is, then skip the update.
-			if !s.Force && updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
-				updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
-				running, err := isTargetRunning(ctx, updateCtx)
-				if err != nil {
-					slog.Error("Failed to check if target is running", "error", err)
-				}
-				if running {
-					slog.Info("Skipping running target", "target_id", updateCtx.ToTarget.ID)
-					return ErrCheckNoUpdate
 				}
 			}
 		} else {
@@ -172,19 +157,39 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if updateCtx.UpdateRunner != nil {
 		updateCtx.InitializedAt = updateCtx.UpdateRunner.Status().InitTime
 	}
+	if !s.Force && !updateCtx.isUpdateRequired(ctx) {
+		// If this is not a forced new sync update, then check the current status and decide whether the sync is needed.
+		// If all current target apps are fetched, installed, and running, then no update is needed - hence ErrCheckNoUpdate is returned.
+		slog.Info("Skipping running target", "target_id", updateCtx.ToTarget.ID)
+		return ErrCheckNoUpdate
+	}
 	return nil
 }
 
-func isTargetRunning(ctx context.Context, updateContext *UpdateContext) (bool, error) {
-	slog.Debug("Checking target", "target_id", updateContext.ToTarget.ID)
-	if len(updateContext.ToTarget.Apps) == 0 {
+func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
+	if u.Type != UpdateTypeSync || u.Mode != UpdateModeNewUpdate {
+		// Update may not be required only for the new sync update, otherwise an update is required
+		return true
+	}
+	// If all current target apps are fetched, installed, and running, then no update is needed
+	running, err := u.isTargetRunning(ctx)
+	if err != nil {
+		slog.Error("Failed to check if target is running; assume it is not", "error", err)
+		return true
+	}
+	return !running
+}
+
+func (u *UpdateContext) isTargetRunning(ctx context.Context) (bool, error) {
+	slog.Debug("Checking target", "target_id", u.ToTarget.ID)
+	if len(u.ToTarget.Apps) == 0 {
 		slog.Debug("No required apps to check")
 		return true, nil
 	}
 
-	if isSublist(updateContext.FromTarget.AppURIs(), updateContext.ToTarget.AppURIs()) {
+	if isSublist(u.FromTarget.AppURIs(), u.ToTarget.AppURIs()) {
 		slog.Debug("Installed applications match selected target apps")
-		status, err := compose.CheckAppsStatus(ctx, updateContext.Config.ComposeConfig(), updateContext.ToTarget.AppURIs())
+		status, err := compose.CheckAppsStatus(ctx, u.Config.ComposeConfig(), u.ToTarget.AppURIs())
 		if err != nil {
 			return false, fmt.Errorf("error checking apps status: %w", err)
 		}
