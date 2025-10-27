@@ -19,6 +19,7 @@ func Fetch(ctx context.Context, cfg *config.Config, toVersion int, options ...Up
 			AllowNewUpdate: true,
 			Force:          true,
 			ToVersion:      toVersion,
+			EnableTUF:      opts.EnableTUF,
 		},
 		&state.Init{},
 		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},

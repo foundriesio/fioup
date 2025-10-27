@@ -23,6 +23,7 @@ func Start(ctx context.Context, cfg *config.Config, options ...UpdateOpt) error 
 				update.StateStarting,
 			},
 			ToVersion: -1,
+			EnableTUF: opts.EnableTUF,
 		},
 		&state.Init{},
 		&state.Fetch{},

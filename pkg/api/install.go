@@ -23,6 +23,7 @@ func Install(ctx context.Context, cfg *config.Config, options ...UpdateOpt) erro
 				update.StateInstalling,
 			},
 			ToVersion: -1,
+			EnableTUF: opts.EnableTUF,
 		},
 		&state.Init{},
 		&state.Fetch{},

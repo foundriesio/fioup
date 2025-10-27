@@ -25,7 +25,7 @@ func init() {
 }
 
 func doCheck(cmd *cobra.Command, opts *commonOptions) {
-	targets, err := api.Check(config, api.WithTUF(opts.enableTuf))
+	targets, err := api.Check(cmd.Context(), config, api.WithTUF(opts.enableTuf))
 	DieNotNil(err, "failed to check for updates")
 	for _, t := range targets.GetSortedList() {
 		fmt.Printf("%d [%s]\n", t.Version, t.ID)

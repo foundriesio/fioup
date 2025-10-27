@@ -16,6 +16,7 @@ import (
 type (
 	UpdateOpts struct {
 		UpdateRunnerOpts
+		EnableTUF              bool
 		Force                  bool
 		SyncCurrent            bool
 		MaxAttempts            int
@@ -29,6 +30,12 @@ type (
 	InstallProgressFunc = compose.InstallProgressFunc
 	StartProgressFunc   = compose.AppStartProgress
 )
+
+func WithTUF(enabled bool) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.EnableTUF = enabled
+	}
+}
 
 func WithStartProgressHandler(handler StartProgressFunc) UpdateOpt {
 	return func(o *UpdateOpts) {
@@ -108,6 +115,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			SyncCurrent:    opts.SyncCurrent,
 			RequireLatest:  opts.RequireLatest,
 			MaxAttempts:    opts.MaxAttempts,
+			EnableTUF:      opts.EnableTUF,
 		},
 		&state.Init{},
 		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
