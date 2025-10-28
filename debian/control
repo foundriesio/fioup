@@ -21,5 +21,8 @@ Depends: ${misc:Depends},
          ${shlibs:Depends},
          lshw,
 Static-Built-Using: ${misc:Static-Built-Using}
-Description:
- OTA Update Client for FoundriesFactory™
+Description: OTA Update Client for FoundriesFactory™
+ A command-line utility for performing over-the-air (OTA) updates of
+ Compose Apps built and managed through FoundriesFactory™. It provides
+ a secure and reliable mechanism to fetch and install updates on
+ devices running containerized applications.
