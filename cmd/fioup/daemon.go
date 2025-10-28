@@ -23,6 +23,14 @@ type (
 	daemonOptions struct {
 		runOnce bool
 	}
+
+	updater struct {
+		opts   *daemonOptions
+		gw     *client.GatewayClient
+		sender *events.EventSender
+
+		sleepInterval time.Duration
+	}
 )
 
 func init() {
@@ -42,65 +50,74 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
-func (opts daemonOptions) initAPIs() (*client.GatewayClient, *events.EventSender) {
-	gw, err := client.NewGatewayClient(config, nil, "")
-	DieNotNil(err, "Failed to create gateway client")
-
-	var sender *events.EventSender
-
-	if !opts.runOnce {
-		sender, err = events.NewEventSender(config, gw)
-		DieNotNil(err, "Failed to create event sender")
+func NewUpdater(opts *daemonOptions) *updater {
+	u := updater{
+		opts: opts,
 	}
-
-	return gw, sender
+	u.reload()
+	return &u
 }
 
-func (opts daemonOptions) pollingInterval() time.Duration {
+func (u *updater) reload() {
+	var err error
+
+	u.Close()
+
+	u.gw, err = client.NewGatewayClient(config, nil, "")
+	DieNotNil(err, "Failed to create gateway client")
+
+	if !u.opts.runOnce {
+		u.sender, err = events.NewEventSender(config, u.gw)
+		DieNotNil(err, "Failed to create event sender")
+		u.sender.Start()
+	}
+
 	pollingSecStr := config.TomlConfig().GetDefault("uptane.polling_seconds", "300")
 	pollingSec, err := strconv.Atoi(pollingSecStr)
 	if err != nil || pollingSec <= 0 {
 		pollingSec = 300
 		slog.Warn("Invalid value for uptane.polling_seconds. Using default value", "value", pollingSecStr, "default", pollingSec)
 	}
-	return time.Duration(time.Duration(pollingSec) * time.Second)
+
+	u.sleepInterval = time.Duration(time.Duration(pollingSec) * time.Second)
 }
 
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
-	interval := opts.pollingInterval()
 	ctx := cmd.Context()
 
-	gwClient, eventSender := opts.initAPIs()
-
-	if eventSender != nil {
-		eventSender.Start()
-		defer eventSender.Stop()
-	}
+	updater := NewUpdater(opts)
+	defer updater.Close()
 
 	for {
-		if nowait := updateCheck(cmd.Context(), opts, gwClient, eventSender); nowait {
+		if nowait := updater.checkUpdates(ctx); nowait {
 			continue
 		}
 
-		sleep(ctx, interval)
+		updater.sleep(ctx)
 	}
 }
 
-func sleep(ctx context.Context, sleepFor time.Duration) {
-	if sleepFor > 0 {
-		slog.Info("Waiting before next check...", "interval", sleepFor)
+func (u updater) Close() {
+	if u.sender != nil {
+		u.sender.Stop()
+	}
+}
+
+func (u updater) sleep(ctx context.Context) {
+	if u.sleepInterval > 0 {
+		slog.Info("Waiting before next check...", "interval", u.sleepInterval)
 	}
 	select {
 	case <-ctx.Done():
 		os.Exit(0)
-	case <-time.After(sleepFor):
+	case <-time.After(u.sleepInterval):
 	}
 }
 
-func updateCheck(ctx context.Context, opts *daemonOptions, gwClient *client.GatewayClient, eventSender *events.EventSender) (nowait bool) {
+func (u updater) checkUpdates(ctx context.Context) (nowait bool) {
 	err := api.Update(ctx, config, -1,
-		api.WithGatewayClient(gwClient),
-		api.WithEventSender(eventSender),
+		api.WithGatewayClient(u.gw),
+		api.WithEventSender(u.sender),
 		api.WithRequireLatest(true),
 		api.WithMaxAttempts(3),
 		api.WithPreStateHandler(preStateHandler),
@@ -119,7 +136,7 @@ func updateCheck(ctx context.Context, opts *daemonOptions, gwClient *client.Gate
 		}
 	} else if err != nil && errors.Is(err, state.ErrStartFailed) {
 		slog.Info("Error starting updated target", "error", err)
-		if !opts.runOnce {
+		if !u.opts.runOnce {
 			// Retry installation, or do a sync update, without waiting
 			// If runOnce is set, exit execution in the return statement bellow
 			nowait = true
@@ -127,7 +144,7 @@ func updateCheck(ctx context.Context, opts *daemonOptions, gwClient *client.Gate
 	} else if err != nil && !errors.Is(err, state.ErrCheckNoUpdate) {
 		slog.Error("Error during update", "error", err)
 	}
-	if opts.runOnce {
+	if u.opts.runOnce {
 		slog.Debug("Run once mode, exiting")
 		DieNotNil(err)
 		os.Exit(0)
