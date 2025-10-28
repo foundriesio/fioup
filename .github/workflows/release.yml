@@ -56,6 +56,9 @@ jobs:
           sudo dpkg -i /tmp/debs/fioup_*.deb
           /usr/bin/fioup --help
 
+          # linting
+          lintian /tmp/debs/fioup_*.deb
+
           # The version will look like v1.2.3. Debian needs the "1.2.3"
           VERSION="${{ env.version }}"
           echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
