@@ -81,12 +81,19 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 		if nowait := updateCheck(cmd.Context(), opts, gwClient, eventSender); nowait {
 			continue
 		}
-		slog.Info("Waiting before next check...", "interval", interval)
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(interval):
-		}
+
+		sleep(ctx, interval)
+	}
+}
+
+func sleep(ctx context.Context, sleepFor time.Duration) {
+	if sleepFor > 0 {
+		slog.Info("Waiting before next check...", "interval", sleepFor)
+	}
+	select {
+	case <-ctx.Done():
+		os.Exit(0)
+	case <-time.After(sleepFor):
 	}
 }
 
