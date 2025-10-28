@@ -51,15 +51,11 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	ctx := cmd.Context()
 	var gwClient *client.GatewayClient
 	var eventSender *events.EventSender
-	if gwClient, err = client.NewGatewayClient(config, nil, ""); err != nil {
-		slog.Error("Failed to create gateway client", "error", err)
-		return
-	}
+	gwClient, err = client.NewGatewayClient(config, nil, "")
+	DieNotNil(err, "Failed to create gateway client")
 	if !opts.runOnce {
-		if eventSender, err = events.NewEventSender(config, gwClient); err != nil {
-			slog.Error("Failed to create event sender", "error", err)
-			return
-		}
+		eventSender, err = events.NewEventSender(config, gwClient)
+		DieNotNil(err, "Failed to create event sender")
 		eventSender.Start()
 		defer eventSender.Stop()
 	}
