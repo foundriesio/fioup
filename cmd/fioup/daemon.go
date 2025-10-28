@@ -10,12 +10,14 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
+	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
 	"github.com/spf13/cobra"
 )
@@ -55,14 +57,19 @@ func NewUpdater(opts *daemonOptions) *updater {
 	u := updater{
 		opts: opts,
 	}
-	u.reload()
+	u.reload(false)
 	return &u
 }
 
-func (u *updater) reload() {
+func (u *updater) reload(reloadConfig bool) {
 	var err error
 
 	u.Close()
+
+	if reloadConfig {
+		config, err = cfg.NewConfig(configPaths)
+		DieNotNil(err)
+	}
 
 	u.gw, err = client.NewGatewayClient(config, nil, "")
 	DieNotNil(err, "Failed to create gateway client")
@@ -84,8 +91,12 @@ func (u *updater) reload() {
 }
 
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
+	slog.Info("Daemon starting", "pid", os.Getpid())
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer cancel()
+
+	sigHUP := make(chan os.Signal, 1)
+	signal.Notify(sigHUP, syscall.SIGHUP)
 
 	updater := NewUpdater(opts)
 	defer updater.Close()
@@ -95,7 +106,9 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 			continue
 		}
 
-		updater.sleep(ctx)
+		if reloadConfig := updater.sleep(ctx, sigHUP); reloadConfig {
+			updater.reload(true)
+		}
 	}
 }
 
@@ -105,7 +118,7 @@ func (u updater) Close() {
 	}
 }
 
-func (u updater) sleep(ctx context.Context) {
+func (u updater) sleep(ctx context.Context, sigHUP chan os.Signal) (reloadConfig bool) {
 	if u.sleepInterval > 0 {
 		slog.Info("Waiting before next check...", "interval", u.sleepInterval)
 	}
@@ -114,8 +127,12 @@ func (u updater) sleep(ctx context.Context) {
 		slog.Debug("Received SIGINT, exiting")
 		u.Close()
 		os.Exit(0)
+	case <-sigHUP:
+		slog.Info("Received SIGHUP")
+		reloadConfig = true
 	case <-time.After(u.sleepInterval):
 	}
+	return
 }
 
 func (u updater) checkUpdates(ctx context.Context) (nowait bool) {
