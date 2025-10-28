@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -83,7 +84,8 @@ func (u *updater) reload() {
 }
 
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
-	ctx := cmd.Context()
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
+	defer cancel()
 
 	updater := NewUpdater(opts)
 	defer updater.Close()
@@ -109,6 +111,8 @@ func (u updater) sleep(ctx context.Context) {
 	}
 	select {
 	case <-ctx.Done():
+		slog.Debug("Received SIGINT, exiting")
+		u.Close()
 		os.Exit(0)
 	case <-time.After(u.sleepInterval):
 	}
