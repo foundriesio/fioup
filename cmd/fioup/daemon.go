@@ -54,14 +54,18 @@ func (opts daemonOptions) initAPIs() (*client.GatewayClient, *events.EventSender
 	return gw, sender
 }
 
-func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
+func (opts daemonOptions) pollingInterval() time.Duration {
 	pollingSecStr := config.TomlConfig().GetDefault("uptane.polling_seconds", "300")
 	pollingSec, err := strconv.Atoi(pollingSecStr)
 	if err != nil || pollingSec <= 0 {
 		pollingSec = 300
-		slog.Debug("Invalid value for uptane.polling_seconds. Using default value", "value", pollingSecStr, "default", pollingSec)
+		slog.Warn("Invalid value for uptane.polling_seconds. Using default value", "value", pollingSecStr, "default", pollingSec)
 	}
-	interval := time.Duration(time.Duration(pollingSec) * time.Second)
+	return time.Duration(time.Duration(pollingSec) * time.Second)
+}
+
+func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
+	interval := opts.pollingInterval()
 	ctx := cmd.Context()
 
 	gwClient, eventSender := opts.initAPIs()
