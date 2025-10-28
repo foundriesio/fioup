@@ -20,6 +20,7 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          lshw,
+         docker.io
 Static-Built-Using: ${misc:Static-Built-Using}
 Description: OTA Update Client for FoundriesFactory™
  A command-line utility for performing over-the-air (OTA) updates of
