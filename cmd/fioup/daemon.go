@@ -40,6 +40,20 @@ func init() {
 	rootCmd.AddCommand(cmd)
 }
 
+func (opts daemonOptions) initAPIs() (*client.GatewayClient, *events.EventSender) {
+	gw, err := client.NewGatewayClient(config, nil, "")
+	DieNotNil(err, "Failed to create gateway client")
+
+	var sender *events.EventSender
+
+	if !opts.runOnce {
+		sender, err = events.NewEventSender(config, gw)
+		DieNotNil(err, "Failed to create event sender")
+	}
+
+	return gw, sender
+}
+
 func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	pollingSecStr := config.TomlConfig().GetDefault("uptane.polling_seconds", "300")
 	pollingSec, err := strconv.Atoi(pollingSecStr)
@@ -49,13 +63,10 @@ func doDaemon(cmd *cobra.Command, opts *daemonOptions) {
 	}
 	interval := time.Duration(time.Duration(pollingSec) * time.Second)
 	ctx := cmd.Context()
-	var gwClient *client.GatewayClient
-	var eventSender *events.EventSender
-	gwClient, err = client.NewGatewayClient(config, nil, "")
-	DieNotNil(err, "Failed to create gateway client")
-	if !opts.runOnce {
-		eventSender, err = events.NewEventSender(config, gwClient)
-		DieNotNil(err, "Failed to create event sender")
+
+	gwClient, eventSender := opts.initAPIs()
+
+	if eventSender != nil {
 		eventSender.Start()
 		defer eventSender.Stop()
 	}
