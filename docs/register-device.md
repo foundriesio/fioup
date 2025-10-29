@@ -56,14 +56,14 @@ Altentatively, you can create a symlink with something like:
 ```
 
 ## Verifying registration
-The `check` subcommand can be used to verifiy connectivity with the
+The `check` subcommand can be used to verify connectivity with the
 Foundries.io backend:
 ```
  $ sudo fioup check
 ```
 
 ## Changing apps that run
-The default behavior of fioup is to run all apps defined in a Target. This
+The default behavior of `fioup` is to run all apps defined in a Target. This
 can be overridden by setting the `pacman.compose_apps` field in
 `/var/sota/sota.toml` to a comma separated list of applications. Examples
 include:
