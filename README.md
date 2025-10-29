@@ -1,23 +1,12 @@
 # fioup
-OTA Update Client for FoundriesFactory (c)
+A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](https://www.compose-spec.io/) published via [the FoundriesFactory™ platform](https://docs.foundries.io/latest).
 
-## Branches
-
-**main**: Primary development branch. Contributors should develop submissions based on this branch, and submit pull requests to this branch.
-
-## Installation Instructions
-
-```commandline
-git clone https://github.com/foundriesio/fioup.git
-```
-```commandline
-cd fioup && make
-```
-As a result, the `fioup` binary should appear in the `./bin` directory.
+## Installation
+[See the installation guide.](docs/install.md)
 
 ## Usage
 
-`fioup --help` shows the available subcommands and execution flags.
+[See the usage guide.](docs/README.md)
 
 ## Getting in Contact
 
