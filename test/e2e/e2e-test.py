@@ -945,6 +945,7 @@ def restore_system_state():
 
     if use_fioup:
         os.environ.pop("FIOUP_VERSION_UPPER_LIMIT", None)
+        os.environ.pop("FIOUP_E2E_RUNONCE", None)
     else:
         logger.info("Making sure there are no targets in current DB...")
         cp = invoke_aklite(['list', '--json', '1'])
@@ -1224,7 +1225,8 @@ def test_fioup_daemon():
         os.environ["FIOUP_VERSION_UPPER_LIMIT"] = str(target.actual_version)
         logger.info(f"Updating to {target.actual_version} {target}")
         min_events_time = datetime.now(timezone.utc)
-        cp = invoke_aklite(["daemon", "--run-once"])
+        os.environ["FIOUP_E2E_RUNONCE"] = "1"
+        cp = invoke_aklite(["daemon"])
         if target.run_rollback:
             logger.info(f"Target {target.actual_version} is a bad target. Verifying retry and recovery behavior")
             # If bad target, check retry and "rollback" logic.
@@ -1236,7 +1238,7 @@ def test_fioup_daemon():
             for i in range(2):
                 logger.info(f"Trying update to target {target.actual_version} again, attempt {i+2}/3")
                 min_events_time = datetime.now(timezone.utc)
-                cp = invoke_aklite(["daemon", "--run-once"])
+                cp = invoke_aklite(["daemon"])
                 assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
                 verify_events(target.actual_version, {
                         ('EcuDownloadStarted', None),
@@ -1250,7 +1252,7 @@ def test_fioup_daemon():
             # No more attempts for new target, a sync update to current target should be performed now
             min_events_time = datetime.now(timezone.utc)
             logger.info(f"No more attempts to target {target.actual_version} should be performed. Trying to sync current target {last_installed_version}")
-            cp = invoke_aklite(["daemon", "--run-once"])
+            cp = invoke_aklite(["daemon"])
             assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
             verify_events(last_installed_version, {
                     ('EcuDownloadStarted', None),
@@ -1265,7 +1267,7 @@ def test_fioup_daemon():
             # make sure there is no update, as synched target should be already running
             min_events_time = datetime.now(timezone.utc)
             logger.info(f"Sync to current target {last_installed_version} done. Making sure no new update is performed by daemon")
-            cp = invoke_aklite(["daemon", "--run-once"])
+            cp = invoke_aklite(["daemon"])
             # If no update is required, daemon --run-once currently returns an error, "selected target is already running"
             assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
             verify_events(0, set(), False, min_events_time)
