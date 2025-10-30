@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/foundriesio/composeapp/pkg/update"
+	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
@@ -23,28 +24,41 @@ import (
 )
 
 type (
+	daemonOpts struct {
+		configEnabled bool
+		fioconfig     fioconfigOpts
+	}
+
 	updater struct {
-		gw     *client.GatewayClient
-		sender *events.EventSender
+		opts daemonOpts
+
+		gw        *client.GatewayClient
+		sender    *events.EventSender
+		configApp *fioconfig.App
 
 		sleepInterval time.Duration
 	}
 )
 
 func init() {
+	opts := daemonOpts{}
 	cmd := &cobra.Command{
 		Use:   "daemon",
 		Short: "Start the update agent daemon",
 		Run: func(cmd *cobra.Command, args []string) {
-			doDaemon(cmd)
+			doDaemon(cmd, opts)
 		},
 		Args: cobra.NoArgs,
 	}
+	cmd.Flags().BoolVar(&opts.configEnabled, "fioconfig", true, "Include fioconfig daemon logic.")
+	opts.fioconfig.ApplyToCmd(cmd)
 	rootCmd.AddCommand(cmd)
 }
 
-func NewUpdater() *updater {
-	u := updater{}
+func NewUpdater(opts daemonOpts) *updater {
+	u := updater{
+		opts: opts,
+	}
 	u.reload(false)
 	return &u
 }
@@ -66,6 +80,15 @@ func (u *updater) reload(reloadConfig bool) {
 	DieNotNil(err, "Failed to create event sender")
 	u.sender.Start()
 
+	if u.opts.configEnabled {
+		u.configApp, err = fioconfig.NewAppWithConfig(
+			config.TomlConfig(),
+			u.opts.fioconfig.secretsDir,
+			u.opts.fioconfig.unsafeHandlers,
+		)
+		DieNotNil(err, "Failed to create fioconfig client")
+	}
+
 	pollingSecStr := config.TomlConfig().GetDefault("uptane.polling_seconds", "300")
 	pollingSec, err := strconv.Atoi(pollingSecStr)
 	if err != nil || pollingSec <= 0 {
@@ -76,7 +99,7 @@ func (u *updater) reload(reloadConfig bool) {
 	u.sleepInterval = time.Duration(time.Duration(pollingSec) * time.Second)
 }
 
-func doDaemon(cmd *cobra.Command) {
+func doDaemon(cmd *cobra.Command, opts daemonOpts) {
 	slog.Info("Daemon starting", "pid", os.Getpid())
 	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer cancel()
@@ -84,10 +107,12 @@ func doDaemon(cmd *cobra.Command) {
 	sigHUP := make(chan os.Signal, 1)
 	signal.Notify(sigHUP, syscall.SIGHUP)
 
-	updater := NewUpdater()
+	updater := NewUpdater(opts)
 	defer updater.Close()
 
 	for {
+		updater.checkConfig(ctx, sigHUP)
+
 		nowait, err := updater.checkUpdates(ctx)
 		updater.checkForCI(err)
 		if nowait {
@@ -132,6 +157,19 @@ func (u updater) sleep(ctx context.Context, sigHUP chan os.Signal) (reloadConfig
 	case <-time.After(u.sleepInterval):
 	}
 	return
+}
+
+func (u updater) checkConfig(ctx context.Context, sigHUP chan os.Signal) {
+	if u.opts.configEnabled {
+		if configMayHaveChanged, _ := configCheck(&u.opts.fioconfig, u.configApp); configMayHaveChanged {
+			// We need to see if we were given a SIGHUP and need to reload
+			// our configuration, set sleep interval to 0 to not block
+			u.sleepInterval = 0
+			if reloadConfig := u.sleep(ctx, sigHUP); reloadConfig {
+				u.reload(true)
+			}
+		}
+	}
 }
 
 func (u updater) checkUpdates(ctx context.Context) (nowait bool, err error) {
