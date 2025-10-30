@@ -6,6 +6,8 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/pkg/errors"
@@ -39,6 +41,11 @@ func init() {
 }
 
 func doCheckConfig(_ *cobra.Command, opts *fioconfigOpts) {
+	// the aklite on-change handler can send a SIGHUP that we can ignore
+	// when not running as a daemon
+	sigHUP := make(chan os.Signal, 1)
+	signal.Notify(sigHUP, syscall.SIGHUP)
+
 	configApp, err := fioconfig.NewAppWithConfig(config.TomlConfig(), opts.secretsDir, opts.unsafeHandlers)
 	cobra.CheckErr(err)
 	_, err = configCheck(opts, configApp)

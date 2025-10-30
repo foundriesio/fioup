@@ -143,7 +143,7 @@ func (u updater) Close() {
 }
 
 func (u updater) sleep(ctx context.Context, sigHUP chan os.Signal) (reloadConfig bool) {
-	if u.sleepInterval > 0 {
+	if u.sleepInterval > 5 {
 		slog.Info("Waiting before next check...", "interval", u.sleepInterval)
 	}
 	select {
@@ -163,9 +163,11 @@ func (u updater) checkConfig(ctx context.Context, sigHUP chan os.Signal) {
 	if u.opts.configEnabled {
 		if configMayHaveChanged, _ := configCheck(&u.opts.fioconfig, u.configApp); configMayHaveChanged {
 			// We need to see if we were given a SIGHUP and need to reload
-			// our configuration, set sleep interval to 0 to not block
-			u.sleepInterval = 0
+			// our configuration, set sleep interval to 1 to give time to catch
+			// signal but not long enough to noticably block execution
+			u.sleepInterval = time.Second * 1
 			if reloadConfig := u.sleep(ctx, sigHUP); reloadConfig {
+				slog.Info("Reloading configuration")
 				u.reload(true)
 			}
 		}
