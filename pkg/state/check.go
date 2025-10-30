@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -187,52 +186,57 @@ func (u *UpdateContext) isTargetInSync(ctx context.Context) (bool, error) {
 		slog.Debug("No required apps to check")
 		return true, nil
 	}
-
-	if isSublist(u.FromTarget.AppURIs(), u.ToTarget.AppURIs()) {
-		slog.Debug("Installed applications match selected target apps")
-		var err error
-		u.CurrentStatus, err = status.GetCurrentStatus(ctx, u.Config.ComposeConfig())
-		if err != nil {
-			return false, fmt.Errorf("error checking apps status: %w", err)
-		}
-
-		for _, appURI := range u.ToTarget.AppURIs() {
-			appStatus, ok := u.CurrentStatus.AppStatuses[appURI]
-			if !ok {
-				slog.Debug("Required app is not present on the host", "app", appURI)
-				return false, nil
-			}
-			if !appStatus.Fetched {
-				slog.Debug("Required app is not fetched", "app", appURI)
-				return false, nil
-			}
-			if !appStatus.Installed {
-				slog.Debug("Required app is not installed", "app", appURI)
-				return false, nil
-			}
-			if !appStatus.Running {
-				slog.Debug("Required app is not running", "app", appURI)
-				return false, nil
-			}
-		}
-		slog.Info("Required applications are fetched, installed, and running")
-		return true, nil
-	} else {
-		slog.Debug("Installed applications list do not contain all target apps")
+	if u.checkAppDiff() {
+		// There is some difference between a list of apps in FromTarget and ToTarget
+		// and taking into account the enabled apps in the config
 		return false, nil
 	}
-}
-
-func isSublist[S ~[]E, E comparable](mainList, sublist S) bool {
-	if len(sublist) > len(mainList) {
-		return false
+	var err error
+	u.CurrentStatus, err = status.GetCurrentStatus(ctx, u.Config.ComposeConfig())
+	if err != nil {
+		return false, fmt.Errorf("error checking apps status: %w", err)
 	}
-	for _, subElem := range sublist {
-		if !slices.Contains(mainList, subElem) {
-			return false
+
+	for _, appURI := range u.ToTarget.AppURIs() {
+		appStatus, ok := u.CurrentStatus.AppStatuses[appURI]
+		if !ok {
+			slog.Debug("Required app is not present on the host", "app", appURI)
+			return false, nil
+		}
+		if !appStatus.Fetched {
+			slog.Debug("Required app is not fetched", "app", appURI)
+			return false, nil
+		}
+		if !appStatus.Installed {
+			slog.Debug("Required app is not installed", "app", appURI)
+			return false, nil
+		}
+		if !appStatus.Running {
+			slog.Debug("Required app is not running", "app", appURI)
+			return false, nil
 		}
 	}
-	return true
+	slog.Info("Required applications are fetched, installed, and running")
+	return true, nil
+}
+
+func (u *UpdateContext) checkAppDiff() bool {
+	diffToCheck := []struct {
+		diff     target.Apps
+		diffType string
+	}{
+		{u.AppDiff.Add, "add"},
+		{u.AppDiff.Remove, "remove"},
+		{u.AppDiff.Update, "update"},
+	}
+	isDiffDetected := false
+	for _, diffItem := range diffToCheck {
+		for _, app := range diffItem.diff {
+			slog.Debug("app list diff detected", "type", diffItem.diffType, "app", app.Name)
+			isDiffDetected = true
+		}
+	}
+	return isDiffDetected
 }
 
 func getCurrentTarget(cfg *compose.Config) (*target.Target, error) {
