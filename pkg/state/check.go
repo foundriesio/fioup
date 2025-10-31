@@ -182,10 +182,6 @@ func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
 
 func (u *UpdateContext) isTargetInSync(ctx context.Context) (bool, error) {
 	slog.Debug("Checking target", "target_id", u.ToTarget.ID)
-	if len(u.ToTarget.Apps) == 0 {
-		slog.Debug("No required apps to check")
-		return true, nil
-	}
 	if u.checkAppDiff() {
 		// There is some difference between a list of apps in FromTarget and ToTarget
 		// and taking into account the enabled apps in the config
