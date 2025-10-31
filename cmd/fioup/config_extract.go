@@ -14,6 +14,7 @@ func init() {
 		Use:   "config-extract",
 		Short: "Extract the current encrypted configuration to secrets directory",
 		Run: func(cmd *cobra.Command, args []string) {
+			opts.AssertCanExtract()
 			doConfigExtract(cmd, &opts)
 		},
 		Args: cobra.NoArgs,

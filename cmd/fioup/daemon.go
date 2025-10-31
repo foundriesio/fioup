@@ -81,6 +81,7 @@ func (u *updater) reload(reloadConfig bool) {
 	u.sender.Start()
 
 	if u.opts.configEnabled {
+		u.opts.fioconfig.AssertCanExtract()
 		u.configApp, err = fioconfig.NewAppWithConfig(
 			config.TomlConfig(),
 			u.opts.fioconfig.secretsDir,

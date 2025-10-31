@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	fioconfig "github.com/foundriesio/fioconfig/app"
@@ -26,12 +27,25 @@ func (opts *fioconfigOpts) ApplyToCmd(cmd *cobra.Command) {
 	_ = cmd.Flags().MarkHidden("unsafe-handlers")
 }
 
+// CanExtract ensures the process has permission to create files in `secretsDir`
+func (opts fioconfigOpts) AssertCanExtract() {
+	if len(opts.secretsDir) == 0 {
+		// This shouldn't be possible. Just defensive coding
+		DieNotNil(errors.New("`secrets-dir` not configured"))
+	}
+	testfile := filepath.Join(opts.secretsDir, ".test-writeable")
+	err := os.WriteFile(testfile, nil, 0o740)
+	DieNotNil(err, "Unable to create files in `secrets-dir`:")
+	_ = os.Remove(testfile)
+}
+
 func init() {
 	opts := fioconfigOpts{}
 	cmd := &cobra.Command{
 		Use:   "config-check",
 		Short: "Check for config updates",
 		Run: func(cmd *cobra.Command, args []string) {
+			opts.AssertCanExtract()
 			doCheckConfig(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
