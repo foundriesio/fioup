@@ -179,5 +179,9 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 }
 
 func (s *EventSender) FlushEventsAsync() {
+	if s.flushChan == nil {
+		slog.Error("Requested events flush on stopped sender")
+		return
+	}
 	s.flushChan <- struct{}{}
 }
