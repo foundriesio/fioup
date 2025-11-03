@@ -14,6 +14,7 @@ It provides a simple and reliable way to deliver and manage Compose Apps updates
 * [Installing fioup](./install.md)
 * [Registering a device](./register-device.md)
 * [Performing an update](./update-device.md)
+* [Remote configuration](./configure-device.md)
 * [Daemon mode](./daemon-mode.md)
 
 ## How It Works
