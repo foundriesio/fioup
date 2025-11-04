@@ -54,6 +54,9 @@ RUN wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/downloa
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+RUN mkdir -p /usr/share/fioconfig/handlers/
+RUN mkdir -p /run/secrets && chmod a+rwx /run/secrets
+
 # Set entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
