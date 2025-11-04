@@ -242,6 +242,19 @@ def get_device_name():
 register_if_required()
 device_name = get_device_name()
 
+def set_device_apps(apps: Optional[List[str]]):
+    if apps is None:
+        data = r"""{"reason":"Override aktualizr-lite update configuration ","files":[{"name":"z-50-fioctl.toml","value":"\n[pacman]\n","unencrypted":true,"on-changed":["/usr/share/fioconfig/handlers/aktualizr-toml-update"]}]}"""
+    else:
+        apps_str = ",".join(apps)
+        data = r"""{"reason":"Override aktualizr-lite update configuration ","files":[{"name":"z-50-fioctl.toml","value":"\n[pacman]\n  compose_apps = \"""" + apps_str + r"""\"\n  docker_apps = \"""" + apps_str + r"""\"\n","unencrypted":true,"on-changed":["/usr/share/fioconfig/handlers/aktualizr-toml-update"]}]}"""
+    url = f"https://api.foundries.io/ota/devices/{device_name}/config/?factory={factory_name}&by-uuid=1"
+    print(data)
+    headers = {'OSF-TOKEN': user_token}
+    res = requests.patch(url, data, headers=headers)
+    assert res.status_code == 201, f"Unable to update device settings: {res.status_code} {res.text}"
+    logger.info(f"  Updated device apps settings in the factory: {apps=}")
+
 def verify_events(target_version: int, expected_events: Optional[Set[Tuple[str, Optional[bool]]]] = None, second_to_last_corr_id: bool = False, min_date: Optional[datetime] = None):
     if target_version:
         logger.info(f"  Verifying events for version {target_version}")
@@ -451,7 +464,7 @@ def cleanup_tuf_metadata():
 
 def cleanup_installed_data():
     if use_fioup:
-        os.system("""rm -f /var/sota/updates.db""")
+        os.system("""rm -f /var/sota/updates.db /etc/sota/conf.d/* /run/secrets/* /var/sota/.last*""")
     os.system("""sqlite3 /var/sota/sql.db  "delete from installed_versions;" ".exit" """)
 
 def install_with_separate_steps(target: Target, explicit_version: bool = True, do_reboot: bool = True, do_finalize: bool = True):
@@ -925,6 +938,7 @@ def do_rollback(target: Target, requires_reboot: bool, installation_in_progress:
 def restore_system_state():
     # Get to the starting point
     logger.info(f"Restoring base environment. Offline={offline}, SingleStep={single_step}, DelayAppsInstall={delay_app_install}, Prune={prune}...")
+    set_device_apps(None)
     write_settings()
     sys_reboot()
     if use_fioup:
@@ -1218,7 +1232,18 @@ def test_fioup_daemon():
     write_settings(apps, prune)
 
     last_installed_version = 0
-    for target_version in install_sequence_incremental:
+    test_sequence = [
+        Target.WorkingOstree,
+        Target.AddFirstApp,
+        Target.AddMoreApps,
+        Target.BreakApp,
+        Target.UpdateBrokenApp,
+        Target.FixApp,
+        Target.UpdateWorkingApp,
+    ]
+    for target_version in test_sequence:
+        set_device_apps(None)
+        # running_apps_before = get_running_apps_from_status()
         target = all_primary_tag_targets[target_version]
         if target.build_error: # skip this one for now
             continue
@@ -1226,7 +1251,7 @@ def test_fioup_daemon():
         logger.info(f"Updating to {target.actual_version} {target}")
         min_events_time = datetime.now(timezone.utc)
         os.environ["FIOUP_E2E_RUNONCE"] = "1"
-        cp = invoke_aklite(["daemon", "--fioconfig=0"])
+        cp = invoke_aklite(["daemon"])
         if target.run_rollback:
             logger.info(f"Target {target.actual_version} is a bad target. Verifying retry and recovery behavior")
             # If bad target, check retry and "rollback" logic.
@@ -1238,7 +1263,7 @@ def test_fioup_daemon():
             for i in range(2):
                 logger.info(f"Trying update to target {target.actual_version} again, attempt {i+2}/3")
                 min_events_time = datetime.now(timezone.utc)
-                cp = invoke_aklite(["daemon", "--fioconfig=0"])
+                cp = invoke_aklite(["daemon"])
                 assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
                 verify_events(target.actual_version, {
                         ('EcuDownloadStarted', None),
@@ -1252,7 +1277,7 @@ def test_fioup_daemon():
             # No more attempts for new target, a sync update to current target should be performed now
             min_events_time = datetime.now(timezone.utc)
             logger.info(f"No more attempts to target {target.actual_version} should be performed. Trying to sync current target {last_installed_version}")
-            cp = invoke_aklite(["daemon", "--fioconfig=0"])
+            cp = invoke_aklite(["daemon"])
             assert cp.returncode == ReturnCodes.Ok, cp.stdout.decode("utf-8")
             verify_events(last_installed_version, {
                     ('EcuDownloadStarted', None),
@@ -1267,11 +1292,12 @@ def test_fioup_daemon():
             # make sure there is no update, as synched target should be already running
             min_events_time = datetime.now(timezone.utc)
             logger.info(f"Sync to current target {last_installed_version} done. Making sure no new update is performed by daemon")
-            cp = invoke_aklite(["daemon", "--fioconfig=0"])
+            cp = invoke_aklite(["daemon"])
             # If no update is required, daemon --run-once currently returns an error, "selected target is already running"
             assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
             verify_events(0, set(), False, min_events_time)
             assert aklite_current_version() == last_installed_version
+            # restore originally running apps
             check_running_apps(apps)
 
         else:
@@ -1286,3 +1312,17 @@ def test_fioup_daemon():
                 }, False, min_events_time)
             check_running_apps(apps)
             last_installed_version = target.actual_version
+            for i in range(len(target.apps)):
+                custom_apps_list = target.apps[:i]
+                set_device_apps(custom_apps_list)
+                logger.info(f"Testing apps list: {custom_apps_list}")
+                cp = invoke_aklite(["daemon"])
+                assert aklite_current_version() == target.actual_version
+                verify_events(target.actual_version, {
+                        ('EcuDownloadStarted', None),
+                        ('EcuDownloadCompleted', True),
+                        ('EcuInstallationStarted', None),
+                        ('EcuInstallationApplied', None),
+                        ('EcuInstallationCompleted', True),
+                    }, False, min_events_time)
+                check_running_apps(custom_apps_list)
