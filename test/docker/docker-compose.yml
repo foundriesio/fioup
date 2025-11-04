@@ -28,6 +28,7 @@ services:
         - ${ETC_SOTA_DIR}:/etc/sota/conf.d
         - ${DOCKER_DATA_ROOT}:/var/lib/docker
         - docker-runtime:/var/run/docker
+        - ${HOME_DIR}:/home/dev
       working_dir: "${PWD}"
       hostname: device
       user: "root"
