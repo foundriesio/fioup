@@ -120,7 +120,7 @@ func doDaemon(cmd *cobra.Command, opts daemonOpts) {
 			continue
 		}
 
-		if reloadConfig := updater.sleep(ctx, sigHUP); reloadConfig {
+		if reloadConfig := updater.sleep(ctx, sigHUP, updater.sleepInterval); reloadConfig {
 			updater.reload(true)
 		}
 	}
@@ -128,7 +128,7 @@ func doDaemon(cmd *cobra.Command, opts daemonOpts) {
 
 // checkForCI looks to see if we are doing e2e testing and will exit the
 // the daemon.
-func (u updater) checkForCI(err error) {
+func (u *updater) checkForCI(err error) {
 	if os.Getenv("FIOUP_E2E_RUNONCE") == "1" {
 		slog.Info("e2e running, exiting daemon")
 		u.Close()
@@ -137,15 +137,15 @@ func (u updater) checkForCI(err error) {
 	}
 }
 
-func (u updater) Close() {
+func (u *updater) Close() {
 	if u.sender != nil {
 		u.sender.Stop()
 	}
 }
 
-func (u updater) sleep(ctx context.Context, sigHUP chan os.Signal) (reloadConfig bool) {
-	if u.sleepInterval > 5 {
-		slog.Info("Waiting before next check...", "interval", u.sleepInterval)
+func (u *updater) sleep(ctx context.Context, sigHUP chan os.Signal, sleepInterval time.Duration) (reloadConfig bool) {
+	if sleepInterval > time.Second*5 {
+		slog.Info("Waiting before next check...", "interval", sleepInterval)
 	}
 	select {
 	case <-ctx.Done():
@@ -155,19 +155,18 @@ func (u updater) sleep(ctx context.Context, sigHUP chan os.Signal) (reloadConfig
 	case <-sigHUP:
 		slog.Info("Received SIGHUP")
 		reloadConfig = true
-	case <-time.After(u.sleepInterval):
+	case <-time.After(sleepInterval):
 	}
 	return
 }
 
-func (u updater) checkConfig(ctx context.Context, sigHUP chan os.Signal) {
+func (u *updater) checkConfig(ctx context.Context, sigHUP chan os.Signal) {
 	if u.opts.configEnabled {
 		if configMayHaveChanged, _ := configCheck(&u.opts.fioconfig, u.configApp); configMayHaveChanged {
 			// We need to see if we were given a SIGHUP and need to reload
 			// our configuration, set sleep interval to 1 to give time to catch
-			// signal but not long enough to noticably block execution
-			u.sleepInterval = time.Second * 1
-			if reloadConfig := u.sleep(ctx, sigHUP); reloadConfig {
+			// signal but not long enough to noticeably block execution
+			if reloadConfig := u.sleep(ctx, sigHUP, time.Second*1); reloadConfig {
 				slog.Info("Reloading configuration")
 				u.reload(true)
 			}
@@ -175,7 +174,7 @@ func (u updater) checkConfig(ctx context.Context, sigHUP chan os.Signal) {
 	}
 }
 
-func (u updater) checkUpdates(ctx context.Context) (nowait bool, err error) {
+func (u *updater) checkUpdates(ctx context.Context) (nowait bool, err error) {
 	err = api.Update(ctx, config, -1,
 		api.WithGatewayClient(u.gw),
 		api.WithEventSender(u.sender),
