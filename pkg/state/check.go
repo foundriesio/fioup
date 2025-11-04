@@ -142,7 +142,7 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 	} else {
 		if s.ToVersion == -1 {
 			if s.SyncCurrent {
-				u.ToTarget = u.FromTarget
+				u.ToTarget = u.getSyncTarget()
 				if u.ToTarget.ID == target.UnknownTarget.ID {
 					return fmt.Errorf("could not find current target to be synced")
 				}
@@ -160,7 +160,7 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 					slog.Debug("Checking failed updates count for target", "target_id", u.ToTarget.ID, "count", count)
 					if count >= s.MaxAttempts {
 						slog.Info("Latest target installation attempts has reached the limit. Syncing current target", "latest_target_id", u.ToTarget.ID, "count", count)
-						u.ToTarget = u.FromTarget
+						u.ToTarget = u.getSyncTarget()
 					}
 				}
 			}
@@ -172,6 +172,19 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 		}
 	}
 	return nil
+}
+
+func (u *UpdateContext) getSyncTarget() target.Target {
+	// If the current target is still listed, then get its full info from the targets list
+	// This is required in order to have all apps in updateCtx.ToTarget, as the running
+	// target may have been installed while some apps were disabled
+	targetFromList := u.Targets.GetTargetByVersion(u.FromTarget.Version)
+	if targetFromList.ID != target.UnknownTarget.ID {
+		return targetFromList
+	} else {
+		slog.Debug("current target not found in the targets list from the server", "current_target_id", u.FromTarget.ID)
+		return u.FromTarget
+	}
 }
 
 func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
