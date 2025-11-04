@@ -29,7 +29,7 @@ In general, contributors should develop on branches based off of `main` and pull
     git remote add upstream https://github.com/foundriesio/fioup.git
     ```
 
-1. Make your changes, add tests, and make sure the tests still pass.
+1. Make your changes, add tests, and make sure the tests still pass. To check changes to documentation, first run `vale sync`, then `vale <file>`.
 1. Commit your changes using the [DCO](https://developercertificate.org/). You can attest to the DCO by commiting with the **-s** or **--signoff** options or manually adding the "Signed-off-by":
 
     ```bash
