@@ -27,6 +27,8 @@ chown -R dev:devgrp /var/lib/docker
 
 ln -sfn ${PWD}/bin/fioup /usr/local/bin/fioup
 ln -sfn ${PWD}/bin/fioup /usr/local/bin/docker-credential-fioup
+chmod +x ${PWD}/debian/fioconfig-handlers/aktualizr-toml-update
+ln -sfn ${PWD}/debian/fioconfig-handlers/aktualizr-toml-update /usr/share/fioconfig/handlers/aktualizr-toml-update
 
 # Run the command as the created user
 exec gosu $DEV_USER:$DEV_GROUP "$@"
