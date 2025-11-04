@@ -1,3 +1,4 @@
+test DCO
 # fioup
 A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](https://www.compose-spec.io/) published via [the FoundriesFactory™ platform](https://docs.foundries.io/latest).
 
