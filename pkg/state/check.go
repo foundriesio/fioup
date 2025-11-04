@@ -90,63 +90,10 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	}
 	updateCtx.Targets = targets
 
-	if updateCtx.Mode == UpdateModeResume {
-		// Get ToTarget if resuming update
-		ongoingUpdate := updateCtx.UpdateRunner.Status()
-		target, err := getTargetOutOfUpdate(&ongoingUpdate)
-		if err != nil {
-			return ErrInvalidOngoingUpdate
-		}
-		updateCtx.ToTarget = *target
-		if s.ToVersion != -1 {
-			// make sure ToVersion matches the ongoing update, otherwise fail
-			if updateCtx.ToTarget.Version != s.ToVersion {
-				return fmt.Errorf("cannot start or resume update to version %d since there is an ongoing update to version %d",
-					s.ToVersion, updateCtx.ToTarget.Version)
-			}
-		} else {
-			if s.RequireLatest {
-				// When running in daemon mode, do not resume the ongoing update if the latest target has changed
-				// Calling code is expected to cancel the ongoing update in this case
-				latestTarget := targets.GetLatestTarget()
-				if latestTarget.ID != updateCtx.ToTarget.ID {
-					slog.Debug("Latest target is not the same as the ongoing update target, and should be cancelled", "ongoing_update_target_id", updateCtx.ToTarget.ID, "latest_target_id", latestTarget.ID)
-					return ErrNewerVersionIsAvailable
-				}
-			}
-		}
-	} else {
-		if s.ToVersion == -1 {
-			if s.SyncCurrent {
-				updateCtx.ToTarget = updateCtx.FromTarget
-				if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
-					return fmt.Errorf("could not find current target to be synced")
-				}
-			} else {
-				updateCtx.ToTarget = targets.GetLatestTarget()
-				if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
-					return fmt.Errorf("could not find latest target: %w", err)
-				}
-			}
-			if s.MaxAttempts > 0 {
-				count, err := update.CountFailedUpdates(updateCtx.Config.ComposeConfig(), updateCtx.ToTarget.ID)
-				if err != nil {
-					slog.Warn("Could not count failed updates for target", "target_id", updateCtx.ToTarget.ID, "error", err)
-				} else {
-					slog.Debug("Checking failed updates count for target", "target_id", updateCtx.ToTarget.ID, "count", count)
-					if count >= s.MaxAttempts {
-						slog.Info("Latest target installation attempts has reached the limit. Syncing current target", "latest_target_id", updateCtx.ToTarget.ID, "count", count)
-						updateCtx.ToTarget = updateCtx.FromTarget
-					}
-				}
-			}
-		} else {
-			updateCtx.ToTarget = targets.GetTargetByVersion(s.ToVersion)
-			if updateCtx.ToTarget.ID == target.UnknownTarget.ID {
-				return fmt.Errorf("could not find target with version %d: %w", s.ToVersion, err)
-			}
-		}
+	if err := updateCtx.selectToTarget(s); err != nil {
+		return err
 	}
+
 	updateCtx.ToTarget.ShortlistApps(updateCtx.Config.GetEnabledApps())
 	if updateCtx.ToTarget.ID == updateCtx.FromTarget.ID {
 		updateCtx.Type = UpdateTypeSync
@@ -162,6 +109,67 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		// If all current target apps are fetched, installed, and running, then no update is needed - hence ErrCheckNoUpdate is returned.
 		slog.Info("Skipping running target", "target_id", updateCtx.ToTarget.ID)
 		return ErrCheckNoUpdate
+	}
+	return nil
+}
+
+func (u *UpdateContext) selectToTarget(s *Check) error {
+	if u.Mode == UpdateModeResume {
+		// Get ToTarget if resuming update
+		ongoingUpdate := u.UpdateRunner.Status()
+		target, err := getTargetOutOfUpdate(&ongoingUpdate)
+		if err != nil {
+			return ErrInvalidOngoingUpdate
+		}
+		u.ToTarget = *target
+		if s.ToVersion != -1 {
+			// make sure ToVersion matches the ongoing update, otherwise fail
+			if u.ToTarget.Version != s.ToVersion {
+				return fmt.Errorf("cannot start or resume update to version %d since there is an ongoing update to version %d",
+					s.ToVersion, u.ToTarget.Version)
+			}
+		} else {
+			if s.RequireLatest {
+				// When running in daemon mode, do not resume the ongoing update if the latest target has changed
+				// Calling code is expected to cancel the ongoing update in this case
+				latestTarget := u.Targets.GetLatestTarget()
+				if latestTarget.ID != u.ToTarget.ID {
+					slog.Debug("Latest target is not the same as the ongoing update target, and should be cancelled", "ongoing_update_target_id", u.ToTarget.ID, "latest_target_id", latestTarget.ID)
+					return ErrNewerVersionIsAvailable
+				}
+			}
+		}
+	} else {
+		if s.ToVersion == -1 {
+			if s.SyncCurrent {
+				u.ToTarget = u.FromTarget
+				if u.ToTarget.ID == target.UnknownTarget.ID {
+					return fmt.Errorf("could not find current target to be synced")
+				}
+			} else {
+				u.ToTarget = u.Targets.GetLatestTarget()
+				if u.ToTarget.ID == target.UnknownTarget.ID {
+					return fmt.Errorf("could not find latest target")
+				}
+			}
+			if s.MaxAttempts > 0 {
+				count, err := update.CountFailedUpdates(u.Config.ComposeConfig(), u.ToTarget.ID)
+				if err != nil {
+					slog.Warn("Could not count failed updates for target", "target_id", u.ToTarget.ID, "error", err)
+				} else {
+					slog.Debug("Checking failed updates count for target", "target_id", u.ToTarget.ID, "count", count)
+					if count >= s.MaxAttempts {
+						slog.Info("Latest target installation attempts has reached the limit. Syncing current target", "latest_target_id", u.ToTarget.ID, "count", count)
+						u.ToTarget = u.FromTarget
+					}
+				}
+			}
+		} else {
+			u.ToTarget = u.Targets.GetTargetByVersion(s.ToVersion)
+			if u.ToTarget.ID == target.UnknownTarget.ID {
+				return fmt.Errorf("could not find target with version %d", s.ToVersion)
+			}
+		}
 	}
 	return nil
 }
