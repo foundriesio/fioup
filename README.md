@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+=======
+sdsadasd
+dsqad
+idsadsa
+test gpg
+test DCO
+>>>>>>> 37a8005 (another test)
 # fioup
 A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](https://www.compose-spec.io/) published via [the FoundriesFactory™ platform](https://docs.foundries.io/latest).
 
