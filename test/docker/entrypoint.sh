@@ -12,7 +12,7 @@ fi
 
 # Create a user with the specified UID and GID if it doesn't already exist
 if ! getent passwd $DEV_USER >/dev/null; then
-    useradd -u $DEV_USER -g $DEV_GROUP -m dev
+    useradd -u $DEV_USER -g $DEV_GROUP -d /home/dev dev
 fi
 
 # Change ownership of the home directory to the appuser
