@@ -16,8 +16,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type EventTypeValue string
-
 const (
 	DownloadStarted       EventTypeValue = "EcuDownloadStarted"
 	DownloadCompleted     EventTypeValue = "EcuDownloadCompleted"
@@ -26,34 +24,40 @@ const (
 	InstallationCompleted EventTypeValue = "EcuInstallationCompleted"
 )
 
-type EventSender struct {
-	dbPath   string
-	gwClient *client.GatewayClient
+type (
+	EventSender struct {
+		dbPath   string
+		gwClient *client.GatewayClient
 
-	ticker    *time.Ticker
-	stopChan  chan struct{}
-	flushChan chan struct{}
+		ticker    *time.Ticker
+		stopChan  chan struct{}
+		flushChan chan struct{}
 
-	wg sync.WaitGroup
-}
+		wg sync.WaitGroup
+	}
 
-type DgEvent struct {
-	CorrelationId string `json:"correlationId"`
-	Success       *bool  `json:"success"`
-	TargetName    string `json:"targetName"`
-	Version       string `json:"version"`
-	Details       string `json:"details,omitempty"`
-}
-type DgEventType struct {
-	Id      EventTypeValue `json:"id"`
-	Version int            `json:"version"`
-}
-type DgUpdateEvent struct {
-	Id         string      `json:"id"`
-	DeviceTime string      `json:"deviceTime"`
-	Event      DgEvent     `json:"event"`
-	EventType  DgEventType `json:"eventType"`
-}
+	EventTypeValue string
+
+	DgEvent struct {
+		CorrelationId string `json:"correlationId"`
+		Success       *bool  `json:"success"`
+		TargetName    string `json:"targetName"`
+		Version       string `json:"version"`
+		Details       string `json:"details,omitempty"`
+	}
+
+	DgEventType struct {
+		Id      EventTypeValue `json:"id"`
+		Version int            `json:"version"`
+	}
+
+	DgUpdateEvent struct {
+		Id         string      `json:"id"`
+		DeviceTime string      `json:"deviceTime"`
+		Event      DgEvent     `json:"event"`
+		EventType  DgEventType `json:"eventType"`
+	}
+)
 
 func sendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	res, err := client.Post("/events", event)
