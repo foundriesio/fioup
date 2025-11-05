@@ -60,6 +60,7 @@ type (
 
 	EnqueueEventOptions struct {
 		Success *bool
+		Details string
 	}
 	EnqueueEventOption func(*EnqueueEventOptions)
 )
@@ -67,6 +68,12 @@ type (
 func WithEventStatus(success bool) EnqueueEventOption {
 	return func(opts *EnqueueEventOptions) {
 		opts.Success = &success
+	}
+}
+
+func WithEventDetails(details string) EnqueueEventOption {
+	return func(opts *EnqueueEventOptions) {
+		opts.Details = details
 	}
 }
 
@@ -171,6 +178,7 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 			Success:       opts.Success,
 			TargetName:    toTarget.ID,
 			Version:       strconv.Itoa(toTarget.Version),
+			Details:       opts.Details,
 		},
 		EventType: DgEventType{
 			Id:      eventType,
