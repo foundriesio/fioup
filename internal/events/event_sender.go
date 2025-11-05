@@ -55,27 +55,6 @@ type DgUpdateEvent struct {
 	EventType  DgEventType `json:"eventType"`
 }
 
-func NewEvent(eventType EventTypeValue, details string, success *bool, correlationId string, targetName string, version int) []DgUpdateEvent {
-	evt := []DgUpdateEvent{
-		{
-			Id:         uuid.New().String(),
-			DeviceTime: time.Now().Format(time.RFC3339),
-			Event: DgEvent{
-				CorrelationId: correlationId,
-				Success:       success,
-				TargetName:    targetName,
-				Version:       strconv.Itoa(version),
-				Details:       details,
-			},
-			EventType: DgEventType{
-				Id:      eventType,
-				Version: 0,
-			},
-		},
-	}
-	return evt
-}
-
 func sendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	res, err := client.Post("/events", event)
 	if err != nil {
@@ -169,8 +148,20 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 	if len(success) > 0 {
 		completionStatus = &success[0]
 	}
-	evt := NewEvent(eventType, "", completionStatus, updateID, toTarget.ID, toTarget.Version)
-	err := SaveEvent(s.dbPath, &evt[0])
+	err := SaveEvent(s.dbPath, &DgUpdateEvent{
+		Id:         uuid.New().String(),
+		DeviceTime: time.Now().Format(time.RFC3339),
+		Event: DgEvent{
+			CorrelationId: updateID,
+			Success:       completionStatus,
+			TargetName:    toTarget.ID,
+			Version:       strconv.Itoa(toTarget.Version),
+		},
+		EventType: DgEventType{
+			Id:      eventType,
+			Version: 0,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("error saving event: %w", err)
 	}
