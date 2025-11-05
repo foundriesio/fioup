@@ -57,7 +57,18 @@ type (
 		Event      DgEvent     `json:"event"`
 		EventType  DgEventType `json:"eventType"`
 	}
+
+	EnqueueEventOptions struct {
+		Success *bool
+	}
+	EnqueueEventOption func(*EnqueueEventOptions)
 )
+
+func WithEventStatus(success bool) EnqueueEventOption {
+	return func(opts *EnqueueEventOptions) {
+		opts.Success = &success
+	}
+}
 
 func sendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
 	res, err := client.Post("/events", event)
@@ -147,17 +158,17 @@ func (s *EventSender) Stop() {
 	slog.Debug("Events sender stopped")
 }
 
-func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, toTarget target.Target, success ...bool) error {
-	var completionStatus *bool
-	if len(success) > 0 {
-		completionStatus = &success[0]
+func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, toTarget target.Target, options ...EnqueueEventOption) error {
+	opts := &EnqueueEventOptions{}
+	for _, opt := range options {
+		opt(opts)
 	}
 	err := SaveEvent(s.dbPath, &DgUpdateEvent{
 		Id:         uuid.New().String(),
 		DeviceTime: time.Now().Format(time.RFC3339),
 		Event: DgEvent{
 			CorrelationId: updateID,
-			Success:       completionStatus,
+			Success:       opts.Success,
 			TargetName:    toTarget.ID,
 			Version:       strconv.Itoa(toTarget.Version),
 		},
