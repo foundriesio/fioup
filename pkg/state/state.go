@@ -74,7 +74,11 @@ var (
 )
 
 func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) {
-	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, success...); err != nil {
+	var opts []events.EnqueueEventOption
+	if len(success) > 0 {
+		opts = append(opts, events.WithEventStatus(success[0]))
+	}
+	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, opts...); err != nil {
 		slog.Error("failed to send event", "event", event, "err", err)
 	}
 }
