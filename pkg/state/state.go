@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -78,7 +79,56 @@ func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) 
 	if len(success) > 0 {
 		opts = append(opts, events.WithEventStatus(success[0]))
 	}
+	opts = append(opts, events.WithEventDetails(u.getEventDetails(event)))
 	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, opts...); err != nil {
 		slog.Error("failed to send event", "event", event, "err", err)
 	}
+}
+
+func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue) string {
+	type (
+		updateInfo struct {
+			Type     UpdateType `json:"type"`
+			Mode     UpdateMode `json:"mode"`
+			State    string     `json:"state"`
+			Progress int        `json:"progress"`
+		}
+		target struct {
+			ID   string   `json:"id"`
+			Apps []string `json:"apps"`
+		}
+		current struct {
+			ID   string   `json:"id"`
+			Apps []string `json:"apps"`
+		}
+		updateDetails struct {
+			Update  updateInfo `json:"update"`
+			Target  target     `json:"target"`
+			Current current    `json:"current"`
+		}
+	)
+
+	switch eventType {
+	case events.DownloadStarted:
+		updateStatus := u.UpdateRunner.Status()
+		updateDetails := updateDetails{
+			Update: updateInfo{
+				Type:     u.Type,
+				Mode:     u.Mode,
+				State:    updateStatus.State.String(),
+				Progress: updateStatus.Progress,
+			},
+			Target: target{
+				ID:   u.ToTarget.ID,
+				Apps: u.ToTarget.AppURIs(),
+			},
+			Current: current{
+				ID:   u.FromTarget.ID,
+				Apps: u.FromTarget.AppURIs(),
+			},
+		}
+		data, _ := json.MarshalIndent(updateDetails, "", "  ")
+		return string(data)
+	}
+	return ""
 }
