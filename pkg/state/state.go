@@ -76,17 +76,19 @@ var (
 
 func (u *UpdateContext) SendEvent(event events.EventTypeValue, eventErr ...error) {
 	var opts []events.EnqueueEventOption
+	var eventError error
 	if len(eventErr) > 0 {
 		eventStatus := eventErr[0] == nil
 		opts = append(opts, events.WithEventStatus(eventStatus))
+		eventError = eventErr[0]
 	}
-	opts = append(opts, events.WithEventDetails(u.getEventDetails(event)))
+	opts = append(opts, events.WithEventDetails(u.getEventDetails(event, eventError)))
 	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, opts...); err != nil {
 		slog.Error("failed to send event", "event", event, "err", err)
 	}
 }
 
-func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue) string {
+func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventError error) string {
 	type (
 		updateInfo struct {
 			Type     UpdateType `json:"type"`
@@ -107,11 +109,20 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue) string 
 			Target  target     `json:"target"`
 			Current current    `json:"current"`
 		}
+		fetchSize struct {
+			Bytes int64 `json:"bytes"`
+			Blobs int   `json:"blobs"`
+		}
+		downloadCompleteDetails struct {
+			Fetched fetchSize `json:"fetched"`
+			Error   string    `json:"error,omitempty"`
+		}
 	)
+	var detailsByte []byte
 
+	updateStatus := u.UpdateRunner.Status()
 	switch eventType {
 	case events.DownloadStarted:
-		updateStatus := u.UpdateRunner.Status()
 		updateDetails := updateDetails{
 			Update: updateInfo{
 				Type:     u.Type,
@@ -128,8 +139,18 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue) string 
 				Apps: u.FromTarget.AppURIs(),
 			},
 		}
-		data, _ := json.MarshalIndent(updateDetails, "", "  ")
-		return string(data)
+		detailsByte, _ = json.MarshalIndent(updateDetails, "", "  ")
+	case events.DownloadCompleted:
+		downloadCompleteDetails := downloadCompleteDetails{
+			Fetched: fetchSize{
+				Bytes: updateStatus.FetchedBytes,
+				Blobs: updateStatus.FetchedBlobs,
+			},
+		}
+		if eventError != nil {
+			downloadCompleteDetails.Error = eventError.Error()
+		}
+		detailsByte, _ = json.MarshalIndent(downloadCompleteDetails, "", "  ")
 	}
-	return ""
+	return string(detailsByte)
 }
