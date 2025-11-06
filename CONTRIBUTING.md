@@ -1,4 +1,4 @@
-# Contributing to fioup
+# Contributing to Fioup
 
 Hi there!
 We’re thrilled that you’d like to contribute to this project.
@@ -8,7 +8,7 @@ Your help is essential for keeping this project great and for making it better.
 
 In general, contributors should develop on branches based off of `main` and pull requests should be made against `main`.
 
-## Submitting a pull request
+## Submitting a Pull Request
 
 1. Please read our [code of conduct](CODE-OF-CONDUCT.md) and [license](LICENSE).
 1. [Fork](https://github.com/foundriesio/fioup/fork) and clone the repository.
@@ -29,8 +29,10 @@ In general, contributors should develop on branches based off of `main` and pull
     git remote add upstream https://github.com/foundriesio/fioup.git
     ```
 
-1. Make your changes, add tests, and make sure the tests still pass. To check changes to documentation, first run `vale sync`, then `vale <file>`.
-1. Commit your changes using the [DCO](https://developercertificate.org/). You can attest to the DCO by commiting with the **-s** or **--signoff** options or manually adding the "Signed-off-by":
+1. Make your changes, add tests, and make sure the tests still pass.
+   To check changes to documentation, first run `vale sync`, then `vale <file>`.
+1. Commit your changes using the [DCO](https://developercertificate.org/).
+   You can attest to the DCO by commiting with the `-s` or `--signoff` options or manually adding the "Signed-off-by":
 
     ```bash
     git commit -s -m "Really useful commit message"`
@@ -48,7 +50,8 @@ In general, contributors should develop on branches based off of `main` and pull
     git push -u origin <my-branch-name>
     ```
 
-    The `-u` is shorthand for `--set-upstream`. This will set up the tracking reference so subsequent runs of `git push` or `git pull` can omit the remote and branch.
+    The `-u` is shorthand for `--set-upstream`.
+    This will set up the tracking reference so subsequent runs of `git push` or `git pull` can omit the remote and branch.
 
 1. [Submit a pull request](https://github.com/foundriesio/fioup/pulls) from your branch to `main`.
 1. Pat yourself on the back and wait for your pull request to be reviewed.
@@ -60,4 +63,4 @@ Here are a few things you can do that will increase the likelihood of your pull 
 - Keep your change as focused as possible.
   If you want to make multiple independent changes, please consider submitting them as separate pull requests.
 - Write a [good commit message](https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
-- It's a good idea to arrange a discussion with other developers to ensure there is consensus on large features, architecture changes, and other core code changes. PR reviews will go much faster when there are no surprises.
+- It is a good idea to arrange a discussion with other developers to ensure there is consensus on large features, architecture changes, and other core code changes. PR reviews will go much faster when there are no surprises.
