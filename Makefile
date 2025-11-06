@@ -5,12 +5,18 @@ LINTER = golangci-lint
 TAGS = disable_pkcs11
 DEBS_DIR ?= $(BUILD_DIR)
 
+PKG := main
+VERSION := $(shell git describe --tags --always --dirty)
+COMMIT  := $(shell git rev-parse --short HEAD)
+DATE    := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+LDFLAGS := -X '$(PKG).Version=$(VERSION)' -X '$(PKG).Commit=$(COMMIT)' -X '$(PKG).Date=$(DATE)'
+
 .PHONY: all build clean test format manpages bash-completion
 
 all: build manpages bash-completion
 
 build:
-	@go build -o $(BUILD_DIR)/$(BINARY_NAME) -tags $(TAGS) $(MAIN)
+	@go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) -tags $(TAGS) $(MAIN)
 
 manpages:
 	@go run -tags disable_pkcs11,disable_main $(MAIN) manpages $(BUILD_DIR)/man

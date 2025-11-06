@@ -42,7 +42,7 @@ var (
 
 			logger := slog.New(handler)
 			slog.SetDefault(logger)
-			if cmd.Name() != "register" {
+			if cmd.Name() != "register" && cmd.Name() != "version" {
 				// Load configuration unless the "register" command is invoked
 				var err error
 				config, err = cfg.NewConfig(configPaths)
