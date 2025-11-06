@@ -53,11 +53,18 @@ jobs:
           make deb DEBS_DIR=/tmp/debs
 
           # sanity check
-          sudo dpkg -i /tmp/debs/fioup_*.deb
-          /usr/bin/fioup --help
+          docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
+          set -ex
 
-          # linting
-          lintian /tmp/debs/fioup_*.deb
+          apt update && apt install -y lintian /host-tmp/debs/fioup_*.deb
+
+          lintian /host-tmp/debs/fioup_*.deb
+
+          test -x /usr/bin/fioup
+          test -x /usr/bin/docker-credential-fioup
+          test -f /usr/share/bash-completion/completions/fioup
+          test -f /lib/systemd/system/fioup.service
+          EOF
 
           # The version will look like v1.2.3. Debian needs the "1.2.3"
           VERSION="${{ env.version }}"
