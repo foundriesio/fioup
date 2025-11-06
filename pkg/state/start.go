@@ -40,7 +40,7 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	} else {
 		err = fmt.Errorf("%w: %s", ErrStartFailed, err.Error())
 	}
-	updateCtx.SendEvent(events.InstallationCompleted, err == nil)
+	updateCtx.SendEvent(events.InstallationCompleted, err)
 	return err
 }
 

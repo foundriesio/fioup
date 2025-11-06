@@ -26,7 +26,7 @@ func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	case update.StateInitialized, update.StateFetching:
 		updateCtx.SendEvent(events.DownloadStarted)
 		err = updateCtx.UpdateRunner.Fetch(ctx, compose.WithFetchProgress(s.ProgressHandler))
-		updateCtx.SendEvent(events.DownloadCompleted, err == nil)
+		updateCtx.SendEvent(events.DownloadCompleted, err)
 	default:
 		updateCtx.AlreadyFetched = true
 	}

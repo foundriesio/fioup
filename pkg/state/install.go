@@ -31,7 +31,7 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		updateCtx.SendEvent(events.InstallationApplied)
 	} else {
 		// If installation failed, it means that update has completed with failure, so send InstallationCompleted event with failure
-		updateCtx.SendEvent(events.InstallationCompleted, false)
+		updateCtx.SendEvent(events.InstallationCompleted, err)
 	}
 	return err
 }
