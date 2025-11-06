@@ -74,10 +74,11 @@ var (
 	UpdateTypeSync      UpdateType = "sync"
 )
 
-func (u *UpdateContext) SendEvent(event events.EventTypeValue, success ...bool) {
+func (u *UpdateContext) SendEvent(event events.EventTypeValue, eventErr ...error) {
 	var opts []events.EnqueueEventOption
-	if len(success) > 0 {
-		opts = append(opts, events.WithEventStatus(success[0]))
+	if len(eventErr) > 0 {
+		eventStatus := eventErr[0] == nil
+		opts = append(opts, events.WithEventStatus(eventStatus))
 	}
 	opts = append(opts, events.WithEventDetails(u.getEventDetails(event)))
 	if err := u.EventSender.EnqueueEvent(event, u.UpdateRunner.Status().ID, u.ToTarget, opts...); err != nil {
