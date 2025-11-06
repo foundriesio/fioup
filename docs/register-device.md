@@ -1,51 +1,63 @@
-# Registering a device
+# Registering a Device
 
-This section assumes you have created a FoundriesFactory. Please follow
+This section assumes you have created a Factory. Please follow
 [sign up process](https://docs.foundries.io/latest/getting-started/signup/index.html)
 if not.
 
 The registration command does several things:
- * Creates a mTLS signing request for the Foundries backend.
- * Creates a device entry in the Foundries backend.
- * Stores configuration and connection material under `/var/sota`.
- * Ensures the Docker credential helper, `docker-credential-fioup`, is
-   present. If not, it will try to symlink `fioup` -> `docker-credential-fioup`.
- * Configure `$HOME/.docker/config.json` to use this helper for
-   authenticating with `hub.foundries.io`.
 
+* Creates a mTLS signing request for the FoundriesFactory™ Platform backend.
+* Creates a device entry in the backend.
+* Stores configuration and connection material under `/var/sota`.
+* Ensures the Docker credential helper, `docker-credential-fioup`, is
+  present. If not, it will try to symlink `fioup` -> `docker-credential-fioup`.
+* Configure `$HOME/.docker/config.json` to use this helper for
+  authenticating with `hub.foundries.io`.
 
-## As root (recommened)
+## As Root (Recommended)
+
 ```
  sudo fioup register --factory <FACTORY_NAME> --name <NAME_FOR_DEVICE>
 ```
 
-## As non-root user (advanced)
-Provide the user, `$USER`, with read and write access to the directory used by `fioup` to store configuration files, metadata, and Compose App blobs.
+## As Non-Root User (Advanced)
+
+Provide the user (`$USER`) with read/write access to the directory used by `fioup` to store configuration files, metadata, and Compose App blobs.
+
 ```
  sudo chown -R $USER /var/sota
 ```
-Add the user to the docker group so that `fioup`, when invoked by this user, can load app container images into the Docker Engine storage (requires access to the Docker Unix socket at `/var/run/docker.sock`).
+
+Add the user to the Docker group so that `fioup` —when invoked by this user—can load app container images into the Docker Engine storage (requires access to the Docker Unix socket at `/var/run/docker.sock`).
 You need to logout and log back in to apply this change.
+
 ```
  sudo usermod -aG docker $USER
+
 ```
-The host/device is now ready for registration with the FoundriesFactory.
-```
+
+The host/device is now ready for registration with your Factory.
+
+ ```
  fioup register --factory <FACTORY_NAME> --name <NAME_FOR_DEVICE>
 ```
 
-**NOTE** If the credential helper isn't installed (i.e. fioup was not
-installed with as a Debian package), then the user must have a writable
-directory in their `PATH` for fioup to setup the credential helper.
-Altentatively, you can create a symlink with something like:
-```
- sudo ln -s <path to fioup> /usr/local/bin/docker-credential-fioup
-```
+>[!NOTE]
+> If the credential helper is not installed (i.e. fioup was not
+> installed with as a Debian package), then the user must have a writable
+> directory in their `PATH` for fioup to setup the credential helper.
+> Alternatively, you can create a symlink with something like:
+>
+> ```
+>  sudo ln -s <path to fioup> /usr/local/bin/docker-credential-fioup
+> ```
 
 ## Example
+
 ```
  sudo fioup register --factory example-factory --name device-1
 ```
+
 ```
  Visit the link below in your browser to authorize this new device. This link will expire in 15 minutes.
   Device UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -55,18 +67,22 @@ Altentatively, you can create a symlink with something like:
  Device is now registered. -
 ```
 
-## Verifying registration
+## Verifying Registration
+
 The `check` subcommand can be used to verify connectivity with the
-Foundries.io backend:
+FoundriesFactory backend:
+
 ```
  $ sudo fioup check
 ```
 
-## Changing apps that run
+## Changing Apps That Run
+
 The default behavior of `fioup` is to run all apps defined in a Target. This
 can be overridden by setting the `pacman.compose_apps` field in
 `/var/sota/sota.toml` to a comma separated list of applications. Examples
 include:
+
 ```
 [pacman]
 # Run two apps, foo and bar
@@ -77,8 +93,9 @@ compose_apps = " "
 ```
 
 Fioup parses and merges configuration options using the follow logic:
-   * `/usr/lib/sota/conf.d/*.toml`
-   * `/var/sota/sota.toml`
-   * `/etc/sota/conf.d/*.toml`
+
+* `/usr/lib/sota/conf.d/*.toml`
+* `/var/sota/sota.toml`
+* `/etc/sota/conf.d/*.toml`
 
 This provides the user a framework for overriding configuration options.

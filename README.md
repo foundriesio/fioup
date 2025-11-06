@@ -1,5 +1,6 @@
-# fioup
-A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](https://www.compose-spec.io/) published via [the FoundriesFactory™ platform](https://docs.foundries.io/latest).
+# Fioup
+
+A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](https://www.compose-spec.io/) published via [the FoundriesFactory™ Platform](https://docs.foundries.io/latest).
 
 ## Installation
 [See the installation guide.](docs/install.md)
@@ -15,4 +16,5 @@ A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](
 
 ## License
 
-*fioup* is licensed under the [BSD 3-Clause Clear License](https://spdx.org/licenses/BSD-3-Clause-Clear.html). See [LICENSE](LICENSE) for the full license text.
+*fioup* is licensed under the [BSD 3-Clause Clear License](https://spdx.org/licenses/BSD-3-Clause-Clear.html).
+See [LICENSE](LICENSE) for the full license text.
