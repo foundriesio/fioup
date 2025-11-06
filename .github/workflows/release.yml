@@ -53,7 +53,7 @@ jobs:
           make deb DEBS_DIR=/tmp/debs
 
           # sanity check
-          sudo dpkg -i /tmp/debs/fioup_*.deb
+          sudo apt update && apt install -y /tmp/debs/fioup_*.deb
           /usr/bin/fioup --help
 
           # linting
