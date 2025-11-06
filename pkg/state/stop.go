@@ -31,7 +31,7 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	err := compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), updateCtx.FromTarget.AppURIs())
 	if err != nil {
 		// If stopping apps failed, it means that update has completed with failure, so send InstallationCompleted event with failure
-		updateCtx.SendEvent(events.InstallationCompleted, false)
+		updateCtx.SendEvent(events.InstallationCompleted, err)
 	}
 	return err
 }
