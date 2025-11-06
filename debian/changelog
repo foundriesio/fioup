@@ -1,4 +1,99 @@
-fioup (0.9.0) UNRELEASED; urgency=medium
+fioup (1.0.0) UNRELEASED; urgency=medium
+
+  [ Mike Sul ]
+  * error: Print cmd run error as non-log message
+  * api: Remove auto-rollback if update failure
+  * go.mod: Bump composeapp version f165a6f
+  * update: Add option to force update
+  * update: Add option to sync the current target
+  * client: Use a pointer receiver for all client methods
+  * client: Add app states reporting
+  * update: Add options to pass gateway client and event sender instances
+  * fetch: Force update by default
+  * install: Skip install if started or starting
+  * go.mod: Bump composeapp version 45d0288
+  * state: Remove printing info from states' implementation
+  * api: Move update runner to api package
+  * state: Add stop state
+  * daemon: Print state processing info
+  * check: Extend context and print more details
+  * init: Add and print more info about initialized update
+  * fetch: Print fetch progress and status
+  * install: Print install progress
+  * start: Print app start progress
+  * state_handler: Rename parameter
+  * daemon: Print update status in daemon mode
+  * docs: register:  Use "-R" instead "-r" in chown
+  * docs: register: Extend non-root registration
+  * check: Add option to enable TUF support
+  * check: Store loaded targets in the update context
+  * api: Use check state in the check API function
+  * check: Refactor code checking if update is needed
+  * status: Introduce package for status functionality
+  * status: Use map for app statuses
+  * check: Check full status of apps if required
+  * state_handler: Fix field names in the init output
+  * debian: Add linting and tiny fixes
+  * debian: Add container engine deps
+  * check: Determine and use app diff consistently.
+  * check: Check app diff even if target has no app
+  * README: Improve the root readme
+  * docs: Add "how it works" section and some cleanups
+  * debian: Add dependency on "docker compose"
+
+  [ Andre Detsch ]
+  * e2e-tests: Adjust tests logic after disabling auto rollback in fioup CLI
+  * e2e-tests: Call 'fioup update --sync-current' after failed updates
+  * update: Add MaxAttempts to api.Update, limiting installation retries
+  * check: Allow limiting latest version by env var
+  * daemon: Add --run-once option (hidden)
+  * daemon: cancel current update if newer version is available
+  * check: allow resuming an update if the target is not in the target list
+  * ci: Speed up CI by running separate e2e tests in parallel
+  * daemon: Adjust installation retry and rollback behavior
+  * daemon: Exit with error if --run-once is used and error occurs
+  * e2e-tests: Allow a min time to be passed as parameter to verify_events
+  * e2e-tests: Add tests for fioup daemon mode
+  * daemon: Exit with error if event sender or gateway client creation fails
+  * daemon: Fix handling of target start errors
+  * e2e-tests: Set FIOUP_E2E_RUNONCE env var instead of using --run-once
+  * fioconfig: Bump to 0c6d0ac
+  * events: Log error when trying to flush events on stopped sender
+  * check: Move code from Check.Execute to a new selectToTarget function
+  * check: Use full current target when doing sync update
+  * daemon: Fix handling of events sender and gw client during config reload
+  * docker: Persist home directory for dev user
+  * docker: Adjust container to allow execution of fioconfig features
+  * e2e-tests: Verify fioconfig functionality in daemon mode
+  * debian: Set executable flag of aktualizr-toml-update script
+
+  [ Andy Doan ]
+  * register: Fix logic for installing docker cred helper
+  * Makefile: Improve `deb` output
+  * Makefile: Test with same flags that we build with
+  * daemon: Move loading of apis into helper function
+  * daemon: Move polling interval logic into helper function
+  * daemon: Break out update logic into its own function
+  * daemon: Move sleep logic into a helper function
+  * daemon: Introduce an `updater` type
+  * daemon: Handle Ctrl-C properly
+  * daemon: Add logic to reload configuration on SIGHUP
+  * daemon: Change run-once logic
+  * cmd: Add `config-check` subcommand
+  * cmd: Add `config-extract` command
+  * cmd: Add `run-and-report` subcommand
+  * daemon: Add fioconfig logic into main loop
+  * Add on-change handler for device config
+  * cmd: Choose a sensible log handler by default
+  * cmd: Assert permission for `secrets-dir`
+  * docs: Add documentation for fioconfig
+
+  [ Katrina Prosise ]
+  * Add prose linter
+
+ -- Mike Sul <bot@foundries.io>  Thu, 06 Nov 2025 09:42:48 +0000
+
+fioup (0.9.0) released; urgency=medium
 
   [ Andy Doan ]
   * debian: Update release scripts to support arm64
