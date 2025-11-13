@@ -4,9 +4,12 @@
 package config
 
 import (
+	"crypto/x509"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -15,6 +18,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/compose"
 	v1 "github.com/foundriesio/composeapp/pkg/compose/v1"
 	"github.com/foundriesio/fioconfig/sotatoml"
+	"github.com/foundriesio/fioconfig/transport"
 )
 
 type (
@@ -23,6 +27,12 @@ type (
 		composeConfig    *compose.Config
 		dgBaseURL        *url.URL
 		storageWatermark uint
+		proxyProvider    *ProxyProvider
+	}
+	ProxyProvider struct {
+		client           *http.Client
+		proxyUrlProvider string
+		proxyCerts       *x509.CertPool
 	}
 )
 
@@ -32,6 +42,8 @@ const (
 	StorageDirKey         = "storage.path"
 	HardwareIDKey         = "provision.primary_ecu_hardware_id"
 	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
+	ComposeAppsProxyKey   = "pacman.compose_apps_proxy"
+	ComposeAppsProxyCaKey = "import.tls_cacert_path"
 
 	StorageDefaultDir               = "/var/sota"
 	TargetsDefaultFilename          = "targets.json"
@@ -75,7 +87,17 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	}
 	slog.Debug("storage usage watermark set", "value", cfg.storageWatermark)
 
-	if cfg.composeConfig, err = newComposeConfig(cfg.tomlConfig); err != nil {
+	var composeProxyProvider compose.ProxyProvider
+	if cfg.tomlConfig.Has(ComposeAppsProxyKey) {
+		if p, err := newProxyProvider(cfg.tomlConfig); err == nil {
+			cfg.proxyProvider = p
+			composeProxyProvider = cfg.proxyProvider.getComposeAppProxy()
+			slog.Debug("proxy for compose apps is set", "proxy URL", p.proxyUrlProvider)
+		} else {
+			slog.Error("failed to create proxy provider for compose apps; skip using proxy", "error", err)
+		}
+	}
+	if cfg.composeConfig, err = newComposeConfig(cfg.tomlConfig, composeProxyProvider); err != nil {
 		return nil, fmt.Errorf("failed to create compose config: %w", err)
 	}
 
@@ -137,11 +159,66 @@ func (c *Config) GetStorageUsageWatermark() uint {
 	return c.storageWatermark
 }
 
-func newComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
+func (c *Config) SetClientForProxy(client *http.Client) {
+	if c.proxyProvider != nil {
+		c.proxyProvider.client = client
+	}
+}
+
+func newComposeConfig(config *sotatoml.AppConfig, proxyProvider compose.ProxyProvider) (*compose.Config, error) {
 	// TODO: set the defaults in cmd/fioup package instead of here
 	return v1.NewDefaultConfig(
 		v1.WithStoreRoot(config.GetDefault("pacman.reset_apps_root", "/var/sota/reset-apps")),
 		v1.WithComposeRoot(config.GetDefault("pacman.compose_apps_root", "/var/sota/compose-apps")),
 		v1.WithUpdateDB(path.Join(config.GetDefault("storage.path", "/var/sota"), "updates.db")),
+		v1.WithProxy(proxyProvider),
 	)
+}
+
+func newProxyProvider(cfg *sotatoml.AppConfig) (*ProxyProvider, error) {
+	var proxyCerts *x509.CertPool
+
+	proxyCa := cfg.Get(ComposeAppsProxyCaKey)
+	if len(proxyCa) == 0 {
+		return nil, fmt.Errorf("path to proxy CA certificates not set in config key %s ", ComposeAppsProxyCaKey)
+	}
+	proxyCerts = x509.NewCertPool()
+	if b, err := os.ReadFile(proxyCa); err == nil {
+		if ok := proxyCerts.AppendCertsFromPEM(b); !ok {
+			return nil, fmt.Errorf("failed to parse proxy CA certificates from %s", proxyCa)
+		}
+	} else {
+		return nil, fmt.Errorf("failed to read proxy CA certificates from %s: %w", proxyCa, err)
+	}
+
+	return &ProxyProvider{
+		proxyUrlProvider: cfg.Get(ComposeAppsProxyKey),
+		proxyCerts:       proxyCerts,
+	}, nil
+}
+
+func (p *ProxyProvider) getComposeAppProxy() compose.ProxyProvider {
+	return func() *compose.ProxyConfig {
+		if p.client == nil {
+			slog.Error("gateway client is not initialized; skip using proxy")
+			return nil
+		}
+		resp, err := transport.HttpDo(p.client, http.MethodPost, p.proxyUrlProvider, nil, nil)
+		if err != nil {
+			slog.Error("failed to request apps proxy URL; skip using proxy", "error", err)
+			return nil
+		} else if resp.StatusCode != 201 {
+			slog.Error("unexpected response code when requesting apps proxy URL; skip using proxy", "code", resp.StatusCode)
+			return nil
+		}
+		var proxyURL *url.URL
+		if proxyURL, err = url.Parse(resp.String()); err != nil {
+			slog.Error("invalid proxy URL received from server; skip using proxy", "url", resp.String(), "error", err)
+			return nil
+		}
+		return &compose.ProxyConfig{
+			ProxyURL:   proxyURL,
+			ProxyCerts: p.proxyCerts,
+		}
+	}
 }
