@@ -41,6 +41,14 @@ func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		// Send download started event regardless if there is enough space or not to mark the start of download attempt
 		updateCtx.SendEvent(events.DownloadStarted)
 		if err == nil {
+			if proxy, err := updateCtx.Client.AppsProxyUrl(); err != nil {
+				return fmt.Errorf("failed to get apps proxy URL: %w", err)
+			} else if proxy != nil {
+				slog.Debug("using apps proxy", "url", proxy.Url)
+				proxy.Configure()
+				defer proxy.Unconfigure()
+			}
+
 			err = updateCtx.UpdateRunner.Fetch(ctx, compose.WithFetchProgress(s.ProgressHandler))
 			// Update storage usage info after fetch to reflect actual usage
 			if err := updateCtx.getAndSetStorageUsageInfo(); err != nil {

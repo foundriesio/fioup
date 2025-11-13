@@ -25,6 +25,9 @@ type (
 		HttpClient *http.Client
 		Headers    map[string]string
 
+		proxyAppsUrl string
+		proxyAppsCa  string
+
 		lastNetInfoFile   string
 		lastSotaFile      string
 		sotaToReport      []byte
@@ -98,6 +101,9 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 		BaseURL:    cfg.GetServerBaseURL(),
 		HttpClient: client,
 		Headers:    headers,
+
+		proxyAppsUrl: cfg.TomlConfig().Get("pacman.apps_proxy_server"),
+		proxyAppsCa:  cfg.TomlConfig().Get("import.tls_cacert_path"),
 
 		lastNetInfoFile:   filepath.Join(sota, ".last-netinfo"),
 		lastSotaFile:      filepath.Join(sota, ".last-sota"),
