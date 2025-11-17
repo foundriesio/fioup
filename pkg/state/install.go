@@ -18,8 +18,8 @@ type Install struct {
 func (s *Install) Name() ActionName { return "Installing" }
 func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	currentState := updateCtx.UpdateRunner.Status().State
-	if currentState.IsOneOf(update.StateStarting, update.StateStarted) {
-		// No need to install updates if the ongoing update is already in starting or started state
+	if currentState.IsOneOf(update.StateInstalled, update.StateStarting, update.StateStarted) {
+		// No need to install updates if the ongoing update is already in installed, starting or started state
 		return nil
 	}
 	var opts []compose.InstallOption
