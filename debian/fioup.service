@@ -6,3 +6,4 @@ Requires=boot-complete.target
 [Service]
 User=root
 ExecStart=/usr/bin/fioup daemon
+RuntimeDirectory=secrets
