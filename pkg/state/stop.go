@@ -17,7 +17,7 @@ type Stop struct{}
 func (s *Stop) Name() ActionName { return "Stopping" }
 func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	currentState := updateCtx.UpdateRunner.Status().State
-	if currentState.IsOneOf(update.StateInstalled, update.StateStarting, update.StateStarted) {
+	if currentState.IsOneOf(update.StateInstalled, update.StateStarting, update.StateStarted, update.StateCompleting) {
 		// No need to stop apps if the ongoing update is already in installing, installed, starting, or started state
 		return nil
 	}

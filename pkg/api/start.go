@@ -21,6 +21,8 @@ func Start(ctx context.Context, cfg *config.Config, options ...UpdateOpt) error 
 			AllowedStates: []update.State{
 				update.StateInstalled,
 				update.StateStarting,
+				update.StateStarted,
+				update.StateCompleting,
 			},
 			ToVersion: -1,
 			EnableTUF: opts.EnableTUF,

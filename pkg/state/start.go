@@ -26,7 +26,14 @@ var (
 
 func (s *Start) Name() ActionName { return "Starting" }
 func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
-	err := updateCtx.UpdateRunner.Start(ctx, compose.WithStartProgressHandler(s.ProgressHandler))
+	var err error
+	currentState := updateCtx.UpdateRunner.Status().State
+	if !currentState.IsOneOf(update.StateInstalled, update.StateStarting, update.StateStarted, update.StateCompleting) {
+		return fmt.Errorf("cannot start or complete update in state %s", currentState.String())
+	}
+	if currentState.IsOneOf(update.StateInstalled, update.StateStarting) {
+		err = updateCtx.UpdateRunner.Start(ctx, compose.WithStartProgressHandler(s.ProgressHandler))
+	}
 	if err == nil {
 		updateCtx.completeUpdate(ctx)
 		updateCtx.Client.UpdateHeaders(updateCtx.ToTarget.AppNames(), updateCtx.ToTarget.ID)
