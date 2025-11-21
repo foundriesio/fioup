@@ -31,4 +31,6 @@ chmod +x ${PWD}/debian/fioconfig-handlers/aktualizr-toml-update
 ln -sfn ${PWD}/debian/fioconfig-handlers/aktualizr-toml-update /usr/share/fioconfig/handlers/aktualizr-toml-update
 
 # Run the command as the created user
-exec gosu $DEV_USER:$DEV_GROUP "$@"
+# exec gosu $DEV_USER:$DEV_GROUP "$@"
+
+exec "$@"
