@@ -27,5 +27,5 @@ configured in `/var/sota/sota.toml` by adding:
 
 ```
 [uptane]
-polling_seconds = 60
+polling_seconds = "60"
 ```
