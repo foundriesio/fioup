@@ -151,6 +151,14 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventEr
 			downloadCompleteDetails.Error = eventError.Error()
 		}
 		detailsByte, _ = json.MarshalIndent(downloadCompleteDetails, "", "  ")
+	case events.InstallationApplied:
+		if eventError != nil {
+			detailsByte, _ = json.MarshalIndent(struct {
+				Error string `json:"error,omitempty"`
+			}{
+				Error: eventError.Error(),
+			}, "", "  ")
+		}
 	case events.InstallationCompleted:
 		var installCompleteDetails struct {
 			AppStatuses []status.AppStatus `json:"app_statuses"`
