@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/foundriesio/composeapp/pkg/update"
+	"github.com/foundriesio/fioup/internal/events"
 )
 
 type Init struct {
@@ -28,9 +29,11 @@ func (s *Init) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		apps = updateCtx.ToTarget.AppURIs()
 	}
 	if state == update.StateCreated || state == update.StateInitializing {
+		updateCtx.SendEvent(events.UpdateInitStarted)
 		err = updateCtx.UpdateRunner.Init(ctx, apps,
 			update.WithInitAllowEmptyAppList(true),
 			update.WithInitCheckStatus(s.CheckState))
+		updateCtx.SendEvent(events.UpdateInitCompleted, err)
 	}
 	status := updateCtx.UpdateRunner.Status()
 	updateCtx.Size.Bytes, updateCtx.Size.Blobs = status.TotalBlobsBytes, len(status.Blobs)

@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	UpdateInitStarted     EventTypeValue = "UpdateInitStarted"
+	UpdateInitCompleted   EventTypeValue = "UpdateInitCompleted"
 	DownloadStarted       EventTypeValue = "EcuDownloadStarted"
 	DownloadCompleted     EventTypeValue = "EcuDownloadCompleted"
 	InstallationStarted   EventTypeValue = "EcuInstallationStarted"

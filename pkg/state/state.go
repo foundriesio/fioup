@@ -122,7 +122,7 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventEr
 
 	updateStatus := u.UpdateRunner.Status()
 	switch eventType {
-	case events.DownloadStarted:
+	case events.UpdateInitCompleted:
 		updateDetails := updateDetails{
 			Update: updateInfo{
 				Type:     u.Type,
