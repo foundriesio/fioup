@@ -27,7 +27,10 @@ RUN apt-get update && apt-get -y install --no-install-suggests --no-install-reco
   shellcheck \
   python3-docker \
   golang \
-  python3-pytest
+  python3-pytest \
+  skopeo \
+  python3-yaml \
+  python3-expandvars
 
 # Add Docker's official GPG key:
 RUN apt-get update && apt-get install -y ca-certificates curl
@@ -56,6 +59,19 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN mkdir -p /usr/share/fioconfig/handlers/
 RUN mkdir -p /run/secrets && chmod a+rwx /run/secrets
+
+ARG REG_CERT=registry/certs/registry.crt
+
+RUN git clone https://github.com/foundriesio/ci-scripts.git /ci-scripts
+ENV PYTHONPATH=/ci-scripts
+ENV LAYERS_SIZE_SCRIPT=/ci-scripts/apps/get_layers_meta.py
+
+COPY $REG_CERT /etc/ssl/certs/registry.crt
+RUN cat /etc/ssl/certs/registry.crt >> /etc/ssl/certs/ca-certificates.crt
+
+WORKDIR /build_composeapp
+RUN git clone https://github.com/foundriesio/composeapp.git && \
+    cd composeapp && git checkout v95 && make && cp ./bin/composectl /usr/bin/
 
 # Set entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
