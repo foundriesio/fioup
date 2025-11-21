@@ -32,6 +32,8 @@ RUN apt-get update && apt-get -y install --no-install-suggests --no-install-reco
   python3-yaml \
   python3-expandvars
 
+RUN git config --global --add safe.directory .
+
 # Add Docker's official GPG key:
 RUN apt-get update && apt-get install -y ca-certificates curl
 RUN install -m 0755 -d /etc/apt/keyrings
