@@ -15,6 +15,11 @@ import (
 )
 
 type (
+	GwHttpOperations interface {
+		HttpGet(client *http.Client, url string, headers map[string]string) (*transport.HttpRes, error)
+		HttpDo(client *http.Client, method, url string, headers map[string]string, data any) (*transport.HttpRes, error)
+	}
+
 	GatewayClient struct {
 		BaseURL    *url.URL
 		HttpClient *http.Client
@@ -27,6 +32,8 @@ type (
 		hwinfoToReport    []byte
 		lastAppStatesFile string
 		lastAppStates     map[string]AppState
+
+		httpOperations GwHttpOperations
 	}
 )
 
@@ -37,6 +44,18 @@ const (
 	HeaderKeyApps   = "x-ats-dockerapps"
 	HeaderKeyTarget = "x-ats-target"
 )
+
+type transportHttpOperations struct{}
+
+func (transportHttpOperations) HttpGet(client *http.Client, url string, headers map[string]string) (*transport.HttpRes, error) {
+	return transport.HttpGet(client, url, headers)
+}
+
+func (transportHttpOperations) HttpDo(client *http.Client, method, url string, headers map[string]string, data any) (*transport.HttpRes, error) {
+	return transport.HttpDo(client, method, url, headers, data)
+}
+
+var DefaultHttpOperations GwHttpOperations = transportHttpOperations{}
 
 func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*GatewayClient, error) {
 	client, err := transport.CreateClient(cfg.TomlConfig())
@@ -64,6 +83,8 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 		lastSotaFile:      filepath.Join(sota, ".last-sota"),
 		lastHwinfoFile:    filepath.Join(sota, ".last-hwinfo"),
 		lastAppStatesFile: filepath.Join(sota, ".last-app-states"),
+
+		httpOperations: DefaultHttpOperations,
 	}
 
 	gw.initSota(cfg.TomlConfig())
@@ -73,7 +94,7 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 }
 
 func (c *GatewayClient) Get(resourcePath string) (*transport.HttpRes, error) {
-	return transport.HttpGet(c.HttpClient, c.BaseURL.JoinPath(resourcePath).String(), c.Headers)
+	return c.httpOperations.HttpGet(c.HttpClient, c.BaseURL.JoinPath(resourcePath).String(), c.Headers)
 }
 
 func (c *GatewayClient) getJson(resourcePath string, item any) error {
@@ -85,11 +106,11 @@ func (c *GatewayClient) getJson(resourcePath string, item any) error {
 }
 
 func (c *GatewayClient) Post(resourcePath string, data any) (*transport.HttpRes, error) {
-	return transport.HttpDo(c.HttpClient, http.MethodPost, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
+	return c.httpOperations.HttpDo(c.HttpClient, http.MethodPost, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
 }
 
 func (c *GatewayClient) Put(resourcePath string, data any) (*transport.HttpRes, error) {
-	return transport.HttpDo(c.HttpClient, http.MethodPut, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
+	return c.httpOperations.HttpDo(c.HttpClient, http.MethodPut, c.BaseURL.JoinPath(resourcePath).String(), c.Headers, data)
 }
 
 func (c *GatewayClient) UpdateHeaders(apps []string, targetID string) {
