@@ -11,6 +11,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +40,11 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		updateCtx.Client.UpdateHeaders(updateCtx.ToTarget.AppNames(), updateCtx.ToTarget.ID)
 	} else {
 		err = fmt.Errorf("%w: %s", ErrStartFailed, err.Error())
+	}
+	var statusErr error
+	updateCtx.CurrentStatus, statusErr = status.GetCurrentStatus(ctx, updateCtx.Config.ComposeConfig())
+	if statusErr != nil {
+		slog.Debug("failed to get current status after starting apps", "error", statusErr)
 	}
 	updateCtx.SendEvent(events.InstallationCompleted, err)
 	return err
