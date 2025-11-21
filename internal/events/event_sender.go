@@ -16,9 +16,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type EventTypeValue string
-
 const (
+	UpdateInitStarted     EventTypeValue = "UpdateInitStarted"
+	UpdateInitCompleted   EventTypeValue = "UpdateInitCompleted"
 	DownloadStarted       EventTypeValue = "EcuDownloadStarted"
 	DownloadCompleted     EventTypeValue = "EcuDownloadCompleted"
 	InstallationStarted   EventTypeValue = "EcuInstallationStarted"
@@ -26,54 +26,57 @@ const (
 	InstallationCompleted EventTypeValue = "EcuInstallationCompleted"
 )
 
-type EventSender struct {
-	dbPath   string
-	gwClient *client.GatewayClient
+type (
+	EventSender struct {
+		dbPath   string
+		gwClient *client.GatewayClient
 
-	ticker    *time.Ticker
-	stopChan  chan struct{}
-	flushChan chan struct{}
+		ticker    *time.Ticker
+		stopChan  chan struct{}
+		flushChan chan struct{}
 
-	wg sync.WaitGroup
-}
-
-type DgEvent struct {
-	CorrelationId string `json:"correlationId"`
-	Success       *bool  `json:"success"`
-	TargetName    string `json:"targetName"`
-	Version       string `json:"version"`
-	Details       string `json:"details,omitempty"`
-}
-type DgEventType struct {
-	Id      EventTypeValue `json:"id"`
-	Version int            `json:"version"`
-}
-type DgUpdateEvent struct {
-	Id         string      `json:"id"`
-	DeviceTime string      `json:"deviceTime"`
-	Event      DgEvent     `json:"event"`
-	EventType  DgEventType `json:"eventType"`
-}
-
-func NewEvent(eventType EventTypeValue, details string, success *bool, correlationId string, targetName string, version int) []DgUpdateEvent {
-	evt := []DgUpdateEvent{
-		{
-			Id:         uuid.New().String(),
-			DeviceTime: time.Now().Format(time.RFC3339),
-			Event: DgEvent{
-				CorrelationId: correlationId,
-				Success:       success,
-				TargetName:    targetName,
-				Version:       strconv.Itoa(version),
-				Details:       details,
-			},
-			EventType: DgEventType{
-				Id:      eventType,
-				Version: 0,
-			},
-		},
+		wg sync.WaitGroup
 	}
-	return evt
+
+	EventTypeValue string
+
+	DgEvent struct {
+		CorrelationId string `json:"correlationId"`
+		Success       *bool  `json:"success"`
+		TargetName    string `json:"targetName"`
+		Version       string `json:"version"`
+		Details       string `json:"details,omitempty"`
+	}
+
+	DgEventType struct {
+		Id      EventTypeValue `json:"id"`
+		Version int            `json:"version"`
+	}
+
+	DgUpdateEvent struct {
+		Id         string      `json:"id"`
+		DeviceTime string      `json:"deviceTime"`
+		Event      DgEvent     `json:"event"`
+		EventType  DgEventType `json:"eventType"`
+	}
+
+	EnqueueEventOptions struct {
+		Success *bool
+		Details string
+	}
+	EnqueueEventOption func(*EnqueueEventOptions)
+)
+
+func WithEventStatus(success bool) EnqueueEventOption {
+	return func(opts *EnqueueEventOptions) {
+		opts.Success = &success
+	}
+}
+
+func WithEventDetails(details string) EnqueueEventOption {
+	return func(opts *EnqueueEventOptions) {
+		opts.Details = details
+	}
 }
 
 func sendEvent(client *client.GatewayClient, event []DgUpdateEvent) error {
@@ -164,13 +167,26 @@ func (s *EventSender) Stop() {
 	slog.Debug("Events sender stopped")
 }
 
-func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, toTarget target.Target, success ...bool) error {
-	var completionStatus *bool
-	if len(success) > 0 {
-		completionStatus = &success[0]
+func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, toTarget target.Target, options ...EnqueueEventOption) error {
+	opts := &EnqueueEventOptions{}
+	for _, opt := range options {
+		opt(opts)
 	}
-	evt := NewEvent(eventType, "", completionStatus, updateID, toTarget.ID, toTarget.Version)
-	err := SaveEvent(s.dbPath, &evt[0])
+	err := SaveEvent(s.dbPath, &DgUpdateEvent{
+		Id:         uuid.New().String(),
+		DeviceTime: time.Now().Format(time.RFC3339),
+		Event: DgEvent{
+			CorrelationId: updateID,
+			Success:       opts.Success,
+			TargetName:    toTarget.ID,
+			Version:       strconv.Itoa(toTarget.Version),
+			Details:       opts.Details,
+		},
+		EventType: DgEventType{
+			Id:      eventType,
+			Version: 0,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("error saving event: %w", err)
 	}
