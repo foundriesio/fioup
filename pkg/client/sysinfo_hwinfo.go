@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/foundriesio/fioconfig/transport"
 )
 
 // uploadHwinfo uploads the output of `lshw` IFF its changed.
@@ -23,7 +21,7 @@ func (c *GatewayClient) uploadHwinfo() error {
 	}
 	headers := map[string]string{"Content-type": "application/json"}
 	url := c.BaseURL.JoinPath("/system_info").String()
-	res, err := transport.HttpDo(c.HttpClient, http.MethodPut, url, headers, c.hwinfoToReport)
+	res, err := c.httpOperations.HttpDo(c.HttpClient, http.MethodPut, url, headers, c.hwinfoToReport)
 	if err != nil {
 		return err
 	}
