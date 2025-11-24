@@ -169,5 +169,18 @@ func (u *UpdateContext) getInstallationStartedDetails() interface{} {
 }
 
 func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interface{} {
-	return nil
+	type installationCompletedDetails struct {
+		Error       string             `json:"error,omitempty"`
+		AppStatuses []status.AppStatus `json:"app_statuses"`
+	}
+	var details installationCompletedDetails
+	if u.CurrentStatus != nil {
+		for _, appStatus := range u.CurrentStatus.AppStatuses {
+			details.AppStatuses = append(details.AppStatuses, appStatus)
+		}
+	}
+	if eventErr != nil {
+		details.Error = eventErr.Error()
+	}
+	return &details
 }
