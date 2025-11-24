@@ -184,7 +184,7 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 		},
 		EventType: DgEventType{
 			Id:      eventType,
-			Version: 0,
+			Version: 2, // current event schema version, distinguishes events sent by different OTA clients and their versions
 		},
 	})
 	if err != nil {
