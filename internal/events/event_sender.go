@@ -182,7 +182,7 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 		},
 		EventType: DgEventType{
 			Id:      eventType,
-			Version: 0,
+			Version: 0x2, // Define event version as 0x2 to distinguish from events sent by older agents
 		},
 	})
 	if err != nil {
