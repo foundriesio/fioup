@@ -27,6 +27,12 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		opts = append(opts, compose.WithInstallProgress(s.ProgressHandler))
 	}
 	err := updateCtx.UpdateRunner.Install(ctx, opts...)
-	updateCtx.SendEvent(events.InstallationApplied, err)
+	if err == nil {
+		// Installation successful, send applied event, which indicates installation is done successfully
+		updateCtx.SendEvent(events.InstallationApplied)
+	} else {
+		// Installation failed, send completed event with error
+		updateCtx.SendEvent(events.InstallationCompleted, err)
+	}
 	return err
 }

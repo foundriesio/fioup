@@ -113,9 +113,14 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventEr
 			Bytes int64 `json:"bytes"`
 			Blobs int   `json:"blobs"`
 		}
+		downloadStartedDetails struct {
+			Fetched  fetchSize `json:"fetched"`
+			Progress int       `json:"progress"`
+		}
 		downloadCompleteDetails struct {
-			Fetched fetchSize `json:"fetched"`
-			Error   string    `json:"error,omitempty"`
+			Fetched  fetchSize `json:"fetched"`
+			Progress int       `json:"progress"`
+			Error    string    `json:"error,omitempty"`
 		}
 	)
 	var detailsByte []byte
@@ -140,6 +145,19 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventEr
 			},
 		}
 		detailsByte, _ = json.MarshalIndent(updateDetails, "", "  ")
+	case events.DownloadStarted:
+		downloadStartedDetails := downloadStartedDetails{
+			Fetched: fetchSize{
+				Bytes: updateStatus.FetchedBytes,
+				Blobs: updateStatus.FetchedBlobs,
+			},
+		}
+		if updateStatus.State == update.StateFetching || updateStatus.State == update.StateFetched {
+			downloadStartedDetails.Progress = updateStatus.Progress
+		} else {
+			downloadStartedDetails.Progress = 0
+		}
+		detailsByte, _ = json.MarshalIndent(downloadStartedDetails, "", "  ")
 	case events.DownloadCompleted:
 		downloadCompleteDetails := downloadCompleteDetails{
 			Fetched: fetchSize{
@@ -147,18 +165,15 @@ func (u *UpdateContext) getEventDetails(eventType events.EventTypeValue, eventEr
 				Blobs: updateStatus.FetchedBlobs,
 			},
 		}
+		if updateStatus.State == update.StateFetching || updateStatus.State == update.StateFetched {
+			downloadCompleteDetails.Progress = updateStatus.Progress
+		} else {
+			downloadCompleteDetails.Progress = 0
+		}
 		if eventError != nil {
 			downloadCompleteDetails.Error = eventError.Error()
 		}
 		detailsByte, _ = json.MarshalIndent(downloadCompleteDetails, "", "  ")
-	case events.InstallationApplied:
-		if eventError != nil {
-			detailsByte, _ = json.MarshalIndent(struct {
-				Error string `json:"error,omitempty"`
-			}{
-				Error: eventError.Error(),
-			}, "", "  ")
-		}
 	case events.InstallationCompleted:
 		var installCompleteDetails struct {
 			AppStatuses []status.AppStatus `json:"app_statuses"`

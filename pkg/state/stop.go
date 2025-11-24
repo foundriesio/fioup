@@ -28,5 +28,9 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	// Installation starts from stopping the currently running apps that are being updated
 	updateCtx.SendEvent(events.InstallationStarted)
 	// Stop apps being updated before installing their updates
-	return compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), updateCtx.FromTarget.AppURIs())
+	err := compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), updateCtx.FromTarget.AppURIs())
+	if err != nil {
+		updateCtx.SendEvent(events.InstallationCompleted, err)
+	}
+	return err
 }
