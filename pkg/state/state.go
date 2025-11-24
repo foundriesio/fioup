@@ -30,6 +30,11 @@ type (
 		Execute(ctx context.Context, updateCtx *UpdateContext) error
 	}
 
+	UpdateSize struct {
+		Bytes int64 `json:"bytes"`
+		Blobs int   `json:"blobs"`
+	}
+
 	UpdateInfo struct {
 		TotalStates     int
 		CurrentStateNum int
@@ -38,11 +43,8 @@ type (
 		ToTarget        target.Target
 		Mode            UpdateMode
 		Type            UpdateType
-		Size            struct {
-			Bytes int64
-			Blobs int
-		}
-		AppDiff struct {
+		Size            UpdateSize
+		AppDiff         struct {
 			Remove target.Apps
 			Add    target.Apps
 			Sync   target.Apps
@@ -64,6 +66,19 @@ type (
 		Targets     target.Targets
 
 		UpdateRunner update.Runner
+	}
+
+	downloadDetails struct {
+		Fetched  UpdateSize `json:"fetched"`
+		Progress int        `json:"progress_percent"`
+	}
+	downloadStartedDetails struct {
+		ToBeFetched     UpdateSize `json:"total_to_be_fetched"`
+		downloadDetails `json:",inline"`
+	}
+	downloadCompletedDetails struct {
+		Error           string `json:"error,omitempty"`
+		downloadDetails `json:",inline"`
 	}
 )
 
@@ -115,12 +130,38 @@ func (u *UpdateContext) getUpdateDetails(eventType events.EventTypeValue, eventE
 	return detailsString
 }
 
+func (u *UpdateContext) getDownloadDetails() downloadDetails {
+	s := u.UpdateRunner.Status()
+	details := downloadDetails{
+		Fetched: UpdateSize{
+			Bytes: s.FetchedBytes,
+			Blobs: s.FetchedBlobs,
+		},
+	}
+	if u.Size.Bytes == 0 {
+		// Nothing to fetch, consider as 100% fetched
+		details.Progress = 100
+	} else if s.State == update.StateFetching || s.State == update.StateFetched {
+		details.Progress = int((float64(s.FetchedBytes) / float64(u.Size.Bytes)) * 100)
+	}
+	return details
+}
+
 func (u *UpdateContext) getDownloadStartedDetails() interface{} {
-	return nil
+	return &downloadStartedDetails{
+		ToBeFetched:     u.Size,
+		downloadDetails: u.getDownloadDetails(),
+	}
 }
 
 func (u *UpdateContext) getDownloadCompletedDetails(eventErr error) interface{} {
-	return nil
+	details := &downloadCompletedDetails{
+		downloadDetails: u.getDownloadDetails(),
+	}
+	if eventErr != nil {
+		details.Error = eventErr.Error()
+	}
+	return details
 }
 
 func (u *UpdateContext) getInstallationStartedDetails() interface{} {
