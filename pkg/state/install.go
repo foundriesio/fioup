@@ -5,10 +5,12 @@ package state
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/foundriesio/fioup/pkg/status"
 )
 
 type Install struct {
@@ -31,6 +33,11 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		updateCtx.SendEvent(events.InstallationApplied)
 	} else {
 		// If installation failed, it means that update has completed with failure, so send InstallationCompleted event with failure
+		if currentStatus, errStatus := status.GetCurrentStatus(ctx, updateCtx.Config.ComposeConfig()); errStatus == nil {
+			updateCtx.CurrentStatus = currentStatus
+		} else {
+			slog.Error("failed to get current app statuses after install failure", "error", errStatus)
+		}
 		updateCtx.SendEvent(events.InstallationCompleted, err)
 	}
 	return err

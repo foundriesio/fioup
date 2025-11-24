@@ -6,10 +6,12 @@ package state
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/foundriesio/fioup/pkg/status"
 )
 
 type Stop struct{}
@@ -31,6 +33,11 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	err := compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), updateCtx.FromTarget.AppURIs())
 	if err != nil {
 		// If stopping apps failed, it means that update has completed with failure, so send InstallationCompleted event with failure
+		if currentStatus, errStatus := status.GetCurrentStatus(ctx, updateCtx.Config.ComposeConfig()); errStatus == nil {
+			updateCtx.CurrentStatus = currentStatus
+		} else {
+			slog.Error("failed to get current app statuses after stop failure", "error", errStatus)
+		}
 		updateCtx.SendEvent(events.InstallationCompleted, err)
 	}
 	return err
