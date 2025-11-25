@@ -47,6 +47,12 @@ test-e2e-daemon:
 
 test-e2e: test-e2e-granular test-e2e-single-command
 
+preload-images:
+	test/fixtures/preload-images.sh
+
+test-integration: preload-images
+	@go test -v ./test/integration/ -tags disable_pkcs11
+
 clean:
 	@rm -rf $(BUILD_DIR)
 

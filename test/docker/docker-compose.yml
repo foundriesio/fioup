@@ -6,7 +6,7 @@ services:
       - ${REG_DIR}/config.yml:/etc/distribution/config.yml
 
   dockerd:
-    image: ghcr.io/foundriesio/moby:25.0.3_fio
+    image: docker:26.1.4-dind
     command: ["dockerd", "-H", "unix:///var/run/docker/docker.sock"]
     volumes:
       - ${DOCKER_DATA_ROOT}:/var/lib/docker

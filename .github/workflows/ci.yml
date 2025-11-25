@@ -55,6 +55,14 @@ jobs:
           USER_TOKEN: ${{ secrets.E2E_TEST_USER_TOKEN }}
           TAG: ${{secrets.E2E_TEST_TAG}}
 
+  integration-test:
+    name: Standalone integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory /__w/fioup/fioup
+      - run: ./dev-shell.sh make test-integration
+
   package:
     strategy:
       fail-fast: true
