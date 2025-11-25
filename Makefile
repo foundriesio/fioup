@@ -34,7 +34,7 @@ check: format
 	$(LINTER) run
 
 test:
-	@go test -tags $(TAGS) ./...
+	@go test -tags $(TAGS) ./pkg/...
 
 test-e2e-single-command:
 	pytest test/e2e/e2e-test.py --maxfail=1 -vv -k 'test_incremental_updates[False-False-True'
@@ -47,6 +47,11 @@ test-e2e-daemon:
 
 test-e2e: test-e2e-granular test-e2e-single-command
 
+preload-images:
+	test/fixtures/preload-images.sh
+
+test-integration: preload-images
+	@go test -v ./test/integration/ -tags $(TAGS)
+
 clean:
 	@rm -rf $(BUILD_DIR)
-
