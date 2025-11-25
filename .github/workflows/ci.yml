@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
@@ -20,7 +20,7 @@ jobs:
     name: End-to-end tests using granular commands
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: git config --global --add safe.directory /__w/fioup/fioup
       - run: ./dev-shell.sh make build test-e2e-granular
         env:
@@ -33,7 +33,7 @@ jobs:
     name: End-to-end tests using single update command
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: git config --global --add safe.directory /__w/fioup/fioup
       - run: ./dev-shell.sh make build test-e2e-single-command
         env:
@@ -46,7 +46,7 @@ jobs:
     name: End-to-end tests using daemon
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: git config --global --add safe.directory /__w/fioup/fioup
       - run: ./dev-shell.sh make build test-e2e-daemon
         env:
@@ -66,7 +66,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Build for Debian
         run: |

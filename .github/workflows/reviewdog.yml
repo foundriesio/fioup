@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Install docutils
         run: sudo apt-get install -y docutils
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: errata-ai/vale-action@reviewdog
         with:
          reporter: github-pr-check
