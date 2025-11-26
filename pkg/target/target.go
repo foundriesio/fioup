@@ -125,6 +125,14 @@ func (a Apps) Names() (res []string) {
 	return
 }
 
+func (a Apps) URIs() (res []string) {
+	res = []string{}
+	for _, app := range a {
+		res = append(res, app.URI)
+	}
+	return
+}
+
 func (t *Target) AppURIs() (res []string) {
 	for _, app := range t.Apps {
 		res = append(res, app.URI)
@@ -142,7 +150,7 @@ func (t *Target) Diff(other *Target) (added, removed, same, diff Apps) {
 			added = append(added, app)
 		} else {
 			if app.URI != appMap[app.Name].URI {
-				diff = append(diff, app)
+				diff = append(diff, appMap[app.Name])
 			} else {
 				same = append(same, app)
 			}
