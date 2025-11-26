@@ -165,7 +165,20 @@ func (u *UpdateContext) getDownloadCompletedDetails(eventErr error) interface{} 
 }
 
 func (u *UpdateContext) getInstallationStartedDetails() interface{} {
-	return nil
+	type installationActions struct {
+		ToBeStopped   []string `json:"stop"`
+		ToBeInstalled []string `json:"install"`
+		ToBePruned    []string `json:"prune"`
+	}
+	return &struct {
+		Actions installationActions `json:"actions"`
+	}{
+		Actions: installationActions{
+			ToBeStopped:   u.FromTarget.AppURIs(),
+			ToBeInstalled: u.ToTarget.AppURIs(),
+			ToBePruned:    append(u.AppDiff.Remove.URIs(), u.AppDiff.Update.URIs()...),
+		},
+	}
 }
 
 func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interface{} {
