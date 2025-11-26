@@ -2,6 +2,7 @@ FROM debian:trixie
 LABEL Description="Fioup testing dockerfile for Debian Trixie"
 
 ENV DEBIAN_FRONTEND=noninteractive
+ARG SRC_DIR=$PWD
 
 # It is important to run these in the same RUN command, because otherwise
 # Docker layer caching breaks us
@@ -55,10 +56,6 @@ RUN wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/downloa
     chmod +x /usr/local/bin/gosu && \
     gosu nobody true
 
-# Copy the entrypoint script
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 RUN mkdir -p /usr/share/fioconfig/handlers/
 RUN mkdir -p /run/secrets && chmod a+rwx /run/secrets
 
@@ -71,10 +68,10 @@ ENV LAYERS_SIZE_SCRIPT=/ci-scripts/apps/get_layers_meta.py
 COPY $REG_CERT /etc/ssl/certs/registry.crt
 RUN cat /etc/ssl/certs/registry.crt >> /etc/ssl/certs/ca-certificates.crt
 
+RUN ln -sfn ${SRC_DIR}/bin/fioup /usr/local/bin/fioup
+RUN ln -sfn ${SRC_DIR}/bin/fioup /usr/local/bin/docker-credential-fioup
+RUN ln -sfn ${SRC_DIR}/debian/fioconfig-handlers/aktualizr-toml-update /usr/share/fioconfig/handlers/aktualizr-toml-update
+
 WORKDIR /build_composeapp
 RUN git clone https://github.com/foundriesio/composeapp.git && \
     cd composeapp && git checkout v95 && make && cp ./bin/composectl /usr/bin/
-
-# Set entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["bash"]

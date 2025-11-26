@@ -20,6 +20,7 @@ services:
         context: ${FIOUP_DOCKER_DIR}
         args:
           FIOUP_VER: master
+          SRC_DIR: ${SRC_DIR}
         dockerfile: Dockerfile
 
       image: fioup-e2e-test
