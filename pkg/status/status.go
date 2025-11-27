@@ -107,3 +107,11 @@ func GetUpdateStatus(cfg *compose.Config) (*UpdateStatus, error) {
 		Progress: s.Progress,
 	}, nil
 }
+
+func (s *CurrentStatus) AppStatusList() []AppStatus {
+	appStatuses := make([]AppStatus, 0, len(s.AppStatuses))
+	for _, appStatus := range s.AppStatuses {
+		appStatuses = append(appStatuses, appStatus)
+	}
+	return appStatuses
+}
