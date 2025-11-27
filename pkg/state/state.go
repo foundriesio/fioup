@@ -171,13 +171,11 @@ func (u *UpdateContext) getInstallationStartedDetails() interface{} {
 func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interface{} {
 	type installationCompletedDetails struct {
 		Error       string             `json:"error,omitempty"`
-		AppStatuses []status.AppStatus `json:"app_statuses"`
+		AppStatuses []status.AppStatus `json:"current_status,omitempty"`
 	}
 	var details installationCompletedDetails
 	if u.CurrentStatus != nil {
-		for _, appStatus := range u.CurrentStatus.AppStatuses {
-			details.AppStatuses = append(details.AppStatuses, appStatus)
-		}
+		details.AppStatuses = u.CurrentStatus.AppStatusList()
 	}
 	if eventErr != nil {
 		details.Error = eventErr.Error()
