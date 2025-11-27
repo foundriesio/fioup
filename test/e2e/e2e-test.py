@@ -294,6 +294,11 @@ def verify_events(target_version: int, expected_events: Optional[Set[Tuple[str, 
             ('EcuInstallationApplied', None),
             ('EcuInstallationCompleted', True)
         }
+    else:
+        expected_events.update([
+            ('UpdateInitStarted', None),
+            ('UpdateInitCompleted', True),
+        ])
 
     if use_fioup and ('EcuInstallationStarted', None) in expected_events:
         # fioup always generates 'EcuInstallationApplied' event
