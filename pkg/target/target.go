@@ -140,7 +140,7 @@ func (t *Target) AppURIs() (res []string) {
 	return
 }
 
-func (t *Target) Diff(other *Target) (added, removed, same, diff Apps) {
+func (t *Target) Diff(other *Target) (added, removed, same, from, to Apps) {
 	appMap := make(map[string]App)
 	for _, app := range t.Apps {
 		appMap[app.Name] = app
@@ -150,7 +150,8 @@ func (t *Target) Diff(other *Target) (added, removed, same, diff Apps) {
 			added = append(added, app)
 		} else {
 			if app.URI != appMap[app.Name].URI {
-				diff = append(diff, appMap[app.Name])
+				from = append(from, appMap[app.Name])
+				to = append(to, app)
 			} else {
 				same = append(same, app)
 			}
