@@ -24,6 +24,9 @@ const (
 	InstallationStarted   EventTypeValue = "EcuInstallationStarted"
 	InstallationApplied   EventTypeValue = "EcuInstallationApplied"
 	InstallationCompleted EventTypeValue = "EcuInstallationCompleted"
+
+	MaxDetailsSize  = 2048
+	TruncatedSuffix = "...[TRUNCATED]"
 )
 
 type (
@@ -171,6 +174,11 @@ func (s *EventSender) EnqueueEvent(eventType EventTypeValue, updateID string, to
 	opts := &EnqueueEventOptions{}
 	for _, opt := range options {
 		opt(opts)
+	}
+	if len(opts.Details) > MaxDetailsSize {
+		slog.Debug("Truncating event details", "original_size", len(opts.Details), "max_size", MaxDetailsSize,
+			"event_id", eventType, "correlation_id", updateID)
+		opts.Details = opts.Details[:MaxDetailsSize-len(TruncatedSuffix)] + TruncatedSuffix
 	}
 	err := SaveEvent(s.dbPath, &DgUpdateEvent{
 		Id:         uuid.New().String(),
