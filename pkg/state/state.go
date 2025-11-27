@@ -45,10 +45,11 @@ type (
 		Type            UpdateType
 		Size            UpdateSize
 		AppDiff         struct {
-			Remove target.Apps
-			Add    target.Apps
-			Sync   target.Apps
-			Update target.Apps
+			Remove   target.Apps
+			Add      target.Apps
+			Sync     target.Apps
+			Update   target.Apps
+			UpdateTo target.Apps
 		}
 		CurrentStatus  *status.CurrentStatus
 		InitializedAt  time.Time
@@ -109,6 +110,10 @@ func (u *UpdateContext) getUpdateDetails(eventType events.EventTypeValue, eventE
 	var detailsString string
 	var details interface{}
 	switch eventType {
+	case events.UpdateInitStarted:
+		details = u.getUpdateInitStartedDetails()
+	case events.UpdateInitCompleted:
+		details = u.getUpdateInitCompletedDetails(eventErr)
 	case events.DownloadStarted:
 		details = u.getDownloadStartedDetails()
 	case events.DownloadCompleted:
@@ -128,6 +133,61 @@ func (u *UpdateContext) getUpdateDetails(eventType events.EventTypeValue, eventE
 			"event", eventType, "err", err)
 	}
 	return detailsString
+}
+
+func (u *UpdateContext) getUpdateInitStartedDetails() interface{} {
+	type UpdateFromTo struct {
+		From []string `json:"from"`
+		To   []string `json:"to"`
+	}
+	type actionsType struct {
+		Remove []string     `json:"remove"`
+		Add    []string     `json:"add"`
+		Sync   []string     `json:"sync"`
+		Update UpdateFromTo `json:"update"`
+	}
+	type updateInitStartedDetails struct {
+		FromTarget    string             `json:"from_target"`
+		ToTarget      string             `json:"to_target"`
+		Type          UpdateType         `json:"type"`
+		Actions       actionsType        `json:"actions"`
+		CurrentStatus []status.AppStatus `json:"current_status,omitempty"`
+	}
+	var currentStatus []status.AppStatus
+	if u.CurrentStatus != nil {
+		currentStatus = u.CurrentStatus.AppStatusList()
+	}
+	return &updateInitStartedDetails{
+		FromTarget: u.FromTarget.ID,
+		ToTarget:   u.ToTarget.ID,
+		Type:       u.Type,
+		Actions: actionsType{
+			Remove: u.AppDiff.Remove.URIs(),
+			Add:    u.AppDiff.Add.URIs(),
+			Sync:   u.AppDiff.Sync.URIs(),
+			Update: UpdateFromTo{
+				From: u.AppDiff.Update.URIs(),
+				To:   u.AppDiff.UpdateTo.URIs(),
+			},
+		},
+		CurrentStatus: currentStatus,
+	}
+}
+
+func (u *UpdateContext) getUpdateInitCompletedDetails(eventErr error) interface{} {
+	if eventErr == nil {
+		return &struct {
+			ToFetch UpdateSize `json:"total_to_fetch"`
+		}{
+			ToFetch: u.Size,
+		}
+	} else {
+		return &struct {
+			Error string `json:"error,omitempty"`
+		}{
+			Error: eventErr.Error(),
+		}
+	}
 }
 
 func (u *UpdateContext) getDownloadDetails() downloadDetails {
