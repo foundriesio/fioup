@@ -15,6 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	SecretsDirDefault = "/run/secrets"
+)
+
 type fioconfigOpts struct {
 	secretsDir      string
 	unsafeHandlers  bool
@@ -22,9 +26,12 @@ type fioconfigOpts struct {
 }
 
 func (opts *fioconfigOpts) ApplyToCmd(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&opts.secretsDir, "secrets-dir", "/run/secrets", "Directory to hold fioconfig secrets when enabled.")
+	cmd.Flags().StringVar(&opts.secretsDir, "secrets-dir", SecretsDirDefault, "Directory to hold fioconfig secrets when enabled.")
 	cmd.Flags().BoolVar(&opts.unsafeHandlers, "unsafe-handlers", false, "Enable unsafe fioconfig handlers.")
 	_ = cmd.Flags().MarkHidden("unsafe-handlers")
+
+	// Ensure the secrets dir exists
+	cobra.CheckErr(os.MkdirAll(opts.secretsDir, 0o750))
 }
 
 // CanExtract ensures the process has permission to create files in `secretsDir`
