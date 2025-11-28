@@ -66,15 +66,6 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		}
 	}
 
-	// Get FromTarget: get last successful update to set FromTarget
-	if fromTarget, err := getCurrentTarget(updateCtx.Config.ComposeConfig()); err == nil {
-		updateCtx.FromTarget = *fromTarget
-		updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
-	} else {
-		slog.Debug("failed to determine the current target, consider it as unknown", "error", err)
-		updateCtx.FromTarget = target.UnknownTarget
-	}
-
 	var targetRepo target.Repo
 	if s.EnableTUF {
 		targetRepo, err = target.NewTufRepo(updateCtx.Config, updateCtx.Client, updateCtx.Config.GetHardwareID())
@@ -89,6 +80,13 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		return err
 	}
 	updateCtx.Targets = targets
+
+	// Get FromTarget: get last successful update to set FromTarget
+	if err := updateCtx.getAndSetCurrentTarget(); err == nil {
+		updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
+	} else {
+		slog.Debug("failed to determine the current target, consider it as unknown", "error", err)
+	}
 
 	if err := updateCtx.selectToTarget(s); err != nil {
 		return err
@@ -257,12 +255,26 @@ func (u *UpdateContext) checkAppDiff() bool {
 	return isDiffDetected
 }
 
-func getCurrentTarget(cfg *compose.Config) (*target.Target, error) {
-	lastUpdate, err := update.GetLastSuccessfulUpdate(cfg)
+func (u *UpdateContext) getAndSetCurrentTarget() error {
+	u.FromTarget = target.UnknownTarget
+	lastUpdate, err := update.GetLastSuccessfulUpdate(u.Config.ComposeConfig())
 	if err != nil {
-		return nil, fmt.Errorf("no last successful update found: %w", err)
+		return fmt.Errorf("no last successful update found: %w", err)
 	}
-	return getTargetOutOfUpdate(lastUpdate)
+	if target := u.Targets.GetTargetByID(lastUpdate.ClientRef); !target.IsUnknown() {
+		target.ShortlistAppsByURI(lastUpdate.URIs)
+		u.FromTarget = target
+		return nil
+	}
+	slog.Debug("no target found in the targets list for the current target ID," +
+		" trying to compose it from the last successful update")
+	// Try to compose target from the last successful update info
+	if target, err := getTargetOutOfUpdate(lastUpdate); err == nil {
+		u.FromTarget = *target
+		return nil
+	} else {
+		return fmt.Errorf("failed to compose current target from last successful update: %w", err)
+	}
 }
 
 func getTargetOutOfUpdate(update *update.Update) (*target.Target, error) {
