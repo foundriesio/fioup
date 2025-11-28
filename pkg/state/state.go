@@ -150,6 +150,7 @@ func (u *UpdateContext) getUpdateInitStartedDetails() interface{} {
 		FromTarget    string             `json:"from_target"`
 		ToTarget      string             `json:"to_target"`
 		Type          UpdateType         `json:"type"`
+		Reason        string             `json:"reason,omitempty"`
 		Actions       actionsType        `json:"actions"`
 		CurrentStatus []status.AppStatus `json:"current_status,omitempty"`
 	}
@@ -157,10 +158,20 @@ func (u *UpdateContext) getUpdateInitStartedDetails() interface{} {
 	if u.CurrentStatus != nil {
 		currentStatus = u.CurrentStatus.AppStatusList()
 	}
+	var reason string
+	if u.Type == UpdateTypeUpdate {
+		reason = "update to a new version"
+	} else if u.CurrentStatus == nil {
+		reason = "user-forced sync of the current target"
+	} else {
+		reason = "sync the current target; one or more apps are out of sync - not fetched or not installed or not running," +
+			" see 'current_status' for details"
+	}
 	return &updateInitStartedDetails{
 		FromTarget: u.FromTarget.ID,
 		ToTarget:   u.ToTarget.ID,
 		Type:       u.Type,
+		Reason:     reason,
 		Actions: actionsType{
 			Remove: u.AppDiff.Remove.URIs(),
 			Add:    u.AppDiff.Add.URIs(),
