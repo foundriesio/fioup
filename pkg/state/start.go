@@ -46,6 +46,7 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	} else {
 		slog.Error("failed to get current app statuses update completion", "error", errStatus)
 	}
+
 	updateCtx.SendEvent(events.InstallationCompleted, err)
 	return err
 }

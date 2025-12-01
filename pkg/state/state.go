@@ -6,9 +6,11 @@ package state
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/client"
@@ -61,12 +63,21 @@ type (
 	UpdateContext struct {
 		UpdateInfo
 
-		Config      *config.Config
-		EventSender *events.EventSender
-		Client      *client.GatewayClient
-		Targets     target.Targets
+		Config       *config.Config
+		EventSender  *events.EventSender
+		Client       *client.GatewayClient
+		Targets      target.Targets
+		StorageUsage *StorageStat
 
 		UpdateRunner update.Runner
+	}
+
+	StorageStat struct {
+		Size      uint64  `json:"size"`
+		Free      uint64  `json:"free"`
+		Reserved  uint64  `json:"reserved"`
+		Available uint64  `json:"available"`
+		Required  *uint64 `json:"required,omitempty"`
 	}
 
 	downloadDetails struct {
@@ -74,11 +85,13 @@ type (
 		Progress int        `json:"progress_percent"`
 	}
 	downloadStartedDetails struct {
-		ToBeFetched     UpdateSize `json:"total_to_be_fetched"`
+		StorageStat     *StorageStat `json:"storage_stat,omitempty"`
+		ToBeFetched     UpdateSize   `json:"total_to_be_fetched"`
 		downloadDetails `json:",inline"`
 	}
 	downloadCompletedDetails struct {
-		Error           string `json:"error,omitempty"`
+		Error           string       `json:"error,omitempty"`
+		StorageStat     *StorageStat `json:"storage_stat,omitempty"`
 		downloadDetails `json:",inline"`
 	}
 )
@@ -220,6 +233,7 @@ func (u *UpdateContext) getDownloadDetails() downloadDetails {
 
 func (u *UpdateContext) getDownloadStartedDetails() interface{} {
 	return &downloadStartedDetails{
+		StorageStat:     u.StorageUsage,
 		ToBeFetched:     u.Size,
 		downloadDetails: u.getDownloadDetails(),
 	}
@@ -227,6 +241,7 @@ func (u *UpdateContext) getDownloadStartedDetails() interface{} {
 
 func (u *UpdateContext) getDownloadCompletedDetails(eventErr error) interface{} {
 	details := &downloadCompletedDetails{
+		StorageStat:     u.StorageUsage,
 		downloadDetails: u.getDownloadDetails(),
 	}
 	if eventErr != nil {
@@ -256,8 +271,11 @@ func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interfac
 	type installationCompletedDetails struct {
 		Error       string             `json:"error,omitempty"`
 		AppStatuses []status.AppStatus `json:"current_status,omitempty"`
+		StorageStat *StorageStat       `json:"storage_stat,omitempty"`
 	}
-	var details installationCompletedDetails
+	details := installationCompletedDetails{
+		StorageStat: u.StorageUsage,
+	}
 	if u.CurrentStatus != nil {
 		details.AppStatuses = u.CurrentStatus.AppStatusList()
 	}
@@ -265,4 +283,19 @@ func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interfac
 		details.Error = eventErr.Error()
 	}
 	return &details
+}
+
+func (u *UpdateContext) getAndSetStorageUsageInfo() error {
+	usageWatermark := u.Config.GetStorageUsageWatermark()
+	if ui, err := compose.GetUsageInfo(u.Config.ComposeConfig().StoreRoot, 0, usageWatermark); err != nil {
+		return fmt.Errorf("failed to get storage usage info: %w", err)
+	} else {
+		u.StorageUsage = &StorageStat{
+			Size:      ui.SizeB,
+			Free:      ui.Free,
+			Reserved:  ui.Reserved,
+			Available: ui.Available,
+		}
+	}
+	return nil
 }
