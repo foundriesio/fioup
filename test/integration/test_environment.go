@@ -10,6 +10,7 @@ import (
 	"time"
 
 	f "github.com/foundriesio/composeapp/test/fixtures"
+	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
 	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/status"
@@ -242,21 +243,26 @@ func checkErr(t *testing.T, err error) {
 }
 
 type integrationTest struct {
-	t       *testing.T
-	tempDir string
-	config  *cfg.Config
-	ctx     context.Context
+	t        *testing.T
+	tempDir  string
+	config   *cfg.Config
+	ctx      context.Context
+	gwClient *client.GatewayClient
+	apiOpts  []api.UpdateOpt
 }
 
 func newIntegrationTest(t *testing.T) *integrationTest {
 	tempDir := t.TempDir()
 	config := createMockConfig(t, tempDir)
-	client.DefaultHttpOperations = mockHttpOperations{config: config, tempDir: tempDir}
+	gwClient, err := client.NewGatewayClient(config, nil, "", client.WithHttpOperations(mockHttpOperations{config: config, tempDir: tempDir}))
+	checkErr(t, err)
 
 	return &integrationTest{
-		t:       t,
-		tempDir: tempDir,
-		config:  config,
-		ctx:     context.Background(),
+		t:        t,
+		tempDir:  tempDir,
+		config:   config,
+		ctx:      context.Background(),
+		gwClient: gwClient,
+		apiOpts:  []api.UpdateOpt{api.WithTUF(false), api.WithGatewayClient(gwClient)},
 	}
 }

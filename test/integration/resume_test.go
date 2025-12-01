@@ -18,7 +18,7 @@ func TestResume(t *testing.T) {
 	allTargets := []*Target{target1, target2}
 	it.saveTargetsJson(allTargets)
 
-	targets, _, err := api.Check(it.ctx, it.config, api.WithTUF(false))
+	targets, _, err := api.Check(it.ctx, it.config, it.apiOpts...)
 
 	checkErr(it.t, err)
 	if len(targets) != len(allTargets) {
@@ -26,48 +26,48 @@ func TestResume(t *testing.T) {
 	}
 
 	// Start update to target1
-	err = api.Fetch(it.ctx, it.config, target1.Version, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, target1.Version, it.apiOpts...)
 	checkErr(it.t, err)
 
 	// Calling fetch again should be a no-op and succeed
-	err = api.Fetch(it.ctx, it.config, target1.Version, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, target1.Version, it.apiOpts...)
 	checkErr(it.t, err)
 
 	// Should not allow to perform a fetch to a different target while update is in progress
-	err = api.Fetch(it.ctx, it.config, target2.Version, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, target2.Version, it.apiOpts...)
 	if err == nil {
 		t.Fatalf("Fetch is expected to fail but did not")
 	}
 
 	// Should keep updating to target1, even having target2 available
-	err = api.Fetch(it.ctx, it.config, -1, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, -1, it.apiOpts...)
 	checkErr(it.t, err)
 
 	allTargets = []*Target{target1, target2, target3}
 	it.saveTargetsJson(allTargets)
 
-	targets, _, err = api.Check(it.ctx, it.config, api.WithTUF(false))
+	targets, _, err = api.Check(it.ctx, it.config, it.apiOpts...)
 	checkErr(it.t, err)
 	if len(targets) != len(allTargets) {
 		t.Fatalf("Number of targets (%d) does not match expected (%d)", len(targets), len(allTargets))
 	}
 
 	// Should keep updating to target1, even with changes TUF
-	err = api.Fetch(it.ctx, it.config, -1, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, -1, it.apiOpts...)
 	checkErr(it.t, err)
 
 	// No install yet, start should fail
-	err = api.Start(it.ctx, it.config)
+	err = api.Start(it.ctx, it.config, api.WithGatewayClient(it.gwClient))
 	if err == nil {
 		t.Fatalf("Start is expected to fail but did not")
 	}
 
 	// Install target1
-	err = api.Install(it.ctx, it.config)
+	err = api.Install(it.ctx, it.config, api.WithGatewayClient(it.gwClient))
 	checkErr(it.t, err)
 
 	// Start target1
-	err = api.Start(it.ctx, it.config)
+	err = api.Start(it.ctx, it.config, api.WithGatewayClient(it.gwClient))
 	checkErr(it.t, err)
 
 	// make sure we are now on target1

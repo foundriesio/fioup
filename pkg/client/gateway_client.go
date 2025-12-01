@@ -55,9 +55,29 @@ func (transportHttpOperations) HttpDo(client *http.Client, method, url string, h
 	return transport.HttpDo(client, method, url, headers, data)
 }
 
-var DefaultHttpOperations GwHttpOperations = transportHttpOperations{}
+type (
+	GatewayClientOpts struct {
+		HttpOperations GwHttpOperations
+	}
+	GatewayClientOpt func(*GatewayClientOpts)
+)
 
-func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*GatewayClient, error) {
+func WithHttpOperations(ops GwHttpOperations) GatewayClientOpt {
+	return func(o *GatewayClientOpts) {
+		o.HttpOperations = ops
+	}
+}
+
+func getGatewayClientOpts(options ...GatewayClientOpt) *GatewayClientOpts {
+	opts := &GatewayClientOpts{transportHttpOperations{}}
+	for _, o := range options {
+		o(opts)
+	}
+	return opts
+}
+
+func NewGatewayClient(cfg *config.Config, apps []string, targetID string, options ...GatewayClientOpt) (*GatewayClient, error) {
+	opts := getGatewayClientOpts(options...)
 	client, err := transport.CreateClient(cfg.TomlConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTPS HttpClient to talk to Device Gateway: %w", err)
@@ -84,7 +104,7 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string) (*Gate
 		lastHwinfoFile:    filepath.Join(sota, ".last-hwinfo"),
 		lastAppStatesFile: filepath.Join(sota, ".last-app-states"),
 
-		httpOperations: DefaultHttpOperations,
+		httpOperations: opts.HttpOperations,
 	}
 
 	gw.initSota(cfg.TomlConfig())
