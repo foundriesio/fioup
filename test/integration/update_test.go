@@ -33,14 +33,14 @@ func TestUpdateSequence(t *testing.T) {
 
 func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	clearEvents()
-	targets, currentStatus, err := api.Check(it.ctx, it.config, api.WithTUF(false))
+	targets, currentStatus, err := api.Check(it.ctx, it.config, it.apiOpts...)
 	checkErr(it.t, err)
 	if len(targets) != len(allTargets) {
 		it.t.Fatalf("Number of targets (%d) does not match expected (%d)", len(targets), len(allTargets))
 	}
 	originalTargetID := currentStatus.TargetID
 
-	err = api.Fetch(it.ctx, it.config, -1, api.WithTUF(false))
+	err = api.Fetch(it.ctx, it.config, -1, it.apiOpts...)
 	checkErr(it.t, err)
 	successVal := true
 	expectedEvents := []events.DgUpdateEvent{
@@ -82,7 +82,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	it.checkEvents(target, expectedEvents)
 	it.checkStatus(originalTargetID)
 
-	err = api.Install(it.ctx, it.config)
+	err = api.Install(it.ctx, it.config, it.apiOpts...)
 	checkErr(it.t, err)
 	expectedEvents = []events.DgUpdateEvent{
 		{
@@ -105,7 +105,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	it.checkEvents(target, expectedEvents)
 	it.checkStatus(originalTargetID)
 
-	err = api.Start(context.Background(), it.config)
+	err = api.Start(context.Background(), it.config, it.apiOpts...)
 	if target.Bad {
 		if err == nil {
 			it.t.Fatalf("Start succeeded but was expected to fail")
