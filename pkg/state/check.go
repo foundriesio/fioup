@@ -115,8 +115,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 func (u *UpdateContext) selectToTarget(s *Check) error {
 	if u.Mode == UpdateModeResume {
 		// Get ToTarget if resuming update
-		ongoingUpdate := u.UpdateRunner.Status()
-		target, err := getTargetOutOfUpdate(&ongoingUpdate)
+		target, err := u.getOngoingUpdateTarget()
 		if err != nil {
 			return ErrInvalidOngoingUpdate
 		}
@@ -275,6 +274,22 @@ func (u *UpdateContext) getAndSetCurrentTarget() error {
 	} else {
 		return fmt.Errorf("failed to compose current target from last successful update: %w", err)
 	}
+}
+
+func (u *UpdateContext) getOngoingUpdateTarget() (*target.Target, error) {
+	ongoingUpdate := u.UpdateRunner.Status()
+	if target := u.Targets.GetTargetByID(ongoingUpdate.ClientRef); !target.IsUnknown() {
+		target.ShortlistAppsByURI(ongoingUpdate.URIs)
+		return &target, nil
+	}
+	slog.Debug("no target found in the targets list for the ongoing update target ID," +
+		" trying to compose it from the ongoing update")
+	// Try to compose target from the ongoing update info
+	target, err := getTargetOutOfUpdate(&ongoingUpdate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compose ongoing update target from ongoing update: %w", err)
+	}
+	return target, nil
 }
 
 func getTargetOutOfUpdate(update *update.Update) (*target.Target, error) {
