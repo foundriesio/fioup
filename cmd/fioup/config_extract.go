@@ -14,7 +14,6 @@ func init() {
 		Use:   "config-extract",
 		Short: "Extract the current encrypted configuration to secrets directory",
 		Run: func(cmd *cobra.Command, args []string) {
-			opts.AssertCanExtract()
 			doConfigExtract(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
@@ -26,6 +25,7 @@ func init() {
 func doConfigExtract(_ *cobra.Command, opts *fioconfigOpts) {
 	configApp, err := fioconfig.NewAppWithConfig(config.TomlConfig(), opts.secretsDir, opts.unsafeHandlers)
 	cobra.CheckErr(err)
+	opts.AssertCanExtract()
 	_, err = configApp.Extract()
 	cobra.CheckErr(err)
 }
