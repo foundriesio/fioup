@@ -5,9 +5,11 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
@@ -17,20 +19,26 @@ import (
 
 type (
 	Config struct {
-		tomlConfig    *sotatoml.AppConfig
-		composeConfig *compose.Config
-		dgBaseURL     *url.URL
+		tomlConfig       *sotatoml.AppConfig
+		composeConfig    *compose.Config
+		dgBaseURL        *url.URL
+		storageWatermark uint
 	}
 )
 
 const (
-	TagKey           = "pacman.tags"
-	ServerBaseUrlKey = "tls.server"
-	StorageDirKey    = "storage.path"
-	HardwareIDKey    = "provision.primary_ecu_hardware_id"
+	TagKey                = "pacman.tags"
+	ServerBaseUrlKey      = "tls.server"
+	StorageDirKey         = "storage.path"
+	HardwareIDKey         = "provision.primary_ecu_hardware_id"
+	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
 
-	StorageDefaultDir      = "/var/sota"
-	TargetsDefaultFilename = "targets.json"
+	StorageDefaultDir               = "/var/sota"
+	TargetsDefaultFilename          = "targets.json"
+	StorageUsageWatermarkDefaultStr = "95"
+	StorageUsageWatermarkDefault    = 95
+	MinStorageUsageWatermark        = 20
+	MaxStorageUsageWatermark        = 99
 )
 
 func NewConfig(tomlConfigPaths []string) (*Config, error) {
@@ -53,6 +61,19 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid value of the device gateway base URL: %w", err)
 	}
+	// Validate and set storage usage watermark
+	cfg.storageWatermark = StorageUsageWatermarkDefault
+	watermarkStr := cfg.tomlConfig.GetDefault(StorageUsageWatermark, StorageUsageWatermarkDefaultStr)
+	if watermark, err := strconv.Atoi(watermarkStr); err == nil {
+		if watermark < MinStorageUsageWatermark || watermark > MaxStorageUsageWatermark {
+			slog.Warn("storage usage watermark out of range; using default", "value", watermark, "default", StorageUsageWatermarkDefaultStr)
+		} else {
+			cfg.storageWatermark = uint(watermark)
+		}
+	} else {
+		slog.Warn("invalid storage usage watermark value; using default", "value", watermarkStr, "default", StorageUsageWatermarkDefaultStr)
+	}
+	slog.Debug("storage usage watermark set", "value", cfg.storageWatermark)
 
 	if cfg.composeConfig, err = newComposeConfig(cfg.tomlConfig); err != nil {
 		return nil, fmt.Errorf("failed to create compose config: %w", err)
@@ -110,6 +131,10 @@ func (c *Config) GetEnabledApps() []string {
 		}
 	}
 	return result
+}
+
+func (c *Config) GetStorageUsageWatermark() uint {
+	return c.storageWatermark
 }
 
 func newComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
