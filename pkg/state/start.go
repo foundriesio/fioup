@@ -47,6 +47,10 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		slog.Error("failed to get current app statuses update completion", "error", errStatus)
 	}
 
+	// Update storage usage info after update completion to reflect actual usage
+	if err := updateCtx.getAndSetStorageUsageInfo(); err != nil {
+		slog.Debug("failed to get storage usage info after fetch", "error", err)
+	}
 	updateCtx.SendEvent(events.InstallationCompleted, err)
 	return err
 }
