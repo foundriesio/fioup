@@ -1,4 +1,90 @@
-fioup (1.0.0) UNRELEASED; urgency=medium
+fioup (1.1.0) UNRELEASED; urgency=medium
+
+  [ New Features ]
+  * Add update details to the context of update events.
+  * Check free space before fetching the update.
+  * Containerized development and test environment, along with basic end-to-end tests running in it.
+
+  [ Changes ]
+  * 27cbbcc state: Add init started and completed events
+  * 63cc2bd event_sender: Truncate event payload if exceeds max allowed
+  * 4f244ec Allow fioup service to be enabled for boot
+
+  [ Bugfixes ]
+  * 7958992 config: Make sure secrets-dir exists before trying to write to it
+  * ed16fd4 check: Determine current target reliably
+  * 3d72b6e install: Send install complete event if install fails
+  * 18dcd4f stop: Send installation complete event if stop fails
+  * d76eca2 state: Allow update completion if it was interrupted before
+  * cacd09f start: Retry completion of successfully started update
+  * a3b808c stop: Only generate InstallationStarted event after checking state
+  * eb7c64b version: Fix and extend version command
+  * 4615e7b install: Avoid performing install if update is in Installed state
+
+  [ Mike Sul ]
+  * release: Install deb package with its dependencies
+  * version: Fix and extend version command
+  * start: Retry completion of successfully started update
+  * state: Allow update completion if it was interrupted before
+  * stop: Send installation complete event if stop fails
+  * install: Send install complete event if install fails
+  * event_sender: Refactor to simplify event creation
+  * event_sender: Group all type defs
+  * event_sender: Add event enqueueing options
+  * event_sender: Add ability to specify event details
+  * state: Pass error when sending event
+  * event_sender: Define update events schema version
+  * go.mod: Bump composectl version 0400d34
+  * state: Add skeleton code for adding context to update events
+  * state: Add fetch progress details to download events
+  * state: Add update details to install complete event
+  * status: Add helper method to retrieve list of app statuses
+  * target: Add helper method over apps slice
+  * state: Add details to the install started event
+  * target: Define and use "from" and "to" apps in diff
+  * state: Add init started and completed events
+  * e2e-test: Always expect "init started/completed" events
+  * go.mod: Bump composectl ver ebf921e
+  * event_sender: Truncate event payload if exceeds max allowed
+  * state: Add update reason to update event context
+  * check: Determine current target reliably
+  * check: Add unit tests for check state
+  * check: Get ongoing target from targets metadata
+  * config: Add storage usage watermark parameter
+  * fetch: Check free space before fetching update
+  * start: Add storage stat to the update completed event
+
+  [ Katrina Prosise ]
+  * Address findings from linter
+
+  [ Andre Detsch ]
+  * install: Avoid performing install if update is in Installed state
+  * stop: Only generate InstallationStarted event after checking state
+  * test: Add a local docker registry to the dev environment
+  * client: Allow http operations to the device gateway to be overwritten
+  * docker: Remove entrypoint.sh script as it is no longer needed
+  * tests: Add tests for a sequence of updates, and resuming an update
+  * ci: Add integration tests to CI workflow
+  * tests: Set custom HttpOperations per GatewayClient instance
+  * config: Make sure secrets-dir exists before trying to write to it
+
+  [ Raul Muñoz ]
+  * Change polling_seconds value type to string
+
+  [ dependabot[bot] ]
+  * build(deps): bump golangci/golangci-lint-action from 8 to 9
+  * build(deps): bump github.com/stretchr/testify from 1.10.0 to 1.11.1
+  * build(deps): bump actions/upload-artifact from 4 to 5
+  * build(deps): bump actions/download-artifact from 5 to 6
+  * build(deps): bump actions/checkout from 3 to 6
+  * build(deps): bump modernc.org/sqlite from 1.39.0 to 1.40.1
+
+composefs  [ Matt Hart ]
+  * Allow fioup service to be enabled for boot
+
+ -- Mike Sul <bot@foundries.io>  Thu, 04 Dec 2025 09:16:43 +0000
+
+fioup (1.0.0) released; urgency=medium
 
   [ Mike Sul ]
   * error: Print cmd run error as non-log message
