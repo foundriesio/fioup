@@ -235,9 +235,12 @@ services:
     command: sh -c "while true; do sleep 60; done"
     ports:
     - %d:80
-  busybox:
+  busybox-1:
     image: ghcr.io/foundriesio/busybox:1.36
     command: sh -c "while true; do sleep 60; done"
+  busybox-2:
+    image: ghcr.io/foundriesio/busybox:1.36
+    command: sh -c "while true; do sleep 120; done"
 `
 	if badApps {
 		appComposeDef = strings.ReplaceAll(appComposeDef, "sh -c", "badcommand")
