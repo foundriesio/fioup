@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -252,6 +253,7 @@ type integrationTest struct {
 }
 
 func newIntegrationTest(t *testing.T) *integrationTest {
+	cleanupDockerImages()
 	tempDir := t.TempDir()
 	config := createMockConfig(t, tempDir)
 	gwClient, err := client.NewGatewayClient(config, nil, "", client.WithHttpOperations(mockHttpOperations{config: config, tempDir: tempDir}))
@@ -264,5 +266,24 @@ func newIntegrationTest(t *testing.T) *integrationTest {
 		ctx:      context.Background(),
 		gwClient: gwClient,
 		apiOpts:  []api.UpdateOpt{api.WithTUF(false), api.WithGatewayClient(gwClient)},
+	}
+}
+
+func execCommand(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func cleanupDockerImages() {
+	cmd := []string{
+		"docker stop $(docker ps -aq) 2> /dev/null",
+		"docker rm -f $(docker ps -aq) 2> /dev/null",
+		"docker image rm -f $(docker images -aq) 2> /dev/null",
+	}
+
+	for _, c := range cmd {
+		_ = execCommand("sh", "-c", c)
 	}
 }
