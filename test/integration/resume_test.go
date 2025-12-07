@@ -71,5 +71,5 @@ func TestResume(t *testing.T) {
 	checkErr(it.t, err)
 
 	// make sure we are now on target1
-	it.checkStatus(target1.ID)
+	it.checkStatus(target1.ID, target1.appsURIs(), true)
 }

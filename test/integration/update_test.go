@@ -14,9 +14,9 @@ import (
 func TestUpdateSequence(t *testing.T) {
 	it := newIntegrationTest(t)
 
-	target1 := it.genNewTarget(100, 2, 150, false)
-	target2 := it.genNewTarget(101, 3, 160, false)
-	target3 := it.genNewTarget(102, 1, 170, true)
+	target1 := it.genNewTarget(100, 2, 50, false)
+	target2 := it.genNewTarget(101, 3, 60, false)
+	target3 := it.genNewTarget(102, 1, 70, true)
 
 	targets := []*Target{target1}
 	it.saveTargetsJson(targets)
@@ -34,6 +34,7 @@ func TestUpdateSequence(t *testing.T) {
 func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	clearEvents()
 	targets, currentStatus, err := api.Check(it.ctx, it.config, it.apiOpts...)
+	beforeApps := runningAppsURIs(currentStatus)
 	checkErr(it.t, err)
 	if len(targets) != len(allTargets) {
 		it.t.Fatalf("Number of targets (%d) does not match expected (%d)", len(targets), len(allTargets))
@@ -80,7 +81,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 		},
 	}
 	it.checkEvents(target, expectedEvents)
-	it.checkStatus(originalTargetID)
+	it.checkStatus(originalTargetID, beforeApps, false)
 
 	err = api.Install(it.ctx, it.config, it.apiOpts...)
 	checkErr(it.t, err)
@@ -103,7 +104,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 		},
 	}
 	it.checkEvents(target, expectedEvents)
-	it.checkStatus(originalTargetID)
+	it.checkStatus(originalTargetID, []string{}, false)
 
 	err = api.Start(context.Background(), it.config, it.apiOpts...)
 	if target.Bad {
@@ -127,8 +128,8 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	}
 	it.checkEvents(target, expectedEvents)
 	if target.Bad {
-		it.checkStatus(originalTargetID)
+		it.checkStatus(originalTargetID, []string{}, false)
 	} else {
-		it.checkStatus(target.ID)
+		it.checkStatus(target.ID, target.appsURIs(), true)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/foundriesio/fioup/pkg/client"
 	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/status"
+	"github.com/stretchr/testify/assert"
 )
 
 const pkey_pem = `
@@ -110,11 +112,44 @@ path = "%s"
 	return config
 }
 
+func (it *integrationTest) refreshConfig() {
+	config, err := cfg.NewConfig([]string{it.tempDir})
+	if err != nil {
+		it.t.Fatalf("Unable to create config: %v", err)
+	}
+	it.config = config
+}
+
+func (it *integrationTest) setApps(appNames []string) {
+	it.apps = appNames
+	appsStr := strings.Join(appNames, ",")
+
+	content := ""
+	if appNames != nil {
+		content = fmt.Sprintf(`
+[pacman]
+compose_apps = "%s"
+`, appsStr)
+	}
+	path := filepath.Join(it.tempDir, "z-50-fioctl.toml")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		it.t.Fatalf("Failed to write %s toml: %v", path, err)
+	}
+}
+
 type Target struct {
 	Version int
 	ID      string
 	Apps    []*f.App
 	Bad     bool
+}
+
+func (t *Target) appsURIs() []string {
+	uris := []string{}
+	for _, app := range t.Apps {
+		uris = append(uris, app.PublishedUri)
+	}
+	return uris
 }
 
 func (it *integrationTest) saveTargetsJson(targets []*Target) {
@@ -211,7 +246,7 @@ services:
 
 	for i := 1; i <= numberOfApps; i++ {
 		port := 8080 + i + portOffset
-		app := f.NewApp(it.t, fmt.Sprintf(appComposeDef, port))
+		app := f.NewApp(it.t, fmt.Sprintf(appComposeDef, port), fmt.Sprintf("app-%d", i))
 		app.Publish(it.t)
 
 		app.Pull(it.t)
@@ -227,10 +262,41 @@ services:
 	}
 }
 
-func (it *integrationTest) checkStatus(targetID string) {
+func runningAppsURIs(status *status.CurrentStatus) []string {
+	runningApps := []string{}
+	for _, app := range status.AppStatuses {
+		if app.Running {
+			runningApps = append(runningApps, app.URI)
+		}
+	}
+	return runningApps
+}
+
+func filterAppsByName(expectedApps []string, appsNames []string) []string {
+	if appsNames == nil {
+		return expectedApps
+	}
+	filtered := []string{}
+	for _, expectedApp := range expectedApps {
+		// example: registry:5000/factory/app-1@sha256:f872bba0a3738f7e3af34aead338ac142e7df4ea6fe330345931cbcb20cbbcf8
+		l := strings.Split(expectedApp, "/")
+		appName := strings.Split(l[len(l)-1], "@")[0]
+		if slices.Contains(appsNames, appName) {
+			filtered = append(filtered, expectedApp)
+		}
+	}
+
+	return filtered
+}
+
+func (it *integrationTest) checkStatus(targetID string, expectedApps []string, filterApps bool) {
 	status, err := status.GetCurrentStatus(it.ctx, it.config.ComposeConfig())
+	runningApps := runningAppsURIs(status)
+	if filterApps {
+		expectedApps = filterAppsByName(expectedApps, it.apps)
+	}
+	assert.ElementsMatch(it.t, expectedApps, runningApps)
 	checkErr(it.t, err)
-	// fmt.Printf("Current status: %+v\n", status)
 	if status.TargetID != targetID {
 		it.t.Fatalf("Current target %s does not match expected target %s", status.TargetID, targetID)
 	}
@@ -250,6 +316,7 @@ type integrationTest struct {
 	ctx      context.Context
 	gwClient *client.GatewayClient
 	apiOpts  []api.UpdateOpt
+	apps     []string
 }
 
 func newIntegrationTest(t *testing.T) *integrationTest {
