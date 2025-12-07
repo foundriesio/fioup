@@ -29,6 +29,16 @@ func TestUpdateSequence(t *testing.T) {
 	targets = []*Target{target1, target2, target3}
 	it.saveTargetsJson(targets)
 	it.testUpdateTo(target3, targets)
+
+	// Sync to target2
+	targets = []*Target{target1, target2}
+	it.saveTargetsJson(targets)
+	it.testUpdateTo(target2, targets)
+
+	// Downgrade to target1
+	targets = []*Target{target1}
+	it.saveTargetsJson(targets)
+	it.testUpdateTo(target1, targets)
 }
 
 func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
