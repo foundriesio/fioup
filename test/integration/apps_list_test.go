@@ -8,7 +8,7 @@ import (
 func TestAppsList(t *testing.T) {
 	it := newIntegrationTest(t)
 
-	target1 := it.genNewTarget(100, 2, 50, false)
+	target1 := it.genNewTarget(100, 2, 50, false, "")
 
 	targets := []*Target{target1}
 	it.saveTargetsJson(targets)

@@ -227,7 +227,7 @@ func (it *integrationTest) saveTargetsJson(targets []*Target) {
 	}
 }
 
-func (it *integrationTest) genNewTarget(version int, numberOfApps int, portOffset int, badApps bool) *Target {
+func (it *integrationTest) genNewTarget(version int, numberOfApps int, portOffset int, badApps bool, nameSuffix string) *Target {
 	appComposeDef := `
 services:
   srvs-01:
@@ -256,7 +256,7 @@ services:
 	}
 	return &Target{
 		Version: version,
-		ID:      fmt.Sprintf("intel-corei7-64-lmp-%d", version),
+		ID:      fmt.Sprintf("intel-corei7-64-lmp-%d%s", version, nameSuffix),
 		Apps:    apps,
 		Bad:     badApps,
 	}

@@ -14,9 +14,9 @@ import (
 func TestUpdateSequence(t *testing.T) {
 	it := newIntegrationTest(t)
 
-	target1 := it.genNewTarget(100, 2, 50, false)
-	target2 := it.genNewTarget(101, 3, 60, false)
-	target3 := it.genNewTarget(102, 1, 70, true)
+	target1 := it.genNewTarget(100, 2, 50, false, "")
+	target2 := it.genNewTarget(101, 3, 60, false, "")
+	target3 := it.genNewTarget(102, 1, 70, true, "")
 
 	targets := []*Target{target1}
 	it.saveTargetsJson(targets)
