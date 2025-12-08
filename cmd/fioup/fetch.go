@@ -37,6 +37,9 @@ func init() {
 			doFetch(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	rootCmd.AddCommand(cmd)
 }

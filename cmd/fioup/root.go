@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"syscall"
 
 	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/foundriesio/fioconfig/sotatoml"
@@ -16,10 +17,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	lockFilePath = "/var/lock/fioup.lock"
+	lockFlagKey  = "lock-flag"
+)
+
 var (
 	verbose     bool
 	configPaths []string
 	config      *cfg.Config
+	lockFile    *os.File
 
 	rootCmd = &cobra.Command{
 		Use:   "fioup",
@@ -47,6 +54,10 @@ var (
 				var err error
 				config, err = cfg.NewConfig(configPaths)
 				cobra.CheckErr(err)
+			}
+			// If the lock flag is set, then acquire lock to prevent concurrent executions from different processes
+			if l := cmd.Annotations[lockFlagKey]; l == "true" {
+				cobra.CheckErr(acquireLock())
 			}
 		},
 	}
@@ -80,4 +91,18 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose debug logging")
 	rootCmd.PersistentFlags().StringSliceVarP(&configPaths, "cfg-dirs", "c",
 		sotatoml.DEF_CONFIG_ORDER, "A comma-separated list of paths to search for .toml configuration files")
+}
+
+func acquireLock() error {
+	var err error
+	lockFile, err = os.OpenFile(lockFilePath, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open or create lock file: %w", err)
+	}
+	// Try to acquire exclusive lock, non-blocking
+	if err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		return fmt.Errorf("another instance of fioup is already running: %w", err)
+	}
+	slog.Debug("successfully acquired lock file", "path", lockFilePath)
+	return nil
 }

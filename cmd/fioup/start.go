@@ -17,6 +17,9 @@ func init() {
 			doStart(cmd)
 		},
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	rootCmd.AddCommand(cmd)
 }

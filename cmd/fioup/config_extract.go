@@ -17,6 +17,9 @@ func init() {
 			doConfigExtract(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	opts.ApplyToCmd(cmd)
 	rootCmd.AddCommand(cmd)

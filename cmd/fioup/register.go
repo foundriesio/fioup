@@ -25,6 +25,9 @@ func init() {
 			cobra.CheckErr(err)
 			doRegister(&opt)
 		},
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	cmd.Flags().BoolVar(&opt.Production, "production", false, "Mark the device as a production device.")
 	cmd.Flags().StringVar(&opt.SotaDir, "sota-dir", register.SOTA_DIR, "The directory to install to keys and configuration to.")
