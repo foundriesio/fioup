@@ -49,6 +49,9 @@ func init() {
 			doDaemon(cmd, opts)
 		},
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	cmd.Flags().BoolVar(&opts.configEnabled, "fioconfig", true, "Include fioconfig daemon logic.")
 	opts.fioconfig.ApplyToCmd(cmd)

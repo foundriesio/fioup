@@ -43,6 +43,9 @@ func init() {
 			doUpdate(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 
 	cmd.Flags().BoolVar(&opts.syncCurrent, "sync-current", false, "Sync the currently installed target if no version is specified.")

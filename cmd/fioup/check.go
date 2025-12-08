@@ -19,6 +19,9 @@ func init() {
 			doCheck(cmd, &opts)
 		},
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	addCommonOptions(cmd, &opts)
 	rootCmd.AddCommand(cmd)

@@ -37,6 +37,9 @@ func init() {
 			doRunAndReport(cmd, args, &opts)
 		},
 		Args: cobra.MinimumNArgs(1),
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	opts.ApplyToCmd(cmd)
 	rootCmd.AddCommand(cmd)

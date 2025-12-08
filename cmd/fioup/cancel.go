@@ -21,6 +21,9 @@ func init() {
 			doCancel(cmd)
 		},
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			lockFlagKey: "true",
+		},
 	}
 	rootCmd.AddCommand(cmd)
 }
