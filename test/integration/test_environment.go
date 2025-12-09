@@ -293,6 +293,7 @@ func filterAppsByName(expectedApps []string, appsNames []string) []string {
 }
 
 func (it *integrationTest) checkStatus(targetID string, expectedApps []string, filterApps bool) {
+	it.t.Helper()
 	status, err := status.GetCurrentStatus(it.ctx, it.config.ComposeConfig())
 	runningApps := runningAppsURIs(status)
 	if filterApps {
