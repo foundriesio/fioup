@@ -42,6 +42,7 @@ func TestUpdateSequence(t *testing.T) {
 }
 
 func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
+	it.t.Helper()
 	clearEvents()
 	targets, currentStatus, err := api.Check(it.ctx, it.config, it.apiOpts...)
 	beforeApps := runningAppsURIs(currentStatus)
