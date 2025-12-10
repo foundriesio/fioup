@@ -59,8 +59,8 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/foundriesio/composeapp v0.0.0-20251127134139-ebf921e14117 h1:fwCTZUR9Y4UsGUqRxlWrmrT7GJTg+Zr1hYoG7j0MbuU=
-github.com/foundriesio/composeapp v0.0.0-20251127134139-ebf921e14117/go.mod h1:nA95y4iS0RnUV9iAyau91/mv7doDs6eXazEE+Pd53c4=
+github.com/foundriesio/composeapp v0.0.0-20251210141902-6a356d0f24de h1:8zWo+TNYYuPe/2fC0fZObk/RD25AH+GhrwJF3uZqqo8=
+github.com/foundriesio/composeapp v0.0.0-20251210141902-6a356d0f24de/go.mod h1:nA95y4iS0RnUV9iAyau91/mv7doDs6eXazEE+Pd53c4=
 github.com/foundriesio/fioconfig v0.0.0-20251101194105-0c6d0ac7e118 h1:6bGiWDTXxAuJm2+lFuIfoE5bqbS5Y9XUyMYZHLY5jMs=
 github.com/foundriesio/fioconfig v0.0.0-20251101194105-0c6d0ac7e118/go.mod h1:3cLFsAyngsCwvXgtt+JgU170oKmJQIvoktvT7gQALE8=
 github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
