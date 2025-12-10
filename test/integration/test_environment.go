@@ -235,6 +235,9 @@ services:
     command: sh -c "while true; do sleep 60; done"
     ports:
     - %d:80
+  busybox-0:
+    image: ghcr.io/foundriesio/busybox:1.36
+    command: sh -c "while true; do sleep 120; done"
   busybox-1:
     image: ghcr.io/foundriesio/busybox:1.36
     command: sh -c "while true; do sleep 60; done"
