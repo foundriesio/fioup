@@ -239,7 +239,7 @@ services:
     image: ghcr.io/foundriesio/busybox:1.36
     command: sh -c "while true; do sleep 60; done"
   busybox-2:
-    image: ghcr.io/foundriesio/busybox:1.36
+    image: ghcr.io/foundriesio/busybox:1.36-multiarch
     command: sh -c "while true; do sleep 120; done"
 `
 	if badApps {
