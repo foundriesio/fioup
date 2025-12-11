@@ -2,6 +2,10 @@
 
 ## Installing Fioup
 
+### Dependencies
+* `docker` >= 25.0.0
+* `docker compose` >= 2.25.0
+
 ### Official Debian Package (Recommended)
 
 1. Update the `apt` package index and install packages needed to use the fioup `apt` repository:
