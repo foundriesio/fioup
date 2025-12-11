@@ -1,4 +1,35 @@
-fioup (1.1.0) UNRELEASED; urgency=medium
+fioup (1.1.1) UNRELEASED; urgency=medium
+
+  [ Changes ]
+  * afa7be7 cmd: Only one instance of fioup can run at a time
+  * 700e137 - 8ea1880 tests: Add multiple integration tests running in the
+    docker/compose based environment
+  * debian: Set minimum required versions for dependencies
+
+  [ Bugfixes ]
+  * 2f04341 go.mod: Bump composeapp ver 6a356d0 -> uninstall: Prune only dangling images
+
+
+  [ Andre Detsch ]
+  * tests: Cleanup docker images at each test startup
+  * tests: Verify apps list changes
+  * tests: Add tests for logic specific to fioup daemon
+  * tests: Use the same docker image twice in the test apps
+  * tests: Add sync and downgrade to update sequence test
+  * tests: Set checkStatus and testUpdateTo as helper functions
+
+  [ Mike Sul ]
+  * cmd: Ensure single instance of fioup when needed
+  * test_environment: Use multiarch image in apps
+  * go.mod: Bump composeapp ver 6a356d0
+  * test: Add service reusing image from another service
+  * docs: Specify minimum required dependency versions
+  * debian: Set minimum required versions for dependencies
+
+  [ dependabot[bot] ]
+  * build(deps): bump github.com/spf13/cobra from 1.10.1 to 1.10.2
+
+fioup (1.1.0) released; urgency=medium
 
   [ New Features ]
   * Add update details to the context of update events.
