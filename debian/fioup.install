@@ -1,3 +1,4 @@
 bin/fioup usr/bin/
 debian/fioup-config-extract.service usr/lib/systemd/system/
 debian/fioconfig-handlers/* usr/share/fioconfig/handlers/
+debian/fioconfig-actions/* usr/share/fioconfig/actions/
