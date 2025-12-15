@@ -38,7 +38,7 @@ func init() {
 		},
 		Args: cobra.MinimumNArgs(1),
 		Annotations: map[string]string{
-			lockFlagKey: "true",
+			lockFlagKey: "false",
 		},
 	}
 	opts.ApplyToCmd(cmd)
