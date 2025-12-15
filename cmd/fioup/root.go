@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -18,7 +20,7 @@ import (
 )
 
 const (
-	lockFilePath = "/var/lock/fioup.lock"
+	lockFileName = "fioup.lock"
 	lockFlagKey  = "lock-flag"
 )
 
@@ -95,6 +97,7 @@ func init() {
 
 func acquireLock() error {
 	var err error
+	lockFilePath := filepath.Join(runtimeLockDir(), lockFileName)
 	lockFile, err = os.OpenFile(lockFilePath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open or create lock file: %w", err)
@@ -105,4 +108,28 @@ func acquireLock() error {
 	}
 	slog.Debug("successfully acquired lock file", "path", lockFilePath)
 	return nil
+}
+
+func runtimeLockDir() string {
+	// If running as root (including via sudo), use /run
+	if os.Geteuid() == 0 {
+		fmt.Println("Running as root, using /run for runtime lock directory")
+		if _, err := os.Stat("/run"); err == nil {
+			return "/run"
+		}
+	}
+	// Non-root: prefer XDG_RUNTIME_DIR
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		if _, err := os.Stat(dir); err == nil {
+			return dir
+		}
+	}
+	// Non-root fallback: /run/user/$UID
+	uid := os.Geteuid()
+	userRun := filepath.Join("/run/user", strconv.Itoa(uid))
+	if _, err := os.Stat(userRun); err == nil {
+		return userRun
+	}
+	// Last resort
+	return os.TempDir()
 }
