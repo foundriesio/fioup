@@ -43,7 +43,7 @@ jobs:
           mv bin/fioup bin/fioup-linux-${{ matrix.hosts.arch }}
 
       - name: Save binaries
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: fioup-linux-${{ matrix.hosts.arch }}
           path: bin/fioup-linux-${{ matrix.hosts.arch }}
@@ -71,13 +71,13 @@ jobs:
           echo "DEB_VERSION=${VERSION#v}" >> $GITHUB_ENV
 
       - name: Save debs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
           path: /tmp/debs/fioup_${{ env.DEB_VERSION }}_${{ matrix.hosts.arch }}.deb
 
       - name: Save release notes
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: release-notes_${{ matrix.hosts.arch }}.txt
           path: /tmp/debs/release-notes.txt
