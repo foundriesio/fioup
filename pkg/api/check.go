@@ -6,6 +6,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/foundriesio/fioup/pkg/config"
 	"github.com/foundriesio/fioup/pkg/state"
@@ -34,6 +35,16 @@ func Check(ctx context.Context, cfg *config.Config, options ...UpdateOpt) (targe
 	}
 	currentStatus := updateRunner.ctx.CurrentStatus
 	if currentStatus == nil {
+		if proxy, err := updateRunner.ctx.Client.AppsProxyUrl(); err != nil {
+			return nil, nil, fmt.Errorf("failed to get apps proxy URL: %w", err)
+		} else if proxy != nil {
+			if err := proxy.Configure(cfg.ComposeConfig()); err != nil {
+				return nil, nil, fmt.Errorf("failed to configure apps proxy: %w", err)
+			}
+			slog.Debug("using apps proxy", "url", proxy.Url)
+			defer proxy.Unconfigure(cfg.ComposeConfig())
+		}
+
 		if s, err := status.GetCurrentStatus(ctx, cfg.ComposeConfig()); err == nil {
 			currentStatus = s
 		} else {
