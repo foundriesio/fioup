@@ -102,8 +102,8 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 		HttpClient: client,
 		Headers:    headers,
 
-		proxyAppsUrl: cfg.TomlConfig().Get("pacman.apps_proxy_server"),
-		proxyAppsCa:  cfg.TomlConfig().Get("import.tls_cacert_path"),
+		proxyAppsUrl: cfg.GetComposeAppsProxy(),
+		proxyAppsCa:  cfg.GetComposeAppsProxyCA(),
 
 		lastNetInfoFile:   filepath.Join(sota, ".last-netinfo"),
 		lastSotaFile:      filepath.Join(sota, ".last-sota"),

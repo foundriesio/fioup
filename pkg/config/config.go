@@ -32,6 +32,8 @@ const (
 	StorageDirKey         = "storage.path"
 	HardwareIDKey         = "provision.primary_ecu_hardware_id"
 	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
+	ComposeAppsProxyKey   = "pacman.compose_apps_proxy"
+	ServerCACertKey       = "import.tls_cacert_path"
 
 	StorageDefaultDir               = "/var/sota"
 	TargetsDefaultFilename          = "targets.json"
@@ -135,6 +137,14 @@ func (c *Config) GetEnabledApps() []string {
 
 func (c *Config) GetStorageUsageWatermark() uint {
 	return c.storageWatermark
+}
+
+func (c *Config) GetComposeAppsProxy() string {
+	return c.tomlConfig.Get(ComposeAppsProxyKey)
+}
+
+func (c *Config) GetComposeAppsProxyCA() string {
+	return c.TomlConfig().Get(ServerCACertKey)
 }
 
 func newComposeConfig(config *sotatoml.AppConfig) (*compose.Config, error) {
