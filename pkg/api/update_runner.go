@@ -91,6 +91,16 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		slog.Debug("failed to report apps states", "error", err)
 	}
 
+	if proxy, err := sm.ctx.Client.AppsProxyUrl(); err != nil {
+		return fmt.Errorf("failed to get apps proxy URL: %w", err)
+	} else if proxy != nil {
+		if err := proxy.Configure(sm.ctx.Config.ComposeConfig()); err != nil {
+			return fmt.Errorf("failed to configure apps proxy: %w", err)
+		}
+		slog.Debug("using apps proxy", "url", proxy.Url)
+		defer proxy.Unconfigure(sm.ctx.Config.ComposeConfig())
+	}
+
 	sm.ctx.TotalStates = len(sm.states)
 	sm.ctx.CurrentStateNum = 1
 	for _, s := range sm.states {
