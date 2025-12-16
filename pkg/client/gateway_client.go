@@ -4,9 +4,11 @@
 package client
 
 import (
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +28,7 @@ type (
 		Headers    map[string]string
 
 		proxyAppsUrl string
-		proxyAppsCa  string
+		proxyAppsCa  *x509.CertPool
 
 		lastNetInfoFile   string
 		lastSotaFile      string
@@ -96,6 +98,16 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 		headers[HeaderKeyTarget] = targetID
 	}
 
+	var proxyCerts *x509.CertPool
+	if len(cfg.GetComposeAppsProxy()) > 0 {
+		proxyCerts = x509.NewCertPool()
+		if pemData, err := os.ReadFile(cfg.GetComposeAppsProxyCA()); err != nil {
+			return nil, fmt.Errorf("unable to read COMPOSE_APPS_PROXY_CA: %w", err)
+		} else if ok := proxyCerts.AppendCertsFromPEM(pemData); !ok {
+			return nil, fmt.Errorf("failed to set COMPOSE_APPS_PROXY_CA: %w", err)
+		}
+	}
+
 	sota := cfg.GetStorageDir()
 	gw := &GatewayClient{
 		BaseURL:    cfg.GetServerBaseURL(),
@@ -103,7 +115,7 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 		Headers:    headers,
 
 		proxyAppsUrl: cfg.GetComposeAppsProxy(),
-		proxyAppsCa:  cfg.GetComposeAppsProxyCA(),
+		proxyAppsCa:  proxyCerts,
 
 		lastNetInfoFile:   filepath.Join(sota, ".last-netinfo"),
 		lastSotaFile:      filepath.Join(sota, ".last-sota"),

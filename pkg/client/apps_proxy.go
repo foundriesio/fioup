@@ -4,28 +4,35 @@
 package client
 
 import (
+	"crypto/x509"
 	"fmt"
 	"net/http"
-	"os"
+	"net/url"
 
+	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/fioconfig/transport"
 )
 
 type AppsProxy struct {
 	Url    string
-	CaCert string
+	CaCert *x509.CertPool
 }
 
 // Configurre sets environment variables required by composectl to use the proxy
-func (p AppsProxy) Configure() {
-	os.Setenv("COMPOSE_APPS_PROXY", p.Url)
-	os.Setenv("COMPOSE_APPS_PROXY_CA", p.CaCert)
+func (p AppsProxy) Configure(cfg *compose.Config) error {
+	proxyURL, err := url.Parse(p.Url)
+	if err != nil {
+		return err
+	}
+	cfg.ProxyURL = proxyURL
+	cfg.ProxyCerts = p.CaCert
+	return nil
 }
 
 // Unconfigure unsets environment variables used for the apps proxy
-func (p AppsProxy) Unconfigure() {
-	os.Unsetenv("COMPOSE_APPS_PROXY")
-	os.Unsetenv("COMPOSE_APPS_PROXY_CA")
+func (p AppsProxy) Unconfigure(cfg *compose.Config) {
+	cfg.ProxyURL = nil
+	cfg.ProxyCerts = nil
 }
 
 // AppsProxyUrl will look to see if an apps proxy server is configured. If so,

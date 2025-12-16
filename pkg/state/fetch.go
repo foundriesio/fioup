@@ -45,8 +45,11 @@ func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 				return fmt.Errorf("failed to get apps proxy URL: %w", err)
 			} else if proxy != nil {
 				slog.Debug("using apps proxy", "url", proxy.Url)
-				proxy.Configure()
-				defer proxy.Unconfigure()
+				if err := proxy.Configure(updateCtx.Config.ComposeConfig()); err != nil {
+					return fmt.Errorf("failed to configure apps proxy: %w", err)
+				} else {
+					defer proxy.Unconfigure(updateCtx.Config.ComposeConfig())
+				}
 			}
 
 			err = updateCtx.UpdateRunner.Fetch(ctx, compose.WithFetchProgress(s.ProgressHandler))
