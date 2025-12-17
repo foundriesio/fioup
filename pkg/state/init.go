@@ -5,14 +5,20 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/pkg/errors"
 )
 
 type Init struct {
 	CheckState bool
 }
+
+var (
+	ErrInitFailed = errors.New("update initialization failed")
+)
 
 func (s *Init) Name() ActionName { return "Initializing" }
 func (s *Init) Execute(ctx context.Context, updateCtx *UpdateContext) error {
@@ -41,6 +47,9 @@ func (s *Init) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	updateCtx.FetchedAt = updateCtx.UpdateRunner.Status().FetchTime
 	if wasInitialized {
 		updateCtx.SendEvent(events.UpdateInitCompleted, err)
+	}
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrInitFailed, err)
 	}
 	return err
 }

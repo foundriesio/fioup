@@ -7,6 +7,7 @@ import (
 
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/foundriesio/fioup/pkg/state"
 )
 
 // TestUpdateSequence tests a sequence of updates including good and bad targets, verifying
@@ -119,9 +120,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 
 	err = api.Start(context.Background(), it.config, it.apiOpts...)
 	if target.Bad {
-		if err == nil {
-			it.t.Fatalf("Start succeeded but was expected to fail")
-		}
+		expectErr(it.t, err, state.ErrStartFailed)
 	} else {
 		checkErr(it.t, err)
 	}
