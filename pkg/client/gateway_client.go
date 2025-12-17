@@ -110,6 +110,7 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 	gw.initSota(cfg.TomlConfig())
 	gw.initHwinfo()
 	gw.initAppStateReporter()
+	cfg.SetClientForProxy(client)
 	return gw, nil
 }
 
