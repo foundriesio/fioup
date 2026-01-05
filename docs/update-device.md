@@ -15,6 +15,12 @@ update is available, it may be applied by running:
  sudo fioup update
 ```
 
+Optionally, you can check the update size before applying the update by running:
+
+```
+sudo fioup diff
+```
+
 ## Advanced
 
 An update can be applied in more granular steps with:
