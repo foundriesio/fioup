@@ -39,7 +39,7 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		updateCtx.completeUpdate(ctx)
 		updateCtx.Client.UpdateHeaders(updateCtx.ToTarget.AppNames(), updateCtx.ToTarget.ID)
 	} else {
-		err = fmt.Errorf("%w: %s", ErrStartFailed, err.Error())
+		err = fmt.Errorf("%w: %w", ErrStartFailed, err)
 	}
 	if currentStatus, errStatus := status.GetCurrentStatus(ctx, updateCtx.Config.ComposeConfig()); errStatus == nil {
 		updateCtx.CurrentStatus = currentStatus

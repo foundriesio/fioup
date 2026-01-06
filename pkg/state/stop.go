@@ -16,6 +16,10 @@ import (
 
 type Stop struct{}
 
+var (
+	ErrStopAppsFailed = fmt.Errorf("stopping apps failed")
+)
+
 func (s *Stop) Name() ActionName { return "Stopping" }
 func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	currentState := updateCtx.UpdateRunner.Status().State
@@ -24,8 +28,8 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		return nil
 	}
 	if !currentState.IsOneOf(update.StateFetched, update.StateInstalling) {
-		return fmt.Errorf("invalid state %s for stopping apps; must be in state %s or %s", currentState,
-			update.StateFetched, update.StateInstalling)
+		return fmt.Errorf("%w: invalid state %s for stopping apps; must be in state %s or %s", ErrInvalidActionForState,
+			currentState, update.StateFetched, update.StateInstalling)
 	}
 	// Installation starts from stopping the currently running apps that are being updated
 	updateCtx.SendEvent(events.InstallationStarted)
@@ -39,6 +43,7 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			slog.Error("failed to get current app statuses after stop failure", "error", errStatus)
 		}
 		updateCtx.SendEvent(events.InstallationCompleted, err)
+		err = fmt.Errorf("%w: %w", ErrStopAppsFailed, err)
 	}
 	return err
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -23,13 +24,18 @@ type (
 	}
 )
 
+var (
+	ErrFetchFailed  = errors.New("download failed")
+	ErrFetchNoSpace = errors.New("download failed, not enough storage space")
+)
+
 func (s *Fetch) Name() ActionName { return "Fetching" }
 func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	var err error
 	updateState := updateCtx.UpdateRunner.Status().State
 	switch updateState {
 	case update.StateCreated, update.StateInitializing:
-		return fmt.Errorf("update not initialized, cannot fetch")
+		return fmt.Errorf("%w:  update not initialized, cannot fetch", ErrInvalidActionForState)
 	case update.StateInitialized, update.StateFetching:
 		// Update storage usage info before fetch to reflect current usage
 		if errUsage := updateCtx.getAndSetStorageUsageInfo(); errUsage != nil {
@@ -37,14 +43,20 @@ func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		} else {
 			// Check for free space only if we could get current storage usage info
 			err = updateCtx.checkFreeSpace()
+			if err != nil {
+				err = fmt.Errorf("%w: %w", ErrFetchNoSpace, err)
+			}
 		}
 		// Send download started event regardless if there is enough space or not to mark the start of download attempt
 		updateCtx.SendEvent(events.DownloadStarted)
 		if err == nil {
 			err = updateCtx.UpdateRunner.Fetch(ctx, compose.WithFetchProgress(s.ProgressHandler))
+			if err != nil {
+				err = fmt.Errorf("%w: %w", ErrFetchFailed, err)
+			}
 			// Update storage usage info after fetch to reflect actual usage
-			if err := updateCtx.getAndSetStorageUsageInfo(); err != nil {
-				slog.Debug("failed to get storage usage info after fetch", "error", err)
+			if errInfo := updateCtx.getAndSetStorageUsageInfo(); errInfo != nil {
+				slog.Debug("failed to get storage usage info after fetch", "error", errInfo)
 			}
 		}
 		updateCtx.SendEvent(events.DownloadCompleted, err)
