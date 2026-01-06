@@ -36,6 +36,10 @@ var (
 	ErrCheckNoUpdate           = errors.New("selected target is already running")
 	ErrNewerVersionIsAvailable = errors.New("can't resume current update, there is a newer version available")
 	ErrInvalidOngoingUpdate    = errors.New("invalid ongoing update")
+	ErrTargetNotFound          = errors.New("target not found")
+	ErrNoMatchingTarget        = errors.New("no matching target available")
+	ErrNoOngoingUpdate         = errors.New("there is no ongoing update")
+	ErrCheckInFailed           = errors.New("check in failed")
 )
 
 func (s *Check) Name() ActionName { return "Checking" }
@@ -46,8 +50,8 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	updateCtx.UpdateRunner, err = update.GetCurrentUpdate(updateCtx.Config.ComposeConfig())
 	if errors.Is(err, update.ErrUpdateNotFound) {
 		if !s.AllowNewUpdate {
-			return fmt.Errorf("no ongoing update to %s found;"+
-				" please run %q or %q first", s.Action, "fioup update", "fioup fetch")
+			return fmt.Errorf("%w: no ongoing update to %s found;"+
+				" please run %q or %q first", ErrNoOngoingUpdate, s.Action, "fioup update", "fioup fetch")
 		}
 		updateCtx.Mode = UpdateModeNewUpdate
 		err = nil
@@ -62,7 +66,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if len(s.AllowedStates) > 0 {
 		currentState := updateCtx.UpdateRunner.Status().State
 		if !currentState.IsOneOf(s.AllowedStates...) {
-			return fmt.Errorf("cannot %s current update if it is in state %q", s.Action, currentState)
+			return fmt.Errorf("%w: cannot %s current update if it is in state %q", ErrInvalidOngoingUpdate, s.Action, currentState)
 		}
 	}
 
@@ -73,11 +77,11 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		targetRepo, err = target.NewPlainRepo(updateCtx.Client, updateCtx.Config.GetTargetsFilepath(), updateCtx.Config.GetHardwareID())
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrCheckInFailed, err)
 	}
 	targets, err := targetRepo.LoadTargets(s.UpdateTargets)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrCheckInFailed, err)
 	}
 	updateCtx.Targets = targets
 
@@ -117,14 +121,14 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 		// Get ToTarget if resuming update
 		target, err := u.getOngoingUpdateTarget()
 		if err != nil {
-			return ErrInvalidOngoingUpdate
+			return fmt.Errorf("%w: %w", ErrInvalidOngoingUpdate, err)
 		}
 		u.ToTarget = *target
 		if s.ToVersion != -1 {
 			// make sure ToVersion matches the ongoing update, otherwise fail
 			if u.ToTarget.Version != s.ToVersion {
-				return fmt.Errorf("cannot start or resume update to version %d since there is an ongoing update to version %d",
-					s.ToVersion, u.ToTarget.Version)
+				return fmt.Errorf("%w: cannot start or resume update to version %d since there is an ongoing update to version %d",
+					ErrInvalidOngoingUpdate, s.ToVersion, u.ToTarget.Version)
 			}
 		} else {
 			if s.RequireLatest {
@@ -142,12 +146,12 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 			if s.SyncCurrent {
 				u.ToTarget = u.getSyncTarget()
 				if u.ToTarget.ID == target.UnknownTarget.ID {
-					return fmt.Errorf("could not find current target to be synced")
+					return fmt.Errorf("%w: could not find current target to be synced", ErrTargetNotFound)
 				}
 			} else {
 				u.ToTarget = u.Targets.GetLatestTarget()
 				if u.ToTarget.ID == target.UnknownTarget.ID {
-					return fmt.Errorf("could not find latest target")
+					return fmt.Errorf("%w: could not find latest target", ErrTargetNotFound)
 				}
 			}
 			if s.MaxAttempts > 0 {
@@ -165,7 +169,7 @@ func (u *UpdateContext) selectToTarget(s *Check) error {
 		} else {
 			u.ToTarget = u.Targets.GetTargetByVersion(s.ToVersion)
 			if u.ToTarget.ID == target.UnknownTarget.ID {
-				return fmt.Errorf("could not find target with version %d", s.ToVersion)
+				return fmt.Errorf("%w: could not find target with version %d", ErrTargetNotFound, s.ToVersion)
 			}
 		}
 	}
