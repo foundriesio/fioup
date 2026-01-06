@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -313,6 +314,13 @@ func checkErr(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func expectErr(t *testing.T, err error, expected error) {
+	t.Helper()
+	if err == nil || !errors.Is(err, expected) {
+		t.Fatalf("%v error was expected, but got %v", expected, err)
 	}
 }
 
