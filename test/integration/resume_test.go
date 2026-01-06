@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/foundriesio/fioup/pkg/state"
 )
 
 // TestResume tests invalid operations are rejected while resuming an update
@@ -35,9 +36,7 @@ func TestResume(t *testing.T) {
 
 	// Should not allow to perform a fetch to a different target while update is in progress
 	err = api.Fetch(it.ctx, it.config, target2.Version, it.apiOpts...)
-	if err == nil {
-		t.Fatalf("Fetch is expected to fail but did not")
-	}
+	expectErr(it.t, err, state.ErrInvalidActionForState)
 
 	// Should keep updating to target1, even having target2 available
 	err = api.Fetch(it.ctx, it.config, -1, it.apiOpts...)
@@ -58,9 +57,7 @@ func TestResume(t *testing.T) {
 
 	// No install yet, start should fail
 	err = api.Start(it.ctx, it.config, api.WithGatewayClient(it.gwClient))
-	if err == nil {
-		t.Fatalf("Start is expected to fail but did not")
-	}
+	expectErr(it.t, err, state.ErrInvalidActionForState)
 
 	// Install target1
 	err = api.Install(it.ctx, it.config, api.WithGatewayClient(it.gwClient))
