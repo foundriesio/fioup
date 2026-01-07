@@ -48,6 +48,8 @@ if use_fioup:
         InstallRollbackOk = 1 # fioup cli returns an error instead of actually doing a rollback
         InstallRollbackNeedsReboot = 0
         InstallRollbackFailed = 1
+        CheckNoUpdate = 25
+        StartFailed = 70
 else:
     # Aklite CLI return codes:
     class ReturnCodes:
@@ -83,6 +85,10 @@ else:
         InstallRollbackOk = 110
         InstallRollbackNeedsReboot = 120
         InstallRollbackFailed = 130
+
+        # Fioup only
+        CheckNoUpdate = 25
+        StartFailed = 70
 
 logger = logging.getLogger(__name__)
 
@@ -585,12 +591,12 @@ def install_with_separate_steps(target: Target, explicit_version: bool = True, d
         cp = invoke_aklite(['run'])
 
         if target.run_rollback:
-            assert cp.returncode == ReturnCodes.InstallRollbackOk, cp.stdout.decode("utf-8")
             verify_callback([
                 ("install-final-pre", ""), ("install-post", "FAILED"),
                 ("install-pre", ""), ("install-post", "OK")
             ])
             if use_fioup:
+                assert cp.returncode == ReturnCodes.StartFailed, cp.stdout.decode("utf-8")
                 # fioup has the same correlation id for fetch and install operations
                 verify_events(target.actual_version, {
                     ('EcuDownloadStarted', None),
@@ -610,6 +616,7 @@ def install_with_separate_steps(target: Target, explicit_version: bool = True, d
                     ('EcuInstallationCompleted', True),
                 }, False)
             else:
+                assert cp.returncode == ReturnCodes.InstallRollbackOk, cp.stdout.decode("utf-8")
                 verify_events(target.actual_version, {
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationApplied', None),
@@ -803,7 +810,6 @@ def install_with_single_step(target: Target, explicit_version: bool = True, do_r
 
     else:  # !install_rollback && !requires_reboot && !delay_app_install
         if target.run_rollback:
-            assert cp.returncode == ReturnCodes.InstallRollbackOk, cp.stdout.decode("utf-8")
             verify_callback([
                 ("check-for-update-pre", ""), ("check-for-update-post", "OK"),
                 ("download-pre", ""), ("download-post", "OK"),
@@ -811,6 +817,7 @@ def install_with_single_step(target: Target, explicit_version: bool = True, do_r
                 ("install-pre", ""), ("install-post", "OK")
                 ])
             if use_fioup:
+                assert cp.returncode == ReturnCodes.StartFailed, cp.stdout.decode("utf-8")
                 verify_events(target.actual_version, {
                     ('EcuDownloadStarted', None),
                     ('EcuDownloadCompleted', True),
@@ -828,6 +835,7 @@ def install_with_single_step(target: Target, explicit_version: bool = True, do_r
                     ('EcuInstallationCompleted', True),
                 }, False)
             else:
+                assert cp.returncode == ReturnCodes.InstallRollbackOk, cp.stdout.decode("utf-8")
                 verify_events(final_target.actual_version, {
                     ('EcuInstallationStarted', None),
                     ('EcuInstallationCompleted', True),
@@ -1262,14 +1270,14 @@ def test_fioup_daemon():
             # If bad target, check retry and "rollback" logic.
             # No explicit rollback is actually performed, just an apps sync update of the current target after
             #  giving up on trying the new target.
-            assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+            assert cp.returncode == ReturnCodes.StartFailed, cp.stdout.decode("utf-8")
             assert aklite_current_version() == last_installed_version
             # Try to update to latest (bad) target 2 more times. Total attempts before giving up is 3
             for i in range(2):
                 logger.info(f"Trying update to target {target.actual_version} again, attempt {i+2}/3")
                 min_events_time = datetime.now(timezone.utc)
                 cp = invoke_aklite(["daemon"])
-                assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+                assert cp.returncode == ReturnCodes.StartFailed, cp.stdout.decode("utf-8")
                 verify_events(target.actual_version, {
                         ('EcuDownloadStarted', None),
                         ('EcuDownloadCompleted', True),
@@ -1299,7 +1307,7 @@ def test_fioup_daemon():
             logger.info(f"Sync to current target {last_installed_version} done. Making sure no new update is performed by daemon")
             cp = invoke_aklite(["daemon"])
             # If no update is required, daemon --run-once currently returns an error, "selected target is already running"
-            assert cp.returncode == ReturnCodes.UnknownError, cp.stdout.decode("utf-8")
+            assert cp.returncode == ReturnCodes.CheckNoUpdate, cp.stdout.decode("utf-8")
             verify_events(0, set(), False, min_events_time)
             assert aklite_current_version() == last_installed_version
             # restore originally running apps
