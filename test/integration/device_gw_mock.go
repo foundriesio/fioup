@@ -13,8 +13,9 @@ import (
 )
 
 type mockHttpOperations struct {
-	config  *cfg.Config
-	tempDir string
+	config       *cfg.Config
+	tempDir      string
+	proxyHandler func() (*transport.HttpRes, error)
 }
 
 func (o mockHttpOperations) HttpGet(client *http.Client, url string, headers map[string]string) (*transport.HttpRes, error) {
@@ -40,11 +41,17 @@ func (o mockHttpOperations) HttpGet(client *http.Client, url string, headers map
 
 var postedEvents []events.DgUpdateEvent
 
-func (mockHttpOperations) HttpDo(client *http.Client, method, url string, headers map[string]string, data any) (*transport.HttpRes, error) {
+func (o mockHttpOperations) HttpDo(client *http.Client, method, url string, headers map[string]string, data any) (*transport.HttpRes, error) {
 	// fmt.Print("HttpDo " + method + " " + url + "\n")
 	if method == http.MethodPost {
 		if strings.HasSuffix(url, "/events") {
 			postedEvents = append(postedEvents, data.([]events.DgUpdateEvent)...)
+		} else if strings.HasSuffix(url, "/apps-proxy-url") {
+			if o.proxyHandler != nil {
+				return o.proxyHandler()
+			} else {
+				return nil, fmt.Errorf("proxyHandler not set for mockHttpOperations")
+			}
 		}
 	}
 
