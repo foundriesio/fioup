@@ -4,32 +4,132 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/foundriesio/fioup/pkg/api"
+	"github.com/foundriesio/fioup/pkg/state"
+	"github.com/foundriesio/fioup/pkg/status"
+	"github.com/foundriesio/fioup/pkg/target"
 	"github.com/spf13/cobra"
 )
 
+type (
+	checkOptions struct {
+		commonOptions
+		Format string
+	}
+)
+
 func init() {
-	opts := commonOptions{}
+	opts := checkOptions{
+		Format: "text",
+	}
 	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Update TUF metadata",
-		Run: func(cmd *cobra.Command, args []string) {
-			doCheck(cmd, &opts)
-		},
-		Args: cobra.NoArgs,
+		Args:  cobra.NoArgs,
 		Annotations: map[string]string{
 			lockFlagKey: "true",
 		},
 	}
-	addCommonOptions(cmd, &opts)
+	cmd.Flags().StringVar(&opts.Format, "format", "text", "Format the output. Values: [text | json]")
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		switch opts.Format {
+		case "text", "json":
+			doCheck(cmd, &opts)
+		default:
+			return fmt.Errorf("invalid value for --format: %s (must be text or json)", opts.Format)
+		}
+		return nil
+	}
+	addCommonOptions(cmd, &opts.commonOptions)
 	rootCmd.AddCommand(cmd)
 }
 
-func doCheck(cmd *cobra.Command, opts *commonOptions) {
+func doCheck(cmd *cobra.Command, opts *checkOptions) {
 	targets, currentStatus, err := api.Check(cmd.Context(), config, api.WithTUF(opts.enableTuf))
 	DieNotNil(err, "failed to check for updates")
+	if opts.Format == "json" {
+		printJsonResult(targets, currentStatus)
+	} else {
+		printTextResult(targets, currentStatus)
+	}
+}
+
+type (
+	CheckResultUpdate struct {
+		SelectedTarget any    `json:"selected_target,omitempty"`
+		Type           string `json:"type,omitempty"`
+		Description    string `json:"description,omitempty"`
+	}
+
+	CheckResult struct {
+		AppsAreInSync  bool              `json:"apps_are_in_sync"`
+		UpdateRequired bool              `json:"update_required"`
+		Update         CheckResultUpdate `json:"update,omitempty"`
+	}
+)
+
+func printJsonResult(targets target.Targets, currentStatus *status.CurrentStatus) {
+	var areAppsInSync = true
+	for _, app := range currentStatus.AppStatuses {
+		if !app.Fetched || !app.Installed || !app.Running {
+			areAppsInSync = false
+		}
+	}
+
+	description := ""
+	var updateType state.UpdateType
+	var selectedTarget target.Target
+	updateRequired := false
+	if currentStatus.TargetID != targets.GetLatestTarget().ID {
+		description = fmt.Sprintf("New version available: %s", targets.GetLatestTarget().ID)
+		updateRequired = true
+		selectedTarget = targets.GetLatestTarget()
+		updateType = state.UpdateTypeUpdate
+	} else if !areAppsInSync {
+		description = "You are running the latest version, but not all apps are in sync."
+		updateRequired = true
+		selectedTarget = targets.GetLatestTarget()
+		updateType = state.UpdateTypeSync
+	}
+
+	result := struct {
+		Targets       target.Targets        `json:"targets"`
+		CurrentStatus *status.CurrentStatus `json:"current_status"`
+		CheckResult   CheckResult           `json:"check_result"`
+	}{
+		Targets:       targets,
+		CurrentStatus: currentStatus,
+		CheckResult: CheckResult{
+			AppsAreInSync:  areAppsInSync,
+			UpdateRequired: updateRequired,
+		},
+	}
+
+	if updateRequired {
+		result.CheckResult.Update = CheckResultUpdate{
+			SelectedTarget: struct {
+				ID      string `json:"id"`
+				Version int    `json:"version"`
+			}{
+				ID:      selectedTarget.ID,
+				Version: selectedTarget.Version,
+			},
+			Type:        string(updateType),
+			Description: description,
+		}
+	}
+
+	if b, err := json.Marshal(result); err != nil {
+		DieNotNil(err, "failed to marshal check result")
+	} else {
+		fmt.Println(string(b))
+	}
+}
+
+func printTextResult(targets target.Targets, currentStatus *status.CurrentStatus) {
 	for _, t := range targets.GetSortedList() {
 		fmt.Printf("%d [%s]\n", t.Version, t.ID)
 		for _, app := range t.Apps {
