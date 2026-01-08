@@ -12,6 +12,7 @@ import (
 	"time"
 
 	f "github.com/foundriesio/composeapp/test/fixtures"
+	"github.com/foundriesio/fioconfig/transport"
 	"github.com/foundriesio/fioup/pkg/api"
 	"github.com/foundriesio/fioup/pkg/client"
 	cfg "github.com/foundriesio/fioup/pkg/config"
@@ -65,7 +66,31 @@ AG/LlZuut3Px7oGWZ+wx
 -----END CERTIFICATE-----
 `
 
-func createMockConfig(t *testing.T, tempDir string) *cfg.Config {
+type (
+	ConfigOptions struct {
+		ProxyAuthURL string
+		ProxyHandler func() (*transport.HttpRes, error)
+	}
+	ConfigOption func(*ConfigOptions)
+)
+
+func WithProxyAuthURL(url string) ConfigOption {
+	return func(o *ConfigOptions) {
+		o.ProxyAuthURL = url
+	}
+}
+
+func WithProxyHandler(handler func() (*transport.HttpRes, error)) ConfigOption {
+	return func(o *ConfigOptions) {
+		o.ProxyHandler = handler
+	}
+}
+
+func createMockConfig(t *testing.T, tempDir string, options ...ConfigOption) *cfg.Config {
+	opts := &ConfigOptions{}
+	for _, o := range options {
+		o(opts)
+	}
 	if tempDir == "" {
 		t.Fatal("tempDir not set")
 	}
@@ -94,13 +119,14 @@ tls_clientcert_path = "%s/client.pem"
 tags = "main"
 reset_apps_root = "%s/reset-apps"
 compose_apps_root = "%s/compose-apps"
+compose_apps_proxy  = "%s"
 
 [provision]
 primary_ecu_hardware_id = "intel-corei7-64"
 
 [storage]
 path = "%s"
-	`, tempDir, tempDir, tempDir, tempDir, tempDir, tempDir)
+	`, tempDir, tempDir, tempDir, tempDir, tempDir, opts.ProxyAuthURL, tempDir)
 	if err := os.WriteFile(filepath.Join(tempDir, "sota.toml"), []byte(sota), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -326,11 +352,16 @@ type integrationTest struct {
 	apps     []string
 }
 
-func newIntegrationTest(t *testing.T) *integrationTest {
+func newIntegrationTest(t *testing.T, options ...ConfigOption) *integrationTest {
+	opts := &ConfigOptions{}
+	for _, o := range options {
+		o(opts)
+	}
 	cleanupDockerImages()
 	tempDir := t.TempDir()
-	config := createMockConfig(t, tempDir)
-	gwClient, err := client.NewGatewayClient(config, nil, "", client.WithHttpOperations(mockHttpOperations{config: config, tempDir: tempDir}))
+	config := createMockConfig(t, tempDir, options...)
+	gwClient, err := client.NewGatewayClient(config, nil, "",
+		client.WithHttpOperations(mockHttpOperations{config: config, tempDir: tempDir, proxyHandler: opts.ProxyHandler}))
 	checkErr(t, err)
 
 	return &integrationTest{
