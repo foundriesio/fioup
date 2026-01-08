@@ -88,7 +88,7 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	slog.Debug("storage usage watermark set", "value", cfg.storageWatermark)
 
 	var composeProxyProvider compose.ProxyProvider
-	if cfg.tomlConfig.Has(ComposeAppsProxyKey) {
+	if cfg.tomlConfig.Has(ComposeAppsProxyKey) && cfg.tomlConfig.Get(ComposeAppsProxyKey) != "" {
 		if p, err := newProxyProvider(cfg.tomlConfig); err == nil {
 			cfg.proxyProvider = p
 			composeProxyProvider = cfg.proxyProvider.getComposeAppProxy()
