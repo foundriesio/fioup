@@ -29,8 +29,11 @@ type (
 		storageWatermark uint
 		proxyProvider    *ProxyProvider
 	}
-	ProxyProvider struct {
-		client           *http.Client
+	// HttpClientFunc defines a function type for making HTTP requests via a proxy.
+	// It takes the method, URL, headers, and body as parameters and returns an HttpRes and an error.
+	proxyHTTPClient func(string, string, map[string]string, any) (*transport.HttpRes, error)
+	ProxyProvider   struct {
+		client           proxyHTTPClient
 		proxyUrlProvider string
 		proxyCerts       *x509.CertPool
 	}
@@ -159,7 +162,7 @@ func (c *Config) GetStorageUsageWatermark() uint {
 	return c.storageWatermark
 }
 
-func (c *Config) SetClientForProxy(client *http.Client) {
+func (c *Config) SetClientForProxy(client proxyHTTPClient) {
 	if c.proxyProvider != nil {
 		c.proxyProvider.client = client
 	}
@@ -203,7 +206,7 @@ func (p *ProxyProvider) getComposeAppProxy() compose.ProxyProvider {
 			slog.Error("gateway client is not initialized; skip using proxy")
 			return nil
 		}
-		resp, err := transport.HttpDo(p.client, http.MethodPost, p.proxyUrlProvider, nil, nil)
+		resp, err := p.client(http.MethodPost, p.proxyUrlProvider, nil, nil)
 		if err != nil {
 			slog.Error("failed to request apps proxy URL; skip using proxy", "error", err)
 			return nil
