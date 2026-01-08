@@ -212,8 +212,16 @@ func (p *ProxyProvider) getComposeAppProxy() compose.ProxyProvider {
 			return nil
 		}
 		var proxyURL *url.URL
-		if proxyURL, err = url.Parse(resp.String()); err != nil {
+		if proxyURL, err = url.ParseRequestURI(resp.String()); err != nil {
 			slog.Error("invalid proxy URL received from server; skip using proxy", "url", resp.String(), "error", err)
+			return nil
+		}
+		if proxyURL.Scheme != "http" && proxyURL.Scheme != "https" {
+			slog.Error("unsupported proxy URL scheme; skip using proxy", "url", resp.String())
+			return nil
+		}
+		if proxyURL.Host == "" {
+			slog.Error("empty proxy URL host; skip using proxy", "url", resp.String())
 			return nil
 		}
 		return &compose.ProxyConfig{
