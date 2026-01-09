@@ -274,16 +274,12 @@ services:
 	if badApps {
 		appComposeDef = strings.ReplaceAll(appComposeDef, "sh -c", "badcommand")
 	}
-	apps := []*f.App{}
+	var apps []*f.App
 
 	for i := 1; i <= numberOfApps; i++ {
 		port := 8080 + i + portOffset
 		app := f.NewApp(it.t, fmt.Sprintf(appComposeDef, port), fmt.Sprintf("app-%d", i))
 		app.Publish(it.t)
-
-		app.Pull(it.t)
-		defer app.Remove(it.t)
-		// app.CheckFetched(t)
 		apps = append(apps, app)
 	}
 	return &Target{
