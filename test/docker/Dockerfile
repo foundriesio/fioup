@@ -73,5 +73,7 @@ RUN ln -sfn ${SRC_DIR}/bin/fioup /usr/local/bin/docker-credential-fioup
 RUN ln -sfn ${SRC_DIR}/debian/fioconfig-handlers/aktualizr-toml-update /usr/share/fioconfig/handlers/aktualizr-toml-update
 
 WORKDIR /build_composeapp
+ENV STOREROOT=/var/sota/reset-apps
+ENV COMPOSEROOT=/var/sota/compose-apps
 RUN git clone https://github.com/foundriesio/composeapp.git && \
     cd composeapp && git checkout v95 && make && cp ./bin/composectl /usr/bin/
