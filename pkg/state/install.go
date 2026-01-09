@@ -5,17 +5,23 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
 	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/status"
+	"github.com/pkg/errors"
 )
 
 type Install struct {
 	ProgressHandler compose.InstallProgressFunc
 }
+
+var (
+	ErrInstallFailed = errors.New("installation failed")
+)
 
 func (s *Install) Name() ActionName { return "Installing" }
 func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
@@ -39,6 +45,7 @@ func (s *Install) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 			slog.Error("failed to get current app statuses after install failure", "error", errStatus)
 		}
 		updateCtx.SendEvent(events.InstallationCompleted, err)
+		err = fmt.Errorf("%w: %w", ErrInstallFailed, err)
 	}
 	return err
 }
