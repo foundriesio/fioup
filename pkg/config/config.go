@@ -29,8 +29,11 @@ type (
 		storageWatermark uint
 		proxyProvider    *ProxyProvider
 	}
-	ProxyProvider struct {
-		client           *http.Client
+	// HttpClientFunc defines a function type for making HTTP requests via a proxy.
+	// It takes the method, URL, headers, and body as parameters and returns an HttpRes and an error.
+	proxyHTTPClient func(string, string, map[string]string, any) (*transport.HttpRes, error)
+	ProxyProvider   struct {
+		client           proxyHTTPClient
 		proxyUrlProvider string
 		proxyCerts       *x509.CertPool
 	}
@@ -88,7 +91,7 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	slog.Debug("storage usage watermark set", "value", cfg.storageWatermark)
 
 	var composeProxyProvider compose.ProxyProvider
-	if cfg.tomlConfig.Has(ComposeAppsProxyKey) {
+	if cfg.tomlConfig.Has(ComposeAppsProxyKey) && cfg.tomlConfig.Get(ComposeAppsProxyKey) != "" {
 		if p, err := newProxyProvider(cfg.tomlConfig); err == nil {
 			cfg.proxyProvider = p
 			composeProxyProvider = cfg.proxyProvider.getComposeAppProxy()
@@ -159,7 +162,7 @@ func (c *Config) GetStorageUsageWatermark() uint {
 	return c.storageWatermark
 }
 
-func (c *Config) SetClientForProxy(client *http.Client) {
+func (c *Config) SetClientForProxy(client proxyHTTPClient) {
 	if c.proxyProvider != nil {
 		c.proxyProvider.client = client
 	}
@@ -203,7 +206,7 @@ func (p *ProxyProvider) getComposeAppProxy() compose.ProxyProvider {
 			slog.Error("gateway client is not initialized; skip using proxy")
 			return nil
 		}
-		resp, err := transport.HttpDo(p.client, http.MethodPost, p.proxyUrlProvider, nil, nil)
+		resp, err := p.client(http.MethodPost, p.proxyUrlProvider, nil, nil)
 		if err != nil {
 			slog.Error("failed to request apps proxy URL; skip using proxy", "error", err)
 			return nil
@@ -212,8 +215,16 @@ func (p *ProxyProvider) getComposeAppProxy() compose.ProxyProvider {
 			return nil
 		}
 		var proxyURL *url.URL
-		if proxyURL, err = url.Parse(resp.String()); err != nil {
+		if proxyURL, err = url.ParseRequestURI(resp.String()); err != nil {
 			slog.Error("invalid proxy URL received from server; skip using proxy", "url", resp.String(), "error", err)
+			return nil
+		}
+		if proxyURL.Scheme != "http" && proxyURL.Scheme != "https" {
+			slog.Error("unsupported proxy URL scheme; skip using proxy", "url", resp.String())
+			return nil
+		}
+		if proxyURL.Host == "" {
+			slog.Error("empty proxy URL host; skip using proxy", "url", resp.String())
 			return nil
 		}
 		return &compose.ProxyConfig{

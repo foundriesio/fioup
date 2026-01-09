@@ -110,7 +110,9 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 	gw.initSota(cfg.TomlConfig())
 	gw.initHwinfo()
 	gw.initAppStateReporter()
-	cfg.SetClientForProxy(client)
+	cfg.SetClientForProxy(func(method string, url string, headers map[string]string, data any) (*transport.HttpRes, error) {
+		return gw.httpOperations.HttpDo(gw.HttpClient, method, url, headers, data)
+	})
 	return gw, nil
 }
 
