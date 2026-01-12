@@ -40,6 +40,7 @@ func init() {
 	cmd.Flags().StringVar(&opt.ApiTokenHeader, "api-token-header", "OSF-TOKEN", "The HTTP header to use for authentication.")
 	cmd.Flags().BoolVar(&opt.Force, "force", false, "Force registration, removing data from previous execution.")
 	cmd.Flags().StringVar(&opt.HardwareID, "hw-id", register.HARDWARE_ID, "Hardware ID to assign to this device.")
+	cmd.Flags().StringSliceVar(&opt.ComposeApps, "apps", nil, "Comma-separated list of apps")
 
 	cobra.CheckErr(cmd.Flags().MarkHidden("api-token-header"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("api-token"))

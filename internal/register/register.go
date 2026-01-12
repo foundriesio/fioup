@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -163,7 +164,9 @@ func getDeviceInfo(opt *RegisterOptions, csr string, dev map[string]interface{})
 		},
 	}
 
-	// putComposeAppInfo(opt, dev) // Implement as needed
+	if len(opt.ComposeApps) > 0 {
+		dev["overrides"].(map[string]any)["pacman"].(map[string]any)["compose_apps"] = "\"" + strings.Join(opt.ComposeApps, ",") + "\""
+	}
 
 	if opt.DeviceGroup != "" {
 		dev["group"] = opt.DeviceGroup
