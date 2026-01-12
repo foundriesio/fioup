@@ -22,6 +22,7 @@ type RegisterOptions struct {
 	PacmanTag   string
 	ApiToken    string
 	UUID        string
+	ComposeApps []string
 
 	Name           string
 	ApiTokenHeader string
