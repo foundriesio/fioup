@@ -14,6 +14,7 @@ func (ts DgTimeStamp) AsTime() time.Time {
 }
 
 type Device struct {
+	Factory   string      `json:"factory"`
 	RepoId    string      `json:"repo_id"`
 	Uuid      string      `json:"uuid"`
 	Name      string      `json:"name"`

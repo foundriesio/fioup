@@ -36,6 +36,7 @@ func doWhoAmI() {
 	if whoamiFormat == "text" {
 		fmt.Println("Name:     ", self.Name)
 		fmt.Println("Uuuid:    ", self.Uuid)
+		fmt.Println("Factory:  ", self.Factory)
 		fmt.Println("Tag:      ", self.Tag)
 		fmt.Println("Last seen:", self.LastSeen.AsTime())
 		fmt.Println("Created:  ", self.CreatedAt.AsTime())
