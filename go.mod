@@ -5,6 +5,7 @@ go 1.24.4
 replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio/go-tuf/v2 v2.0.2-fio
 
 require (
+	github.com/containerd/containerd v1.7.15
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/foundriesio/composeapp v0.0.0-20251217143356-4f79b3b0b796
 	github.com/foundriesio/fioconfig v0.0.0-20251212233306-87efd8b30ea1
@@ -16,7 +17,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/ini.v1 v1.67.0
-	modernc.org/sqlite v1.42.2
+	modernc.org/sqlite v1.43.0
 )
 
 require (
@@ -28,7 +29,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/compose-spec/compose-go v1.20.2 // indirect
-	github.com/containerd/containerd v1.7.15 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
