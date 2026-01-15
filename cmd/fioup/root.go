@@ -113,7 +113,7 @@ func acquireLock() error {
 func runtimeLockDir() string {
 	// If running as root (including via sudo), use /run
 	if os.Geteuid() == 0 {
-		fmt.Println("Running as root, using /run for runtime lock directory")
+		slog.Debug("Running as root, using /run for runtime lock directory")
 		if _, err := os.Stat("/run"); err == nil {
 			return "/run"
 		}
