@@ -1,4 +1,65 @@
-fioup (1.1.1) UNRELEASED; urgency=medium
+fioup (1.2.0) UNRELEASED; urgency=medium
+  
+  [New Features]
+  * 0827497 debian: Introduce support for remote actions
+  * fa7abc7 config: Add proxy support
+  * 4716f4a cmd: Add cmd to show diff between versions
+  * 6e02b41 check: Return specific errors on different check situations
+  * deabf17 cmd: Return specific exit codes for known errors
+
+  [Changes]
+  * 0190dc3 refactor(register): don't mark device group as hidden
+  * 7ae0bd4 feat(register): add parameter to specify app list
+  * 960fc12 feat(whoami): add factory information display
+  * 519e19c refactor(client): update proxy client to use function type
+  * 76ccc4d check: Add format option to `fioup check`, allowing json output
+
+  [Bugfixes]
+  * a8c3526 root: Use correct dir for a lock file
+  * 6461902 cmd: run-and-report does not need lock
+  * de381e6 fix(config): ensure proxy key is not empty
+  * 9da1d28 fix(config): validate proxy URL scheme and host
+  * cc33c37 cmd: Print runtime lock related message as debug
+
+  [ Mike Sul ]
+  * root: Use correct dir for a lock file
+  * cmd: Add cmd to show diff between versions
+  * docs: Update doc with info on the "diff" command
+  * refactor(register): don't mark device group as hidden
+  * feat(register): add parameter to specify app list
+  * feat(whoami): add factory information display
+  * go.mod: bump composeapp ver 3ff7638
+  * fix(config): ensure proxy key is not empty
+  * fix(config): validate proxy URL scheme and host
+  * refactor(client): update proxy client to use function type
+  * feat(test): add proxy handler to mockHttpOperations
+  * fix(docker): add env variables to define app dirs
+  * refactor(test): remove unnecessary app pull
+  * feat(test): add server and integration test for proxy mode testing
+
+  [ Andy Doan ]
+  * cmd: run-and-report does not need lock
+  * debian: Introduce support for remote actions
+  * config: Add proxy support
+
+  [ dependabot[bot] ]
+  * build(deps): bump actions/upload-artifact from 5 to 6
+  * build(deps): bump modernc.org/sqlite from 1.40.1 to 1.42.2
+  * build(deps): bump actions/download-artifact from 6 to 7
+  * build(deps): bump modernc.org/sqlite from 1.42.2 to 1.43.0
+  * build(deps): bump gopkg.in/ini.v1 from 1.67.0 to 1.67.1
+
+  [ Andre Detsch ]
+  * check: Return specific errors on different check situations
+  * state: Add error codes for each state operation
+  * tests: Verify expected errors in existing integration tests
+  * tests: Add tests to verify specific error codes
+  * cmd: Return specific exit codes for known errors
+  * check: Add format option to `fioup check`, allowing json output
+
+ -- Mike Sul <bot@foundries.io>  Thu, 15 Jan 2026 09:26:56 +0000
+
+fioup (1.1.1) released; urgency=medium
 
   [ Changes ]
   * afa7be7 cmd: Only one instance of fioup can run at a time
