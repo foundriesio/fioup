@@ -80,7 +80,7 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrMetaUpdateFailed, err)
 	}
-	targets, err := targetRepo.LoadTargets(s.UpdateTargets)
+	targets, _, err := targetRepo.LoadTargets(s.UpdateTargets)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrMetaUpdateFailed, err)
 	}

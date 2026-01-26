@@ -56,7 +56,7 @@ func Diff(ctx context.Context, cfg *config.Config, fromVersion, toVersion int, o
 	}
 
 	var targets target.Targets
-	if targets, err = targetRepo.LoadTargets(false); err != nil {
+	if targets, _, err = targetRepo.LoadTargets(false); err != nil {
 		return nil, fmt.Errorf("failed to load targets: %w", err)
 	}
 

@@ -21,6 +21,8 @@ type (
 		tufClient  *tuf.FioTuf
 		targets    Targets
 		hardwareID string
+		// TODO: implement fetching targets version from "tuf.FioTuf"
+		version int
 	}
 )
 
@@ -45,17 +47,17 @@ func (r *tufRepo) update() error {
 	return r.loadTargets()
 }
 
-func (r *tufRepo) LoadTargets(update bool) (Targets, error) {
+func (r *tufRepo) LoadTargets(update bool) (Targets, int, error) {
 	if update {
 		if err := r.update(); err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 	} else {
 		if err := r.loadTargets(); err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 	}
-	return r.targets, nil
+	return r.targets, r.version, nil
 }
 
 func (r *tufRepo) loadTargets() error {

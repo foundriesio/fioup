@@ -5,6 +5,6 @@ package target
 
 type (
 	Repo interface {
-		LoadTargets(update bool) (Targets, error)
+		LoadTargets(update bool) (Targets, int, error)
 	}
 )
