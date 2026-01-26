@@ -59,6 +59,15 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	expectedEvents := []events.DgUpdateEvent{
 		{
 			EventType: events.DgEventType{
+				Id: events.MetadataUpdateCompleted,
+			},
+			Event: events.DgEvent{
+				Version: strconv.Itoa(target.Version),
+				Success: &successVal,
+			},
+		},
+		{
+			EventType: events.DgEventType{
 				Id: events.UpdateInitStarted,
 			},
 			Event: events.DgEvent{
