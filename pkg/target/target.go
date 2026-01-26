@@ -30,6 +30,7 @@ type (
 	}
 	Signed struct {
 		Targets map[string]Metadata `json:"targets"`
+		Version int                 `json:"version"`
 	}
 	Metadata struct {
 		Custom Custom `json:"custom"`

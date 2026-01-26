@@ -21,6 +21,7 @@ type (
 		targetsFilepath string
 		targets         []Target
 		hardwareID      string
+		version         int
 	}
 )
 
@@ -55,17 +56,17 @@ func (r *plainRepo) update() error {
 	return r.loadTargets(res.Body)
 }
 
-func (r *plainRepo) LoadTargets(update bool) (Targets, error) {
+func (r *plainRepo) LoadTargets(update bool) (Targets, int, error) {
 	if update {
 		if err := r.update(); err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 	} else {
 		if err := r.readTargets(); err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 	}
-	return r.targets, nil
+	return r.targets, r.version, nil
 }
 
 func (r *plainRepo) readTargets() error {
@@ -120,5 +121,6 @@ func (r *plainRepo) loadTargets(targetsData []byte) error {
 			Apps:    apps,
 		})
 	}
+	r.version = targetsFile.Signed.Version
 	return nil
 }
