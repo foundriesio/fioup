@@ -5,15 +5,21 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/rand"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
 	"github.com/foundriesio/composeapp/pkg/update"
+	"github.com/foundriesio/fioup/internal/events"
 	"github.com/foundriesio/fioup/pkg/status"
 	"github.com/foundriesio/fioup/pkg/target"
+	"github.com/oklog/ulid/v2"
 	"github.com/pkg/errors"
 )
 
@@ -80,20 +86,38 @@ func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrMetaUpdateFailed, err)
 	}
-	targets, _, err := targetRepo.LoadTargets(s.UpdateTargets)
-	if err != nil {
+
+	currentTargetsVersion := -1
+	newTargetsVersion := -1
+	var targets target.Targets
+
+	defer func() {
+		if err != nil || (newTargetsVersion != -1 && newTargetsVersion != currentTargetsVersion) {
+			updateCtx.sendMetadataUpdateCompletedEvent(currentTargetsVersion, newTargetsVersion, err)
+		}
+	}()
+
+	// Load current targets
+	targets, currentTargetsVersion, err = targetRepo.LoadTargets(false)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %w", ErrMetaUpdateFailed, err)
+	}
+	if s.UpdateTargets {
+		targets, newTargetsVersion, err = targetRepo.LoadTargets(s.UpdateTargets)
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrMetaUpdateFailed, err)
+		}
 	}
 	updateCtx.Targets = targets
 
 	// Get FromTarget: get last successful update to set FromTarget
-	if err := updateCtx.getAndSetCurrentTarget(); err == nil {
+	if err = updateCtx.getAndSetCurrentTarget(); err == nil {
 		updateCtx.Client.UpdateHeaders(updateCtx.FromTarget.AppNames(), updateCtx.FromTarget.ID)
 	} else {
 		slog.Debug("failed to determine the current target, consider it as unknown", "error", err)
 	}
 
-	if err := updateCtx.selectToTarget(s); err != nil {
+	if err = updateCtx.selectToTarget(s); err != nil {
 		return err
 	}
 
@@ -295,6 +319,48 @@ func (u *UpdateContext) getOngoingUpdateTarget() (*target.Target, error) {
 		return nil, fmt.Errorf("failed to compose ongoing update target from ongoing update: %w", err)
 	}
 	return target, nil
+}
+
+func (u *UpdateContext) sendMetadataUpdateCompletedEvent(currentTargetsVersion, newTargetsVersion int, err error) {
+	type metadataUpdateDetails struct {
+		FromVersion int `json:"from_version"`
+		ToVersion   int `json:"to_version"`
+	}
+	type metadataUpdateErrDetails struct {
+		CurrentVersion int    `json:"current_version"`
+		Error          string `json:"error"`
+	}
+	var details interface{}
+	if err != nil {
+		details = metadataUpdateErrDetails{
+			CurrentVersion: currentTargetsVersion,
+			Error:          err.Error(),
+		}
+	} else if newTargetsVersion != -1 {
+		// Only send details if we have a valid new version, indicating that an update was performed
+		details = metadataUpdateDetails{
+			FromVersion: currentTargetsVersion,
+			ToVersion:   newTargetsVersion,
+		}
+	}
+
+	status := err == nil
+	detailsStr := ""
+	if b, err := json.Marshal(details); err != nil {
+		slog.Error("failed to marshal metadata update details", "err", err)
+	} else {
+		detailsStr = string(b)
+	}
+	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
+	id, err := ulid.New(ulid.Timestamp(time.Now()), entropy)
+	if err != nil {
+		slog.Error("failed to generate ULID for metadata update completed event", "err", err)
+		return
+	}
+	if err := u.EventSender.EnqueueEvent(events.MetadataUpdateCompleted,
+		"meta-"+id.String(), u.ToTarget, events.WithEventStatus(status), events.WithEventDetails(detailsStr)); err != nil {
+		slog.Error("failed to send event", "event", events.MetadataUpdateCompleted, "err", err)
+	}
 }
 
 func getTargetOutOfUpdate(update *update.Update) (*target.Target, error) {

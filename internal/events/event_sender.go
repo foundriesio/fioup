@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	UpdateInitStarted     EventTypeValue = "UpdateInitStarted"
-	UpdateInitCompleted   EventTypeValue = "UpdateInitCompleted"
-	DownloadStarted       EventTypeValue = "EcuDownloadStarted"
-	DownloadCompleted     EventTypeValue = "EcuDownloadCompleted"
-	InstallationStarted   EventTypeValue = "EcuInstallationStarted"
-	InstallationApplied   EventTypeValue = "EcuInstallationApplied"
-	InstallationCompleted EventTypeValue = "EcuInstallationCompleted"
+	MetadataUpdateCompleted EventTypeValue = "MetadataUpdateCompleted"
+	UpdateInitStarted       EventTypeValue = "UpdateInitStarted"
+	UpdateInitCompleted     EventTypeValue = "UpdateInitCompleted"
+	DownloadStarted         EventTypeValue = "EcuDownloadStarted"
+	DownloadCompleted       EventTypeValue = "EcuDownloadCompleted"
+	InstallationStarted     EventTypeValue = "EcuInstallationStarted"
+	InstallationApplied     EventTypeValue = "EcuInstallationApplied"
+	InstallationCompleted   EventTypeValue = "EcuInstallationCompleted"
 
 	MaxDetailsSize  = 2048
 	TruncatedSuffix = "...[TRUNCATED]"
