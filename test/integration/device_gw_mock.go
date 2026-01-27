@@ -64,6 +64,7 @@ func (o mockHttpOperations) HttpDo(client *http.Client, method, url string, head
 }
 
 func (it *integrationTest) checkEvents(target *Target, expectedEvents []events.DgUpdateEvent) {
+	it.t.Helper()
 	if len(postedEvents) != len(expectedEvents) {
 		it.t.Fatalf("Number of posted events (%d) does not match expected (%d)", len(postedEvents), len(expectedEvents))
 	}
