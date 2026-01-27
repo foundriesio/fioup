@@ -239,10 +239,10 @@ func (it *integrationTest) saveTargetsJson(targets []*Target) {
     "targets": {
 	  %s
     },
-    "version": 352
+    "version": %d
   }
 }
-`, formattedTimeExpiration, targetsJson)
+`, formattedTimeExpiration, targetsJson, it.targetsNextVersion)
 
 	outDir := it.tempDir + "/http_get/repo/"
 	if err := os.MkdirAll(outDir, 0o700); err != nil && !os.IsExist(err) {
@@ -252,6 +252,8 @@ func (it *integrationTest) saveTargetsJson(targets []*Target) {
 	if err := os.WriteFile(outDir+"targets.json", []byte(fullJson), 0o600); err != nil {
 		it.t.Fatalf("Unable to write targets.json: %v", err)
 	}
+	it.targetsNextVersion += 1
+	it.areTargetsUpdated = true
 }
 
 func (it *integrationTest) genNewTarget(version int, numberOfApps int, portOffset int, badApps bool, nameSuffix string) *Target {
@@ -347,13 +349,15 @@ func expectErr(t *testing.T, err error, expected error) {
 }
 
 type integrationTest struct {
-	t        *testing.T
-	tempDir  string
-	config   *cfg.Config
-	ctx      context.Context
-	gwClient *client.GatewayClient
-	apiOpts  []api.UpdateOpt
-	apps     []string
+	t                  *testing.T
+	tempDir            string
+	config             *cfg.Config
+	ctx                context.Context
+	gwClient           *client.GatewayClient
+	apiOpts            []api.UpdateOpt
+	apps               []string
+	targetsNextVersion int
+	areTargetsUpdated  bool
 }
 
 func newIntegrationTest(t *testing.T, options ...ConfigOption) *integrationTest {
@@ -369,12 +373,13 @@ func newIntegrationTest(t *testing.T, options ...ConfigOption) *integrationTest 
 	checkErr(t, err)
 
 	return &integrationTest{
-		t:        t,
-		tempDir:  tempDir,
-		config:   config,
-		ctx:      context.Background(),
-		gwClient: gwClient,
-		apiOpts:  []api.UpdateOpt{api.WithTUF(false), api.WithGatewayClient(gwClient)},
+		t:                  t,
+		tempDir:            tempDir,
+		config:             config,
+		ctx:                context.Background(),
+		gwClient:           gwClient,
+		apiOpts:            []api.UpdateOpt{api.WithTUF(false), api.WithGatewayClient(gwClient)},
+		targetsNextVersion: 352,
 	}
 }
 

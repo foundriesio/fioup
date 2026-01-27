@@ -48,6 +48,23 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 	targets, currentStatus, err := api.Check(it.ctx, it.config, it.apiOpts...)
 	beforeApps := runningAppsURIs(currentStatus)
 	checkErr(it.t, err)
+
+	successVal := true
+	var expectedEvents []events.DgUpdateEvent
+	if it.areTargetsUpdated {
+		expectedEvents = []events.DgUpdateEvent{
+			{
+				EventType: events.DgEventType{
+					Id: events.MetadataUpdateCompleted,
+				},
+				Event: events.DgEvent{
+					Version: strconv.Itoa(target.Version),
+					Success: &successVal,
+				},
+			},
+		}
+	}
+	it.areTargetsUpdated = false
 	if len(targets) != len(allTargets) {
 		it.t.Fatalf("Number of targets (%d) does not match expected (%d)", len(targets), len(allTargets))
 	}
@@ -55,17 +72,8 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 
 	err = api.Fetch(it.ctx, it.config, -1, it.apiOpts...)
 	checkErr(it.t, err)
-	successVal := true
-	expectedEvents := []events.DgUpdateEvent{
-		{
-			EventType: events.DgEventType{
-				Id: events.MetadataUpdateCompleted,
-			},
-			Event: events.DgEvent{
-				Version: strconv.Itoa(target.Version),
-				Success: &successVal,
-			},
-		},
+
+	expectedEvents = append(expectedEvents, []events.DgUpdateEvent{
 		{
 			EventType: events.DgEventType{
 				Id: events.UpdateInitStarted,
@@ -100,7 +108,7 @@ func (it *integrationTest) testUpdateTo(target *Target, allTargets []*Target) {
 				Success: &successVal,
 			},
 		},
-	}
+	}...)
 	it.checkEvents(target, expectedEvents)
 	it.checkStatus(originalTargetID, beforeApps, false)
 
