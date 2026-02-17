@@ -58,9 +58,6 @@ func (sm *UpdateRunner) GetFromTarget() target.Target {
 }
 
 func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
-	if err := db.InitializeDatabase(cfg.GetDBPath()); err != nil {
-		return err
-	}
 	sm.ctx.Config = cfg
 
 	var err error
@@ -72,6 +69,11 @@ func (sm *UpdateRunner) Run(ctx context.Context, cfg *config.Config) error {
 		}
 		sm.ctx.Client = gwClient
 	}
+
+	if err := db.InitializeDatabase(cfg.GetDBPath()); err != nil {
+		return err
+	}
+
 	eventSender := sm.ctx.EventSender
 	if eventSender == nil {
 		eventSender, err = events.NewEventSender(cfg, gwClient)
