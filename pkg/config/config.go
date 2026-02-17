@@ -43,12 +43,14 @@ const (
 	TagKey                = "pacman.tags"
 	ServerBaseUrlKey      = "tls.server"
 	StorageDirKey         = "storage.path"
+	StorageDBPathKey      = "storage.sqldb_path"
 	HardwareIDKey         = "provision.primary_ecu_hardware_id"
 	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
 	ComposeAppsProxyKey   = "pacman.compose_apps_proxy"
 	ComposeAppsProxyCaKey = "import.tls_cacert_path"
 
 	StorageDefaultDir               = "/var/sota"
+	StorageDefaultDBPath            = "sql.db"
 	TargetsDefaultFilename          = "targets.json"
 	StorageUsageWatermarkDefaultStr = "95"
 	StorageUsageWatermarkDefault    = 95
@@ -136,9 +138,7 @@ func (c *Config) ComposeConfig() *compose.Config {
 }
 
 func (c *Config) GetDBPath() string {
-	// TODO: set the defaults in cmd/fioup package instead of here
-	return filepath.Join(c.tomlConfig.GetDefault("storage.path", "/var/sota"),
-		c.tomlConfig.GetDefault("storage.sqldb_path", "sql.db"))
+	return filepath.Join(c.GetStorageDir(), c.tomlConfig.GetDefault(StorageDBPathKey, StorageDefaultDBPath))
 }
 
 func (c *Config) GetEnabledApps() []string {
