@@ -4,9 +4,13 @@
 package client
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -106,6 +110,7 @@ func NewGatewayClient(cfg *config.Config, apps []string, targetID string, option
 
 		httpOperations: opts.HttpOperations,
 	}
+	gw.cleanupLastStateIfRequire(cfg)
 
 	gw.initSota(cfg.TomlConfig())
 	gw.initHwinfo()
@@ -139,4 +144,22 @@ func (c *GatewayClient) Put(resourcePath string, data any) (*transport.HttpRes, 
 func (c *GatewayClient) UpdateHeaders(apps []string, targetID string) {
 	c.Headers[HeaderKeyApps] = strings.Join(apps, ",")
 	c.Headers[HeaderKeyTarget] = targetID
+}
+
+func (c *GatewayClient) cleanupLastStateIfRequire(cfg *config.Config) {
+	_, err := os.Stat(cfg.GetDBPath())
+	if errors.Is(err, fs.ErrNotExist) {
+		slog.Debug("DB file doesn't exist, cleaning up last state files to make fioup send the new state to the server")
+		// If DB file doesn't exist, it means it's a fresh start, so we need to get a new state and send it to the server,
+		// so we should cleanup the last state files to make fioup send the new state to the server.
+		for _, file := range []string{c.lastNetInfoFile, c.lastSotaFile, c.lastHwinfoFile, c.lastAppStatesFile} {
+			if err := os.Remove(file); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				slog.Warn("Failed to cleanup last state file", "file", file, "error", err)
+			}
+		}
+	} else if err == nil {
+		slog.Debug("DB file exists, keeping last state files to avoid sending the state to the server again")
+	} else {
+		slog.Warn("Failed to stat DB file, keeping last state files to avoid sending the state to the server again", "error", err)
+	}
 }
