@@ -50,6 +50,7 @@ func init() {
 func doCheck(cmd *cobra.Command, opts *checkOptions) {
 	targets, currentStatus, err := api.Check(cmd.Context(), config, api.WithTUF(opts.enableTuf))
 	DieNotNil(err, "failed to check for updates")
+
 	if opts.Format == "json" {
 		printJsonResult(targets, currentStatus)
 	} else {
@@ -137,23 +138,25 @@ func printTextResult(targets target.Targets, currentStatus *status.CurrentStatus
 		}
 		fmt.Println()
 	}
-	fmt.Printf("Current version: %s\n", currentStatus.TargetID)
-	var areAppsInSync = true
-	for _, app := range currentStatus.AppStatuses {
-		fmt.Printf("    %-20s%s\n", app.Name, app.URI)
-		fmt.Printf("    %-20sfetched:%v; installed:%v; running:%v\n", "", app.Fetched, app.Installed, app.Running)
-		fmt.Println()
-		if !app.Fetched || !app.Installed || !app.Running {
-			areAppsInSync = false
-		}
-	}
-	if currentStatus.TargetID != targets.GetLatestTarget().ID {
-		fmt.Printf("New version available: %s. Please run 'fioup update' to get it.\n",
-			targets.GetLatestTarget().ID)
-	} else if !areAppsInSync {
-		fmt.Println("You are running the latest version, but not all apps are in sync." +
-			" Please run 'fioup update' to fix this.")
+	currentTarget := targets.GetTargetByID(currentStatus.TargetID)
+
+	fmt.Println("Current version:", currentTarget.Version)
+	if currentTarget.ID != targets.GetLatestTarget().ID {
+		fmt.Println("Latest version: ", targets.GetLatestTarget().Version)
+		fmt.Println("Status:          Update available")
+	} else if currentStatus.AreAppsHealthy() {
+		fmt.Println("Status:          Up-to-date")
 	} else {
-		fmt.Println("You are running the latest version.")
+		fmt.Println("Status:          Up-to-date (degraded)")
+		fmt.Println("Unhealthy apps:")
+		for _, app := range currentStatus.AppStatuses {
+			if app.Running && app.Installed && app.Fetched {
+				continue
+			}
+			fmt.Printf(" - %s\n", app.Name)
+			fmt.Printf("   %s\n", app.URI)
+			fmt.Printf("   state: fetched:%v; installed:%v; running:%v\n", app.Fetched, app.Installed, app.Running)
+			fmt.Println()
+		}
 	}
 }
