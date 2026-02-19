@@ -51,6 +51,7 @@ const (
 
 	StorageDefaultDir               = "/var/sota"
 	StorageDefaultDBPath            = "sql.db"
+	DefaultConfigFilename           = "sota.toml"
 	TargetsDefaultFilename          = "targets.json"
 	StorageUsageWatermarkDefaultStr = "95"
 	StorageUsageWatermarkDefault    = 95
@@ -64,6 +65,27 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 
 	if len(tomlConfigPaths) == 0 {
 		return nil, fmt.Errorf("config: no TOML paths provided")
+	}
+	// Check if a device is registered by checking if sota.toml exists in any of the provided paths
+	registered := false
+	for _, p := range tomlConfigPaths {
+		s, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if s.IsDir() {
+			if _, err := os.Stat(filepath.Join(p, DefaultConfigFilename)); err == nil {
+				registered = true
+				break
+			}
+		} else if s.Name() == DefaultConfigFilename {
+			registered = true
+			break
+		}
+	}
+	if !registered {
+		return nil, fmt.Errorf("config: no device config is found in the provided paths %q; "+
+			"make sure the device is registered", strings.Join(tomlConfigPaths, ", "))
 	}
 	if cfg.tomlConfig, err = sotatoml.NewAppConfig(tomlConfigPaths); err != nil {
 		return nil, fmt.Errorf("config: failed to load TOML from paths %q: %w",
