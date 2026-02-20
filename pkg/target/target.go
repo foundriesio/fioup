@@ -72,6 +72,10 @@ func (t *Target) NoApps() bool {
 	return len(t.Apps) == 0
 }
 
+// ShortlistApps filters the target's apps to only include those whose name is in the provided shortlist.
+// If the shortlist is nil then it does not filter the apps.
+// If the shortlist is empty then it clears the target's apps.
+// This should be used for shortlisting based on "compose_apps" value in the .toml config.
 func (t *Target) ShortlistApps(shortlist []string) {
 	if shortlist == nil {
 		return
@@ -92,8 +96,13 @@ func (t *Target) ShortlistApps(shortlist []string) {
 	t.Apps = shortlistedApps
 }
 
+// ShortlistAppsByURI filters the target's apps to only include those whose URI is in the provided shortlist.
+// If the shortlist is nil OR empty, it clears the target's apps.
+// This should be used solely for shortlisting based on an update record's "uri" field,
+// which interprets both nil and empty as update to the state with no apps.
 func (t *Target) ShortlistAppsByURI(shortlist []string) {
 	if shortlist == nil {
+		t.Apps = nil
 		return
 	}
 	var shortlistedApps []App
