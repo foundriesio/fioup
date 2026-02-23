@@ -115,3 +115,12 @@ func (s *CurrentStatus) AppStatusList() []AppStatus {
 	}
 	return appStatuses
 }
+
+func (s *CurrentStatus) AreAppsHealthy() bool {
+	for _, appStatus := range s.AppStatuses {
+		if !appStatus.Running || !appStatus.Installed || !appStatus.Fetched {
+			return false
+		}
+	}
+	return true
+}
