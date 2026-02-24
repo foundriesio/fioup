@@ -8,7 +8,7 @@ COPY --chown=builder / /src/fioup
 
 USER builder
 RUN \
-    cd /src/fioup && debuild
+    cd /src/fioup && debuild -us -uc
 
 # The first 3 lines of dpkg-parsechange log are:
 # * blank line
