@@ -1,4 +1,40 @@
-fioup (1.2.0) UNRELEASED; urgency=medium
+fioup (1.3.0) unstable; urgency=medium
+
+  [ New Features ]
+  * 0211417 feat(check): Send event on meta update or failure
+  * f3e0415 feat(gateway_client): cleanup state just after re-registration
+  * 48f1537 feat(config): check if config exists before using it
+
+  [Changes]
+  * bdf0c19 refact(check): output check summary in a structured way
+
+  [Bugfixes]
+  * 31d527d fix(target): shortlist all apps if update URIs is nil
+  * c22850f fix(fioconfig): bump fioconfig 6384248 -> 6384248 fiotest: Update the way we set the test "target"
+
+  [ dependabot[bot] ]
+  * build(deps): bump github.com/containerd/containerd from 1.7.15 to 1.7.30
+  * build(deps): bump modernc.org/sqlite from 1.43.0 to 1.44.2
+
+  [ Mike Sul ]
+  * go.mod: Switch back to containerd v1.7.15
+  * go.mod: bump composeapp ver 8fadf8c
+  * fix(test): Print caller line number when checking events
+  * refactor(target): Provide targets version
+  * feat(check): Send event on meta update or failure
+  * refact(test): add update metadata event support
+  * refact(config): define and use consts for db path key
+  * refact(update_runner): init DB just before event sender
+  * feat(gateway_client): cleanup state just after re-registration
+  * fix(target): shortlist all apps if update URIs is nil
+  * feat(config): check if config exists before using it
+  * feat(status): add helper method to check apps health
+  * refact(check): output check summary in a structured way
+  * fix(fioconfig): bump fioconfig 6384248
+
+ -- dependabot[bot] <bot@foundries.io>  Tue, 24 Feb 2026 09:05:32 +0000
+
+fioup (1.2.0) released; urgency=medium
   
   [New Features]
   * 0827497 debian: Introduce support for remote actions
