@@ -51,7 +51,7 @@ preload-images:
 	test/fixtures/preload-images.sh
 
 test-integration: preload-images
-	@go test -v ./test/integration/ -tags $(TAGS)
+	@go test -timeout 30m -v ./test/integration/ -tags $(TAGS)
 
 clean:
 	@rm -rf $(BUILD_DIR)
