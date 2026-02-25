@@ -5,7 +5,7 @@ go 1.24.4
 replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio/go-tuf/v2 v2.0.2-fio
 
 require (
-	github.com/containerd/containerd v1.7.15
+	github.com/containerd/containerd v1.7.30
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/foundriesio/composeapp v0.0.0-20260123133007-8fadf8c3588a
 	github.com/foundriesio/fioconfig v0.0.0-20260223150833-638424812372
@@ -30,7 +30,9 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/compose-spec/compose-go v1.20.2 // indirect
+	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
+	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -63,6 +65,7 @@ require (
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/user v0.3.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
