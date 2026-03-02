@@ -52,7 +52,8 @@ var (
 func (s *Check) Name() ActionName { return "Checking" }
 func (s *Check) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 	var err error
-
+	// Set a flag to indicate if the update is forced, which will be used in later stages to determine if certain checks should be skipped
+	updateCtx.IsForcedUpdate = s.Force
 	// Check if there is an ongoing update and set action type accordingly and fail if given action is not allowed
 	updateCtx.UpdateRunner, err = update.GetCurrentUpdate(updateCtx.Config.ComposeConfig())
 	if errors.Is(err, update.ErrUpdateNotFound) {

@@ -57,6 +57,7 @@ type (
 		InitializedAt  time.Time
 		FetchedAt      time.Time
 		AlreadyFetched bool
+		IsForcedUpdate bool
 	}
 
 	// UpdateContext holds the state machine context
