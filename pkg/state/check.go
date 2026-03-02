@@ -231,15 +231,25 @@ func (u *UpdateContext) isUpdateRequired(ctx context.Context) bool {
 
 func (u *UpdateContext) isTargetInSync(ctx context.Context) (bool, error) {
 	slog.Debug("Checking target", "target_id", u.ToTarget.ID)
-	if u.checkAppDiff() {
+	hasAppListChanged := u.checkAppDiff()
+	if hasAppListChanged && len(u.AppDiff.Sync) == 0 {
 		// There is some difference between a list of apps in FromTarget and ToTarget
-		// and taking into account the enabled apps in the config
+		// and taking into account the enabled apps in the config,
+		// so return the false without checking the status, as the target is definitely not in sync,
+		// unless there are some apps in the "diff.sync" list which indicates that we need to check
+		// the status of these apps anyway for the non-forced update.
 		return false, nil
 	}
 	var err error
 	u.CurrentStatus, err = status.GetCurrentStatus(ctx, u.Config.ComposeConfig())
 	if err != nil {
 		return false, fmt.Errorf("error checking apps status: %w", err)
+	}
+
+	if hasAppListChanged {
+		// If an app list has changed, then no need to check details of the app status,
+		// as the target is definitely not in sync.
+		return false, nil
 	}
 
 	for _, appURI := range u.ToTarget.AppURIs() {
