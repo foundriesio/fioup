@@ -88,7 +88,7 @@ func doStatus(cmd *cobra.Command, opts *statusOptions) {
 	if ongoing {
 		fmt.Printf("  Updated at:\t%s\n", us.StartTime.Local().Format(time.DateTime))
 	} else {
-		fmt.Printf("  Completed at:\t%s\n", us.StartTime.Local().Format(time.DateTime))
+		fmt.Printf("  Completed at:\t%s\n", us.UpdatedAt.Local().Format(time.DateTime))
 	}
 
 	fmt.Println("  Apps:")
