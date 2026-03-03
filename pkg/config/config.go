@@ -5,6 +5,7 @@ package config
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -71,6 +72,9 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	for _, p := range tomlConfigPaths {
 		s, err := os.Stat(p)
 		if err != nil {
+			if errors.Is(err, os.ErrPermission) {
+				return nil, fmt.Errorf("config: permission denied when accessing path %q: %w", p, err)
+			}
 			continue
 		}
 		if s.IsDir() {
