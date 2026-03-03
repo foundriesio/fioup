@@ -19,7 +19,7 @@ set -ex
 
 apt update && apt install -y git-buildpackage
 useradd -m -u $(id -u) -s /bin/bash builder
-sudo -u builder EMAIL=bot@foundries.io \
+sudo -u builder DEBFULLNAME="Foundries CI Bot" EMAIL=bot@foundries.io \
 	gbp dch -N ${version} --ignore-branch
 EOF
 
