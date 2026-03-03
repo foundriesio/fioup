@@ -1,6 +1,4 @@
-FROM debian:trixie AS builder
-
-RUN apt update -y && apt install -y build-essential devscripts golang
+FROM ghcr.io/foundriesio/debuild-go-min:trixie AS builder
 
 RUN useradd -m -u 1000 -s /bin/bash builder && mkdir /src && chown builder /src
 
