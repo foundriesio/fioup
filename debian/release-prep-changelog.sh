@@ -12,12 +12,13 @@ version=${version#v} # make sure we don't do v0.1.1
 
 sed -i 's/UNRELEASED; /released; /' debian/changelog
 
+DEB_IMAGE=ghcr.io/foundriesio/debuild-go-min:trixie
+
 docker run --rm -i \
 	-v `pwd`:`pwd` -w `pwd` \
-	debian:trixie  <<EOF
+	${DEB_IMAGE}  <<EOF
 set -ex
 
-apt update && apt install -y git-buildpackage
 useradd -m -u $(id -u) -s /bin/bash builder
 sudo -u builder DEBFULLNAME="Foundries CI Bot" EMAIL=bot@foundries.io \
 	gbp dch -N ${version} --ignore-branch
