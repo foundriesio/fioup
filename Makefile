@@ -19,10 +19,12 @@ build:
 	@go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) -tags $(TAGS) $(MAIN)
 
 manpages:
-	@go run -tags disable_pkcs11,disable_main $(MAIN) manpages $(BUILD_DIR)/man
+	@GOOS= GOARCH= \
+	go run -tags disable_pkcs11,disable_main $(MAIN) manpages $(BUILD_DIR)/man
 
 bash-completion:
-	@go run -tags disable_pkcs11,disable_main $(MAIN) bash-completion $(BUILD_DIR)/bash-completion
+	@GOOS= GOARCH= \
+	go run -tags disable_pkcs11,disable_main $(MAIN) bash-completion $(BUILD_DIR)/bash-completion
 
 deb:
 	docker build --progress=plain --output $(DEBS_DIR) -f debian/Dockerfile .
