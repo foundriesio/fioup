@@ -15,21 +15,21 @@ Fioup includes a few ways to work with configuration data.
 
 ### `config-check`
 
-`fioup config-check` makes a request to the [Device Gateway](https://docs.foundries.io/latest/reference-manual/ota/ota-architecture.html)
+`sudo fioup config-check` makes a request to the [Device Gateway](https://docs.foundries.io/latest/reference-manual/ota/ota-architecture.html)
 to check for new configuration data. If configuration has changed, it will
 download and extract the data.
 
 ### `config-extract`
 
 Devices often need access to configuration data in the boot process before
-networking is available and the daemon might run. `fioup config-extract` will
+networking is available and the daemon might run. `sudo fioup config-extract` will
 decrypt and extract the current copy of configuration data, `/var/sota/config.encrypted`,
 to `/run/secrets` if its availble.
 
 ### `daemon mode`
 
-By default, `fioup daemon` checks with the Device Gateway for new configuration
-data during each update interval. This can be disabled with `fioup daemon --fioconfig=0`.
+By default, `sudo fioup daemon` checks with the Device Gateway for new configuration
+data during each update interval. This can be disabled with `sudo fioup daemon --fioconfig=0`.
 
 ## Example
 
