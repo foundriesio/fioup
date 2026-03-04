@@ -1,3 +1,23 @@
+fioup (1.3.1) unstable; urgency=medium
+
+  [ Mike Sul ]
+  * feat(state): add forced update flag
+  * refact(check): always check status of "sync" apps
+  * refact(stop): stop app only if removed or need sync
+  * fix(config): return permission denied error when access is missing
+  * fix(makefile): generate manpages and bash completion using host arch
+  * debian: set email title explicitly
+  * debian: use pre-built image to run the changelog generator in
+  * debian: use pre-built image for a deb package generation
+  * ci: check a deb package with lintian
+  * debian: update deps to support Ubuntu
+  * ci: add a deb package verification of Ubuntu
+
+  [ Michael Scott ]
+  * status: last update: change completed update to use UpdatedAt
+
+ -- Foundries CI Bot <bot@foundries.io>  Wed, 04 Mar 2026 12:36:40 +0000
+
 fioup (1.3.0) unstable; urgency=medium
 
   [ New Features ]
