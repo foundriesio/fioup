@@ -3,8 +3,8 @@
 ## Installing Fioup
 
 ### Dependencies
-* `docker` >= 25.0.0
-* `docker compose` >= 2.25.0
+* `docker` >= 25.0.0 (`docker.io` package on Debian and Ubuntu)
+* `docker compose` >= 2.25.0 (`docker-compose` package on Debian, `docker-compose-v2` or `docker-compose-plugin` package on Ubuntu)
 
 ### Official Debian Package (Recommended)
 
