@@ -11,8 +11,7 @@
 1. Update the `apt` package index and install packages needed to use the fioup `apt` repository:
 
    ```
-   sudo apt update
-   sudo apt install -y apt-transport-https ca-certificates curl gnupg
+   sudo apt update && sudo apt install -y apt-transport-https ca-certificates curl gnupg
    ```
 
 1. Download the public signing key for the package repositories:
@@ -30,8 +29,7 @@
 1. Install fioup
 
    ```
-   sudo apt update
-   sudo apt install fioup
+   sudo apt update && sudo apt install fioup
    ```
 
 A systemd service, `fioup`, is created in a disabled state. This service
