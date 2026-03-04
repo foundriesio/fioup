@@ -90,7 +90,9 @@ jobs:
           docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
           set -ex
 
-          apt update && apt install -y /host-tmp/debs/fioup_*.deb
+          apt update && apt install -y lintian /host-tmp/debs/fioup_*.deb
+
+          lintian /host-tmp/debs/fioup_*.deb
 
           test -x /usr/bin/fioup
           test -x /usr/bin/docker-credential-fioup
