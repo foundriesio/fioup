@@ -84,9 +84,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Build for Debian
+      - name: Build and check a deb package
         run: |
           make deb DEBS_DIR=/tmp/debs
+          # Check installation on Debian
           docker run --rm -i -v /tmp:/host-tmp debian:trixie <<EOF
           set -ex
 
@@ -99,3 +100,16 @@ jobs:
           test -f /usr/share/bash-completion/completions/fioup
           test -f /lib/systemd/system/fioup.service
           EOF
+          # Check installation on Ubuntu
+          docker run --rm -i -v /tmp:/host-tmp ubuntu:noble <<EOF
+          set -ex
+
+          apt update && apt install -y /host-tmp/debs/fioup_*.deb
+
+          test -x /usr/bin/fioup
+          test -x /usr/bin/docker-credential-fioup
+          test -f /usr/share/bash-completion/completions/fioup
+          test -f /lib/systemd/system/fioup.service
+          EOF
+
+
