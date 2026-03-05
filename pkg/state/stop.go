@@ -64,7 +64,12 @@ func (s *Stop) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		}
 	}
 	slog.Debug("apps to stop", "updateType", updateCtx.Type, "isForcedUpdate", updateCtx.IsForcedUpdate, "apps", appsToStop.Names())
-	err := compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), appsToStop.URIs())
+	var err error
+	if len(appsToStop) > 0 {
+		// Invoke compose.StopApps only when there are apps to stop, as compose.StopApps will stop all apps if empty list is passed in,
+		// which is not the intended behavior here.
+		err = compose.StopApps(ctx, updateCtx.Config.ComposeConfig(), appsToStop.URIs())
+	}
 	if err != nil {
 		// If stopping apps failed, it means that update has completed with failure, so send InstallationCompleted event with failure
 		if currentStatus, errStatus := status.GetCurrentStatus(ctx, updateCtx.Config.ComposeConfig()); errStatus == nil {
