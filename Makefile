@@ -6,8 +6,8 @@ TAGS = disable_pkcs11
 DEBS_DIR ?= $(BUILD_DIR)
 
 PKG := main
-VERSION := $(shell git describe --tags --always --dirty)
-COMMIT  := $(shell git rev-parse --short HEAD)
+VERSION ?= $(shell git describe --tags --always --dirty --abbrev=7 --match "v*" 2>/dev/null || echo "dev")
+COMMIT  ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 LDFLAGS := -X '$(PKG).Version=$(VERSION)' -X '$(PKG).Commit=$(COMMIT)' -X '$(PKG).Date=$(DATE)'
 
