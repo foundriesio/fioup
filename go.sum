@@ -62,6 +62,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/foundriesio/composeapp v0.0.0-20260123133007-8fadf8c3588a h1:d1uq3JCLV+Ei9byR5YIhLJADfLe3TAtewdtGSbyCSzE=
 github.com/foundriesio/composeapp v0.0.0-20260123133007-8fadf8c3588a/go.mod h1:nA95y4iS0RnUV9iAyau91/mv7doDs6eXazEE+Pd53c4=
+github.com/foundriesio/composeapp v0.0.0-20260305122754-eb3c4b4e47f1 h1:F2dg5SroSAXOhKeSEfnP/ouThXP/bX1y0pVbXZXU+JY=
+github.com/foundriesio/composeapp v0.0.0-20260305122754-eb3c4b4e47f1/go.mod h1:l5brruAI/C8bxx0Co0WDFHnXUeyQXIvpzFITVeKO5S0=
 github.com/foundriesio/fioconfig v0.0.0-20260223150833-638424812372 h1:RLtO6fYyoxVdV84Ajdo0kYC7qqH3sXXrrF+jy/6ZW7U=
 github.com/foundriesio/fioconfig v0.0.0-20260223150833-638424812372/go.mod h1:3cLFsAyngsCwvXgtt+JgU170oKmJQIvoktvT7gQALE8=
 github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8 h1:nL7q+DCc1M925rKSCvZQEwyKxHanjsMBF1kjyRZ9v0U=
