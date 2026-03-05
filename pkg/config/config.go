@@ -49,6 +49,9 @@ const (
 	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
 	ComposeAppsProxyKey   = "pacman.compose_apps_proxy"
 	ComposeAppsProxyCaKey = "import.tls_cacert_path"
+	// AppsToKeepKey A comma separated list of app names to keep/retain during an update even
+	// if they are not part of a target or in the list of enabled apps ("pacman.compose_apps").
+	AppsToKeepKey = "pacman.reset_apps"
 
 	StorageDefaultDir               = "/var/sota"
 	StorageDefaultDBPath            = "sql.db"
@@ -175,6 +178,18 @@ func (c *Config) GetEnabledApps() []string {
 	}
 	apps := c.tomlConfig.Get("pacman.compose_apps")
 	parts := strings.Split(apps, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if v := strings.TrimSpace(p); v != "" {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func (c *Config) GetAppsToKeep() []string {
+	appsToKeepList := c.tomlConfig.Get(AppsToKeepKey)
+	parts := strings.Split(appsToKeepList, ",")
 	result := make([]string, 0, len(parts))
 	for _, p := range parts {
 		if v := strings.TrimSpace(p); v != "" {
