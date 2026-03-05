@@ -57,13 +57,14 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 
 func (u *UpdateContext) completeUpdate(ctx context.Context) {
 	var err error
+	appsToKeep := u.Config.GetAppsToKeep()
 	// 1. First attempt with pruning
-	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err == nil {
+	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning(appsToKeep...)); err == nil {
 		return
 	}
 	slog.Debug("update completion with pruning failed; retrying", "error", err)
 	// 2. Second attempt with pruning
-	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err == nil {
+	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning(appsToKeep...)); err == nil {
 		return
 	}
 	slog.Error("update completion with pruning failed; trying without pruning", "error", err)
