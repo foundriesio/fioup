@@ -8,6 +8,10 @@ name: Create release
 env:
   version: ${{ github.ref_name }}
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build:
     strategy:
@@ -35,6 +39,13 @@ jobs:
       - name: Hack around https://github.com/actions/checkout/issues/290
         run: |
           git fetch --tags --force
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binaries
         run: |
