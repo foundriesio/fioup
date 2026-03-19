@@ -66,7 +66,7 @@ func Diff(ctx context.Context, cfg *config.Config, fromVersion, toVersion int, o
 		if lastUpdate, err := update.GetLastSuccessfulUpdate(cfg.ComposeConfig()); err == nil {
 			fromTarget = targets.GetTargetByID(lastUpdate.ClientRef)
 		} else {
-			return nil, fmt.Errorf("failed to get current target: %w", err)
+			fromTarget = target.UnknownTarget
 		}
 	} else {
 		fromTarget = targets.GetTargetByVersion(fromVersion)
