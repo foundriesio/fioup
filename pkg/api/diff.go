@@ -122,6 +122,14 @@ func Diff(ctx context.Context, cfg *config.Config, fromVersion, toVersion int, o
 	return &diff, nil
 }
 
+func (d *DiffReport) BlobCount() int {
+	count := 0
+	for _, blobs := range d.Blobs {
+		count += len(blobs)
+	}
+	return count
+}
+
 func getCurrentAppBlobs(ctx context.Context, cfg *config.Config, appURIs []string) (map[string]compose.BlobInfo, error) {
 	status, err := compose.CheckAppsStatus(ctx, cfg.ComposeConfig(), appURIs, compose.WithQuickCheckFetch(true),
 		compose.WithCheckInstallation(false), compose.WithCheckRunning(false))

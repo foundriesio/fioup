@@ -59,7 +59,7 @@ func doDiff(cmd *cobra.Command, opts *diffOptions) {
 	fmt.Printf("Update size from version %d to %d:\n", diff.FromTarget.Version, diff.ToTarget.Version)
 	fmt.Printf("  On wire size: %s\n", compose.FormatBytesInt64(diff.WireSize))
 	fmt.Printf("  On disk size: %s\n", compose.FormatBytesInt64(diff.DiskSize))
-	fmt.Printf("  Blob count:   %d\n", len(diff.Blobs))
+	fmt.Printf("  Blob count:   %d\n", diff.BlobCount())
 	if opts.blobs {
 		fmt.Println("  Blobs:")
 		for baseURL, b := range diff.Blobs {
