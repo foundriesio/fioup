@@ -4,7 +4,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"strconv"
 
 	"github.com/foundriesio/composeapp/pkg/compose"
@@ -55,6 +57,10 @@ The latest available and the current versions are used if <to-version> and <from
 
 func doDiff(cmd *cobra.Command, opts *diffOptions) {
 	diff, err := api.Diff(cmd.Context(), config, opts.fromVersion, opts.toVersion, api.WithTUFEnabled(opts.enableTuf))
+	if errors.Is(err, fs.ErrNotExist) {
+		DieNotNil(fmt.Errorf("cannot calucate diff because targets metadata is not available locally; " +
+			"please run the 'check' command to obtain the metadata and try again"))
+	}
 	DieNotNil(err, "failed to obtain diff:")
 	fmt.Printf("Update size from version %d to %d:\n", diff.FromTarget.Version, diff.ToTarget.Version)
 	fmt.Printf("  On wire size: %s\n", compose.FormatBytesInt64(diff.WireSize))
