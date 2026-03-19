@@ -62,6 +62,9 @@ func doDiff(cmd *cobra.Command, opts *diffOptions) {
 			"please run the 'check' command to obtain the metadata and try again"))
 	}
 	DieNotNil(err, "failed to obtain diff:")
+	if diff.FromTarget.IsUnknown() {
+		fmt.Println("Failed to get current target: diff computed assuming no update is installed")
+	}
 	fmt.Printf("Update size from version %d to %d:\n", diff.FromTarget.Version, diff.ToTarget.Version)
 	fmt.Printf("  On wire size: %s\n", compose.FormatBytesInt64(diff.WireSize))
 	fmt.Printf("  On disk size: %s\n", compose.FormatBytesInt64(diff.DiskSize))
