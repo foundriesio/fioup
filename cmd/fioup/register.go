@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/foundriesio/fioup/internal/register"
+	"github.com/foundriesio/fioup/pkg/client"
+	cfg "github.com/foundriesio/fioup/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +63,16 @@ func doRegister(opts *register.RegisterOptions) {
 	}
 	cobra.CheckErr(err)
 	fmt.Printf("Device %s is now registered at factory %s\n", opts.Name, opts.Factory)
+
+	// Checking connection to Device Gateway and sending configuration and sysinfo after registration.
+	config, err = cfg.NewConfig([]string{opts.SotaDir})
+	DieNotNil(err, "failed to load configuration")
+	client, err := client.NewGatewayClient(config, nil, "")
+	DieNotNil(err, "failed to create Device Gateway client")
+
+	fmt.Print("Checking connection to Device Gateway and sending device configuration...")
+	DieNotNil(client.PutSysInfo(), "failed to send device configuration and sysinfo to Device Gateway")
+	fmt.Println("success")
 }
 
 type oauthHandler struct {
