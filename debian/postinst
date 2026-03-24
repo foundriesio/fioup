@@ -1,0 +1,39 @@
+#!/bin/sh
+set -e
+
+printf "Running postinst (%s): checking Docker storage driver (expected: overlay2)... " "$1"
+
+print_and_continue() {
+    echo
+    echo "$1"
+    echo "fioup requires Docker to use the 'overlay2' storage driver."
+    echo "Continuing with installation."
+    echo
+    exit 0
+}
+
+DOCKER_BIN="$(command -v docker || true)"
+
+# Docker not installed → allow
+if [ -z "$DOCKER_BIN" ]; then
+    print_and_continue "NOTE: Docker not found, skipping check."
+fi
+
+# Docker installed but not running → allow (unknown state)
+if ! "$DOCKER_BIN" info >/dev/null 2>&1; then
+    print_and_continue "NOTE: Docker not running, skipping check."
+fi
+
+# Docker running → check driver
+driver=$("$DOCKER_BIN" info --format '{{.Driver}}' 2>/dev/null || true)
+
+if [ -z "$driver" ]; then
+    print_and_continue "WARNING: Unable to determine Docker storage driver."
+fi
+
+if [ "$driver" != "overlay2" ]; then
+    print_and_continue "WARNING: Unsupported Docker storage driver detected: $driver"
+fi
+
+echo "OK"
+exit 0
