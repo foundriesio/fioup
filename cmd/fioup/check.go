@@ -30,7 +30,8 @@ func init() {
 		Short: "Update TUF metadata",
 		Args:  cobra.NoArgs,
 		Annotations: map[string]string{
-			lockFlagKey: "true",
+			lockFlagKey:        "true",
+			requireOverlay2Key: "true",
 		},
 	}
 	cmd.Flags().StringVar(&opts.Format, "format", "text", "Format the output. Values: [text | json]")
