@@ -18,7 +18,8 @@ func init() {
 		},
 		Args: cobra.NoArgs,
 		Annotations: map[string]string{
-			lockFlagKey: "true",
+			lockFlagKey:        "true",
+			requireOverlay2Key: "true",
 		},
 	}
 	rootCmd.AddCommand(cmd)
