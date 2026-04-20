@@ -93,23 +93,51 @@ func (r *tufRepo) loadTargets() error {
 		}
 
 		var apps []App
-		for _, appField := range targetDetails.Apps {
+		isValidTarget := true
+		for appName, appField := range targetDetails.Apps {
 			appRef, err := compose.ParseAppRef(appField.URI)
 			if err != nil {
-				slog.Debug("target with invalid app URI is found", "target custom", targetDetails)
-				continue
+				slog.Error(
+					"failed to parse app URI in target",
+					"target", id,
+					"app", appName,
+					"uri", appField.URI,
+					"error", err,
+				)
+				isValidTarget = false
+				// This is an invalid target, continue processing other targets instead of
+				// returning an error since the target file may contain multiple targets and some of them may be valid.
+				break
+			}
+			// The app name embedded in the URI must match the app name declared
+			// in the target configuration. A mismatch indicates a misconfigured
+			// target. This validation is required because composectl derives the
+			// app name from the URI passed through its CLI or API.
+			if appRef.Name != appName {
+				slog.Error(
+					"app name mismatch between target and URI",
+					"target", id,
+					"target_app", appName,
+					"uri_app", appRef.Name,
+					"uri", appField.URI,
+				)
+				isValidTarget = false
+				// This is an invalid target, continue processing other targets instead of
+				// returning an error since the target file may contain multiple targets and some of them may be valid.
+				break
 			}
 			apps = append(apps, App{
-				Name: appRef.Name,
+				Name: appName,
 				URI:  appField.URI,
 			})
 		}
-
-		r.targets = append(r.targets, Target{
-			ID:      id,
-			Version: version,
-			Apps:    apps,
-		})
+		if isValidTarget {
+			r.targets = append(r.targets, Target{
+				ID:      id,
+				Version: version,
+				Apps:    apps,
+			})
+		}
 	}
 	return nil
 }
