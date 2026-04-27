@@ -57,13 +57,17 @@ func (s *Start) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 
 func (u *UpdateContext) completeUpdate(ctx context.Context) {
 	var err error
-	// 1. First attempt with pruning
-	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err == nil {
+	// 1. First attempt with app pruning, prune images based on the prune type configured by the user
+	imagePruneType := compose.PruneTypeOnlyAppImages
+	if u.Config.GetImagePruningFlag() {
+		imagePruneType = compose.PruneTypeAllUnusedImages
+	}
+	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning(imagePruneType)); err == nil {
 		return
 	}
 	slog.Debug("update completion with pruning failed; retrying", "error", err)
 	// 2. Second attempt with pruning
-	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning()); err == nil {
+	if err = u.UpdateRunner.Complete(ctx, update.CompleteWithPruning(imagePruneType)); err == nil {
 		return
 	}
 	slog.Error("update completion with pruning failed; trying without pruning", "error", err)
