@@ -36,3 +36,21 @@ An update can be applied in more granular steps with:
 > Once you've started an update sequence, you must `fioup cancel` to start a new sequence.
 
 The update status can be checked at any time with `sudo fioup status`.
+
+### Configure Image Pruning Mode
+
+By default, once updated apps have been started, `fioup` prunes only unused container images associated with apps
+managed by `fioup`.
+
+In this context, *image pruning* means removing image references left behind after an app has been removed or updated.
+If the removed reference is the last one pointing to that image, Docker deletes the image itself.
+
+`fioup` can also be configured to prune **all** unused images, including images not related to apps managed by `fioup`.
+
+To enable this mode, set the `pacman.prune_unused_images` option in the `fioup` configuration file (by
+default `/var/sota/sota.toml`) to `"1"`:
+
+```toml
+[pacman]
+prune_unused_images = "1"
+```
