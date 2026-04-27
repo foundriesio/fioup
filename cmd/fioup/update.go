@@ -44,8 +44,7 @@ func init() {
 		},
 		Args: cobra.RangeArgs(0, 1),
 		Annotations: map[string]string{
-			lockFlagKey:        "true",
-			requireOverlay2Key: "true",
+			lockFlagKey: "true",
 		},
 	}
 

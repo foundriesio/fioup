@@ -50,8 +50,7 @@ func init() {
 		},
 		Args: cobra.NoArgs,
 		Annotations: map[string]string{
-			lockFlagKey:        "true",
-			requireOverlay2Key: "true",
+			lockFlagKey: "true",
 		},
 	}
 	cmd.Flags().BoolVar(&opts.configEnabled, "fioconfig", true, "Include fioconfig daemon logic.")
