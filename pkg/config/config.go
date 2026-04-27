@@ -41,14 +41,15 @@ type (
 )
 
 const (
-	TagKey                = "pacman.tags"
-	ServerBaseUrlKey      = "tls.server"
-	StorageDirKey         = "storage.path"
-	StorageDBPathKey      = "storage.sqldb_path"
-	HardwareIDKey         = "provision.primary_ecu_hardware_id"
-	StorageUsageWatermark = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
-	ComposeAppsProxyKey   = "pacman.compose_apps_proxy"
-	ComposeAppsProxyCaKey = "import.tls_cacert_path"
+	TagKey                          = "pacman.tags"
+	ServerBaseUrlKey                = "tls.server"
+	StorageDirKey                   = "storage.path"
+	StorageDBPathKey                = "storage.sqldb_path"
+	HardwareIDKey                   = "provision.primary_ecu_hardware_id"
+	StorageUsageWatermark           = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
+	ComposeAppsProxyKey             = "pacman.compose_apps_proxy"
+	ComposeAppsProxyCaKey           = "import.tls_cacert_path"
+	ComposeAppsPruneUnusedImagesKey = "pacman.prune_unused_images"
 
 	StorageDefaultDir               = "/var/sota"
 	StorageDefaultDBPath            = "sql.db"
@@ -192,6 +193,10 @@ func (c *Config) SetClientForProxy(client proxyHTTPClient) {
 	if c.proxyProvider != nil {
 		c.proxyProvider.client = client
 	}
+}
+
+func (c *Config) GetImagePruningFlag() bool {
+	return c.tomlConfig.GetDefault(ComposeAppsPruneUnusedImagesKey, "0") == "1"
 }
 
 func newComposeConfig(config *sotatoml.AppConfig, proxyProvider compose.ProxyProvider) (*compose.Config, error) {
