@@ -12,7 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/docker/client"
 	fioconfig "github.com/foundriesio/fioconfig/app"
 	"github.com/foundriesio/fioconfig/sotatoml"
 	cfg "github.com/foundriesio/fioup/pkg/config"
@@ -21,10 +20,8 @@ import (
 )
 
 const (
-	lockFileName       = "fioup.lock"
-	lockFlagKey        = "lock-flag"
-	requireOverlay2Key = "require-overlay2"
-	overlay2DriverName = "overlay2"
+	lockFileName = "fioup.lock"
+	lockFlagKey  = "lock-flag"
 )
 
 var (
@@ -64,19 +61,6 @@ var (
 			if l := cmd.Annotations[lockFlagKey]; l == "true" {
 				cobra.CheckErr(acquireLock())
 			}
-
-			// If the "require overlay2" flag is set, then check if the Docker storage driver is overlay2
-			if l := cmd.Annotations[requireOverlay2Key]; l == "true" {
-				cli, err := client.NewClientWithOpts(client.FromEnv)
-				cobra.CheckErr(err)
-
-				info, err := cli.Info(cmd.Context())
-				cobra.CheckErr(err)
-				if info.Driver != overlay2DriverName {
-					cobra.CheckErr(fmt.Errorf("overlay2 storage driver is required, detected: %s", info.Driver))
-				}
-				slog.Debug("Detected storage driver", "driver", info.Driver)
-			}
 		},
 	}
 )
@@ -102,7 +86,6 @@ func Execute() error {
 		rootCmd.PersistentPreRun(rootCmd, nil)
 		os.Exit(runDockerCredsHelper())
 	}
-
 	return rootCmd.Execute()
 }
 
