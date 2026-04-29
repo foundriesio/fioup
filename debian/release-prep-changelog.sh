@@ -20,7 +20,11 @@ docker run --rm -i \
 set -ex
 
 useradd -m -u $(id -u) -s /bin/bash builder
-sudo -u builder DEBFULLNAME="Foundries CI Bot" EMAIL=bot@foundries.io \
-	gbp dch -N ${version} --ignore-branch
+
+runuser -u builder -- env \
+  DEBFULLNAME="Foundries CI Bot" \
+  EMAIL=bot@foundries.io \
+  gbp dch -N ${version} --ignore-branch
+
 EOF
 
