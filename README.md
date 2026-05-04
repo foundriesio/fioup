@@ -5,6 +5,24 @@ A command-line tool for performing Over-The-Air (OTA) updates of [Compose Apps](
 ## Installation
 [See the installation guide.](docs/install.md)
 
+## Building
+
+### Native Build
+
+```bash
+make
+```
+
+The binary is written to `./bin/fioup`.
+
+### Cross-Compilation
+
+`fioup` supports standard Go cross-compilation. For example:
+
+```bash
+GOOS=linux GOARCH=arm64 make
+```
+
 ## Usage
 
 [See the usage guide.](docs/README.md)
