@@ -25,6 +25,7 @@ jobs:
 
     permissions:
       contents: write
+      packages: read
     runs-on: ${{ matrix.hosts.os }}
 
     steps:
