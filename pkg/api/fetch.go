@@ -22,6 +22,6 @@ func Fetch(ctx context.Context, cfg *config.Config, toVersion int, options ...Up
 			EnableTUF:      opts.EnableTUF,
 		},
 		&state.Init{},
-		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
+		&state.Fetch{ProgressHandler: opts.FetchProgressHandler, Workers: opts.FetchWorkers},
 	}, updateOptsToRunnerOpt(opts)).Run(ctx, cfg)
 }

@@ -27,6 +27,7 @@ type (
 	daemonOpts struct {
 		configEnabled bool
 		fioconfig     fioconfigOpts
+		workers       int
 	}
 
 	updater struct {
@@ -41,11 +42,12 @@ type (
 )
 
 func init() {
-	opts := daemonOpts{}
+	opts := daemonOpts{workers: defaultFetchWorkers}
 	cmd := &cobra.Command{
 		Use:   "daemon",
 		Short: "Start the update agent daemon",
 		Run: func(cmd *cobra.Command, args []string) {
+			validateWorkers(opts.workers)
 			doDaemon(cmd, opts)
 		},
 		Args: cobra.NoArgs,
@@ -54,6 +56,7 @@ func init() {
 		},
 	}
 	cmd.Flags().BoolVar(&opts.configEnabled, "fioconfig", true, "Include fioconfig daemon logic.")
+	addWorkersFlag(cmd, &opts.workers)
 	opts.fioconfig.ApplyToCmd(cmd)
 	rootCmd.AddCommand(cmd)
 }
@@ -187,7 +190,8 @@ func (u *updater) checkUpdates(ctx context.Context) (nowait bool, err error) {
 		api.WithPostStateHandler(postStateHandler),
 		api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
 		api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
-		api.WithStartProgressHandler(appStartHandler))
+		api.WithStartProgressHandler(appStartHandler),
+		api.WithFetchWorkers(u.opts.workers))
 	if err != nil && errors.Is(err, state.ErrNewerVersionIsAvailable) {
 		slog.Info("Cancelling current update, going to start a new one for the newer version")
 		_, err := api.Cancel(ctx, config)

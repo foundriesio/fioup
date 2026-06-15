@@ -17,6 +17,7 @@ import (
 type (
 	Fetch struct {
 		ProgressHandler compose.FetchProgressFunc
+		Workers         int
 	}
 
 	InsufficientStorageError struct {
@@ -50,7 +51,10 @@ func (s *Fetch) Execute(ctx context.Context, updateCtx *UpdateContext) error {
 		// Send download started event regardless if there is enough space or not to mark the start of download attempt
 		updateCtx.SendEvent(events.DownloadStarted)
 		if err == nil {
-			err = updateCtx.UpdateRunner.Fetch(ctx, compose.WithFetchProgress(s.ProgressHandler))
+			err = updateCtx.UpdateRunner.Fetch(ctx,
+				compose.WithFetchProgress(s.ProgressHandler),
+				compose.WithFetchWorkers(s.Workers),
+			)
 			if err != nil {
 				err = fmt.Errorf("%w: %w", ErrFetchFailed, err)
 			}
