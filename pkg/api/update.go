@@ -24,6 +24,7 @@ type (
 		FetchProgressHandler   FetchProgressFunc
 		InstallProgressHandler InstallProgressFunc
 		StartProgressHandler   StartProgressFunc
+		FetchWorkers           int
 	}
 	UpdateOpt           func(*UpdateOpts)
 	FetchProgressFunc   = compose.FetchProgressFunc
@@ -52,6 +53,12 @@ func WithInstallProgressHandler(handler InstallProgressFunc) UpdateOpt {
 func WithFetchProgressHandler(handler FetchProgressFunc) UpdateOpt {
 	return func(o *UpdateOpts) {
 		o.FetchProgressHandler = handler
+	}
+}
+
+func WithFetchWorkers(workers int) UpdateOpt {
+	return func(o *UpdateOpts) {
+		o.FetchWorkers = workers
 	}
 }
 
@@ -118,7 +125,7 @@ func Update(ctx context.Context, cfg *config.Config, toVersion int, options ...U
 			EnableTUF:      opts.EnableTUF,
 		},
 		&state.Init{},
-		&state.Fetch{ProgressHandler: opts.FetchProgressHandler},
+		&state.Fetch{ProgressHandler: opts.FetchProgressHandler, Workers: opts.FetchWorkers},
 		&state.Stop{},
 		&state.Install{ProgressHandler: opts.InstallProgressHandler},
 		&state.Start{ProgressHandler: opts.StartProgressHandler},

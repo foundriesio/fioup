@@ -19,6 +19,7 @@ type (
 	updateOptions struct {
 		version     int
 		syncCurrent bool
+		workers     int
 	}
 )
 
@@ -26,6 +27,7 @@ func init() {
 	opts := updateOptions{
 		version:     -1,
 		syncCurrent: false,
+		workers:     defaultFetchWorkers,
 	}
 
 	cmd := &cobra.Command{
@@ -40,6 +42,7 @@ func init() {
 					DieNotNil(fmt.Errorf("--sync-current cannot be used when a version is specified"))
 				}
 			}
+			validateWorkers(opts.workers)
 			doUpdate(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
@@ -49,6 +52,7 @@ func init() {
 	}
 
 	cmd.Flags().BoolVar(&opts.syncCurrent, "sync-current", false, "Sync the currently installed target if no version is specified.")
+	addWorkersFlag(cmd, &opts.workers)
 	rootCmd.AddCommand(cmd)
 }
 
@@ -60,6 +64,7 @@ func doUpdate(cmd *cobra.Command, opts *updateOptions) {
 			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
 			api.WithInstallProgressHandler(update.GetInstallProgressPrinter(update.WithIndentation(8))),
 			api.WithStartProgressHandler(appStartHandler),
+			api.WithFetchWorkers(opts.workers),
 		)...))
 }
 

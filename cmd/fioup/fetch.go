@@ -15,12 +15,14 @@ import (
 type (
 	fetchOptions struct {
 		version int
+		workers int
 	}
 )
 
 func init() {
 	opts := fetchOptions{
 		version: -1,
+		workers: defaultFetchWorkers,
 	}
 
 	cmd := &cobra.Command{
@@ -34,6 +36,7 @@ func init() {
 					cobra.CheckErr(fmt.Errorf("invalid version number: %w", err))
 				}
 			}
+			validateWorkers(opts.workers)
 			doFetch(cmd, &opts)
 		},
 		Args: cobra.RangeArgs(0, 1),
@@ -41,6 +44,7 @@ func init() {
 			lockFlagKey: "true",
 		},
 	}
+	addWorkersFlag(cmd, &opts.workers)
 	rootCmd.AddCommand(cmd)
 }
 
@@ -48,6 +52,7 @@ func doFetch(cmd *cobra.Command, opts *fetchOptions) {
 	DieNotNil(api.Fetch(cmd.Context(), config, opts.version,
 		append(updateHandlers,
 			api.WithFetchProgressHandler(update.GetFetchProgressPrinter(update.WithIndentation(8))),
+			api.WithFetchWorkers(opts.workers),
 		)...,
 	))
 }
