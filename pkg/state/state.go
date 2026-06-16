@@ -287,16 +287,22 @@ func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interfac
 }
 
 func (u *UpdateContext) getAndSetStorageUsageInfo() error {
-	usageWatermark := u.Config.GetStorageUsageWatermark()
-	if ui, err := compose.GetUsageInfo(u.Config.ComposeConfig().StoreRoot, 0, usageWatermark); err != nil {
-		return fmt.Errorf("failed to get storage usage info: %w", err)
+	var watermark uint64
+	var inBytes bool
+	if reserved := u.Config.GetReservedStorage(); reserved > 0 {
+		watermark, inBytes = reserved, true
 	} else {
-		u.StorageUsage = &StorageStat{
-			Size:      ui.SizeB,
-			Free:      ui.Free,
-			Reserved:  ui.Reserved,
-			Available: ui.Available,
-		}
+		watermark = u.Config.GetStorageWatermark()
+	}
+	ui, err := compose.GetUsageInfo(u.Config.ComposeConfig().StoreRoot, 0, watermark, inBytes)
+	if err != nil {
+		return fmt.Errorf("failed to get storage usage info: %w", err)
+	}
+	u.StorageUsage = &StorageStat{
+		Size:      ui.SizeB,
+		Free:      ui.Free,
+		Reserved:  ui.Reserved,
+		Available: ui.Available,
 	}
 	return nil
 }
