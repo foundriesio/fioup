@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/docker/go-units"
 	"github.com/foundriesio/composeapp/pkg/compose"
 	v1 "github.com/foundriesio/composeapp/pkg/compose/v1"
 	"github.com/foundriesio/fioconfig/sotatoml"
@@ -27,7 +28,8 @@ type (
 		tomlConfig       *sotatoml.AppConfig
 		composeConfig    *compose.Config
 		dgBaseURL        *url.URL
-		storageWatermark uint
+		storageWatermark uint64
+		reservedStorage  uint64
 		proxyProvider    *ProxyProvider
 	}
 	// HttpClientFunc defines a function type for making HTTP requests via a proxy.
@@ -46,7 +48,8 @@ const (
 	StorageDirKey                   = "storage.path"
 	StorageDBPathKey                = "storage.sqldb_path"
 	HardwareIDKey                   = "provision.primary_ecu_hardware_id"
-	StorageUsageWatermark           = "pacman.storage_watermark" // in percentage of overall storage, the maximum allowed to be used by apps
+	StorageUsageWatermark           = "pacman.storage_watermark" // percentage (20-99) of overall storage usable by apps
+	ReservedStorageKey              = "pacman.reserved_storage"  // absolute free space to keep reserved (e.g. "2GiB" or "500MB"); takes precedence over StorageUsageWatermark
 	ComposeAppsProxyKey             = "pacman.compose_apps_proxy"
 	ComposeAppsProxyCaKey           = "import.tls_cacert_path"
 	ComposeAppsPruneUnusedImagesKey = "pacman.prune_unused_images"
@@ -105,19 +108,36 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid value of the device gateway base URL: %w", err)
 	}
-	// Validate and set storage usage watermark
+	// Validate and set the storage usage watermark. pacman.storage_watermark is a
+	// percentage of overall storage usable by apps; pacman.reserved_storage is an
+	// absolute amount of free space to keep reserved (e.g. "2GiB") and, when set,
+	// takes precedence over the percentage watermark.
 	cfg.storageWatermark = StorageUsageWatermarkDefault
 	watermarkStr := cfg.tomlConfig.GetDefault(StorageUsageWatermark, StorageUsageWatermarkDefaultStr)
 	if watermark, err := strconv.Atoi(watermarkStr); err == nil {
 		if watermark < MinStorageUsageWatermark || watermark > MaxStorageUsageWatermark {
 			slog.Warn("storage usage watermark out of range; using default", "value", watermark, "default", StorageUsageWatermarkDefaultStr)
 		} else {
-			cfg.storageWatermark = uint(watermark)
+			cfg.storageWatermark = uint64(watermark)
 		}
 	} else {
 		slog.Warn("invalid storage usage watermark value; using default", "value", watermarkStr, "default", StorageUsageWatermarkDefaultStr)
 	}
-	slog.Debug("storage usage watermark set", "value", cfg.storageWatermark)
+	if reservedStr := cfg.tomlConfig.GetDefault(ReservedStorageKey, ""); reservedStr != "" {
+		if reserved, err := parseReservedStorage(reservedStr); err == nil && reserved > 0 {
+			if cfg.tomlConfig.Has(StorageUsageWatermark) {
+				slog.Warn("both pacman.storage_watermark and pacman.reserved_storage are set; ignoring pacman.storage_watermark",
+					"reserved_storage", reservedStr)
+			}
+			cfg.reservedStorage = uint64(reserved)
+			slog.Debug("storage reserved free space set", "bytes", cfg.reservedStorage)
+		} else {
+			slog.Warn("invalid pacman.reserved_storage value; ignoring", "value", reservedStr)
+		}
+	}
+	if cfg.reservedStorage == 0 {
+		slog.Debug("storage usage watermark set", "percent", cfg.storageWatermark)
+	}
 
 	var composeProxyProvider compose.ProxyProvider
 	if cfg.tomlConfig.Has(ComposeAppsProxyKey) && cfg.tomlConfig.Get(ComposeAppsProxyKey) != "" {
@@ -134,6 +154,16 @@ func NewConfig(tomlConfigPaths []string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// parseReservedStorage accepts both binary (e.g. "2GiB", "500MiB") and decimal
+// (e.g. "2GB", "500MB") byte-size suffixes. The presence of an "ib" suffix
+// selects the binary parser; otherwise the decimal parser is used.
+func parseReservedStorage(s string) (int64, error) {
+	if strings.Contains(strings.ToLower(s), "ib") {
+		return units.RAMInBytes(s)
+	}
+	return units.FromHumanSize(s)
 }
 
 func (c *Config) GetHardwareID() string {
@@ -185,8 +215,17 @@ func (c *Config) GetEnabledApps() []string {
 	return result
 }
 
-func (c *Config) GetStorageUsageWatermark() uint {
+// GetStorageWatermark returns the configured storage usage watermark as a
+// percentage of total storage usable by apps.
+func (c *Config) GetStorageWatermark() uint64 {
 	return c.storageWatermark
+}
+
+// GetReservedStorage returns the absolute amount of free space, in bytes, to
+// keep reserved for non-Apps usage. A value of zero means no reservation is
+// configured and the percentage watermark from GetStorageWatermark applies.
+func (c *Config) GetReservedStorage() uint64 {
+	return c.reservedStorage
 }
 
 func (c *Config) SetClientForProxy(client proxyHTTPClient) {
