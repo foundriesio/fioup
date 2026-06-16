@@ -7,7 +7,7 @@ replace github.com/theupdateframework/go-tuf/v2 v2.0.2 => github.com/foundriesio
 require (
 	github.com/containerd/containerd v1.7.15
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/go-units v0.5.0
 	github.com/foundriesio/composeapp v0.0.0-20260427073250-05c7cebb3b64
 	github.com/foundriesio/fioconfig v0.0.0-20260223150833-638424812372
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
@@ -37,10 +37,10 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v25.0.3+incompatible // indirect
+	github.com/docker/docker v25.0.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/foundriesio/go-ecies v0.3.0 // indirect

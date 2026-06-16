@@ -287,16 +287,31 @@ func (u *UpdateContext) getInstallationCompletedDetails(eventErr error) interfac
 }
 
 func (u *UpdateContext) getAndSetStorageUsageInfo() error {
-	usageWatermark := u.Config.GetStorageUsageWatermark()
-	if ui, err := compose.GetUsageInfo(u.Config.ComposeConfig().StoreRoot, 0, usageWatermark); err != nil {
-		return fmt.Errorf("failed to get storage usage info: %w", err)
-	} else {
-		u.StorageUsage = &StorageStat{
-			Size:      ui.SizeB,
-			Free:      ui.Free,
-			Reserved:  ui.Reserved,
-			Available: ui.Available,
+	storeRoot := u.Config.ComposeConfig().StoreRoot
+	var ui *compose.UsageInfo
+	var err error
+	if reserved, ok := u.Config.GetStorageReservedBytes(); ok {
+		// Absolute reserved free space: derive Size/Free via a watermark of 100 (no
+		// reservation) and then apply the configured byte reserve ourselves.
+		if ui, err = compose.GetUsageInfo(storeRoot, 0, 100); err == nil {
+			ui.Reserved = reserved
+			if ui.Free > reserved {
+				ui.Available = ui.Free - reserved
+			} else {
+				ui.Available = 0
+			}
 		}
+	} else {
+		ui, err = compose.GetUsageInfo(storeRoot, 0, u.Config.GetStorageUsageWatermark())
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get storage usage info: %w", err)
+	}
+	u.StorageUsage = &StorageStat{
+		Size:      ui.SizeB,
+		Free:      ui.Free,
+		Reserved:  ui.Reserved,
+		Available: ui.Available,
 	}
 	return nil
 }
