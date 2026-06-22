@@ -54,3 +54,40 @@ default `/var/sota/sota.toml`) to `"1"`:
 [pacman]
 prune_unused_images = "1"
 ```
+
+### Configure Storage Usage
+
+`fioup` checks that enough storage is available before fetching and installing
+an update, and refuses to proceed otherwise. Two options under the `[pacman]`
+section of the `fioup` configuration file (by default `/var/sota/sota.toml`)
+control how much of the device's storage may be consumed by apps.
+
+#### `storage_watermark`
+
+A percentage of the total storage that apps may use. The value must be an
+integer between `20` and `99`; when unset, the default is `95`.
+
+```toml
+[pacman]
+storage_watermark = "80"
+```
+
+With the example above, an update is allowed only while the total storage
+usage including the apps stays below 80% of the underlying filesystem.
+
+#### `reserved_storage`
+
+An absolute amount of free space to keep reserved for non-app usage, expressed
+as a byte size with either a binary (`KiB`, `MiB`, `GiB`) or decimal (`KB`,
+`MB`, `GB`) suffix. When set, apps may use all available storage except the
+reserved amount.
+
+```toml
+[pacman]
+reserved_storage = "2GiB"
+```
+
+`reserved_storage` takes precedence over `storage_watermark`: when both are
+set, the percentage watermark is ignored and a warning is logged. Use
+`reserved_storage` on devices with large data partitions where a fixed
+absolute reserve is more meaningful than a percentage.
