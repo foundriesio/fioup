@@ -1,3 +1,21 @@
+fioup (1.4.0) unstable; urgency=medium
+
+  [ Mike Sul ]
+  * Revert "build(deps): bump modernc.org/sqlite from 1.44.3 to 1.46.2"
+  * fix(release-ci): add permission to read gh packages
+  * docs: add basic build instructions to README
+  * chore(gitignore): ignore IDEs directories
+  * chore(gitignore): ignore AI agents stuff
+  * docs(agents): add agentic coding guidelines
+  * ci(lint): fix docutils install and skip agent docs
+  * feat(cli): add --workers flag for concurrent fetch
+
+  [ Andre Detsch ]
+  * feat(config): add reserved_storage option
+  * docs(update): document storage usage options
+
+ -- Foundries CI Bot <bot@foundries.io>  Fri, 03 Jul 2026 10:13:40 +0000
+
 fioup (1.3.3) unstable; urgency=medium
 
   [ Mike Sul ]
