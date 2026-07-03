@@ -8,7 +8,7 @@ require (
 	github.com/containerd/containerd v1.7.15
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/foundriesio/composeapp v0.0.0-20260619212818-3b952986a27b
+	github.com/foundriesio/composeapp v0.0.0-20260703100758-07a5b14b2e55
 	github.com/foundriesio/fioconfig v0.0.0-20260223150833-638424812372
 	github.com/foundriesio/fiotuf v0.0.0-20250811143610-819b20a26cb8
 	github.com/google/uuid v1.6.0
